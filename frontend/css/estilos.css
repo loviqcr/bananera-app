@@ -5,16 +5,21 @@
    ========================================================================= */
 
 :root {
-  --verde-900: #14351f;
-  --verde-800: #1b5e3a;
-  --verde-700: #21754a;
-  --verde-600: #2d8a4f;
-  --verde-500: #3ea866;
-  --verde-100: #e3f3e8;
+  /* Paleta alineada al ícono/logo de la app (ciclo siembra-riega-corta). */
+  --verde-900: #0a4d18;
+  --verde-800: #0d6b1f;
+  --verde-700: #007820;
+  --verde-600: #1c9236;
+  --verde-500: #34b34f;
+  --verde-100: #e2f5e6;
+  --azul-500: #0068c0;
+  --azul-600: #00579f;
+  --naranja-500: #f87800;
+  --naranja-600: #d66700;
   --ambar-500: #f7b538;
   --ambar-600: #e29e1f;
   --rojo-500: #e5484d;
-  --amarillo-500: #f2b705;
+  --amarillo-500: #f8d000;
   --gris-900: #14181a;
   --gris-700: #3c4448;
   --gris-500: #6b7578;
@@ -436,7 +441,17 @@ button {
 }
 
 .marca-login__icono {
-  font-size: 3rem;
+  width: 96px;
+  height: 96px;
+  border-radius: 22px;
+  box-shadow: var(--sombra);
+}
+
+.pie-pagina {
+  text-align: center;
+  margin-top: 20px;
+  font-size: 0.78rem;
+  color: var(--texto-suave);
 }
 
 .marca-login__titulo {
@@ -581,7 +596,8 @@ button {
 .insignia--verde { background: var(--verde-100); color: var(--primario-fuerte); }
 .insignia--ambar { background: rgba(247, 181, 56, 0.22); color: var(--ambar-600); }
 .insignia--rojo { background: rgba(229, 72, 77, 0.16); color: var(--rojo-500); }
-.insignia--azul { background: rgba(60, 120, 200, 0.16); color: #2f6fb3; }
+.insignia--azul { background: rgba(0, 104, 192, 0.16); color: var(--azul-600); }
+.insignia--naranja { background: rgba(248, 120, 0, 0.16); color: var(--naranja-600); }
 
 @media (prefers-color-scheme: dark) {
   .insignia--gris { background: #2a352d; color: var(--texto-suave); }
