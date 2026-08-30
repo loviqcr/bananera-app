@@ -26,7 +26,7 @@ services:
       - key: ADMIN_NOMBRE
         value: Administrador
       - key: CORS_ORIGINS
-        value: https://platanos-app-e8208.web.app
+        value: https://bananera-app.web.app,https://platanos-app-e8208.web.app
 
 databases:
   - name: bananera-db
