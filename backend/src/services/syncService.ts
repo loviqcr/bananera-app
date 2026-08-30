@@ -159,12 +159,28 @@ async function eliminarConLww(
       return { tabla: op.tabla, id: op.id, estado: 'rechazado', motivo: 'Sin acceso a esa finca' };
     }
   }
-  await client.query(
+  const resultado = await client.query(
     `UPDATE ${registro.tabla}
      SET eliminado_at = $2, updated_at = $2
-     WHERE id = $1 AND updated_at <= $2`,
+     WHERE id = $1 AND updated_at <= $2
+     RETURNING id`,
     [op.id, actualizadoEn]
   );
+
+  if (resultado.rowCount === 0) {
+    // Existía una versión más reciente en el servidor: no se borró, es el
+    // resultado esperado de last-write-wins. El cliente debe hacer pull.
+    await registrarAuditoria({
+      tabla: registro.tabla,
+      registroId: op.id,
+      usuarioId: usuario.id,
+      accion: 'conflicto_resuelto',
+      datosAnteriores: anterior.rows[0],
+      client,
+    });
+    return { tabla: op.tabla, id: op.id, estado: 'ok', motivo: 'Version del servidor era más reciente (LWW)' };
+  }
+
   await registrarAuditoria({
     tabla: registro.tabla,
     registroId: op.id,

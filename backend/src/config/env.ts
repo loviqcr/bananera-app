@@ -16,7 +16,7 @@ export const env = {
   jwtRefreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN ?? '30d',
   port: parseInt(process.env.PORT ?? '3000', 10),
   adminUsuario: process.env.ADMIN_USUARIO ?? 'admin',
-  adminPassword: process.env.ADMIN_PASSWORD ?? 'cambiar123',
+  adminPassword: required('ADMIN_PASSWORD'),
   adminNombre: process.env.ADMIN_NOMBRE ?? 'Administrador',
   corsOrigins: (process.env.CORS_ORIGINS ?? '*').split(',').map((s) => s.trim()),
 };

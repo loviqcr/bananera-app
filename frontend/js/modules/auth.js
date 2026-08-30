@@ -19,6 +19,29 @@ function tokenExpirado(token) {
   return Date.now() >= datos.exp * 1000;
 }
 
+/**
+ * Pide un accessToken nuevo con el refreshToken guardado (dura 30 días vs.
+ * las 12h del accessToken) y actualiza la sesión local. Devuelve null si el
+ * refreshToken también venció o no hay red — en ese caso hay que iniciar
+ * sesión de nuevo.
+ */
+async function renovarToken(sesion) {
+  try {
+    const respuesta = await fetch(`${API_BASE_URL}/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken: sesion.refreshToken }),
+    });
+    if (!respuesta.ok) return null;
+    const datos = await respuesta.json();
+    const actualizada = { ...sesion, usuario: datos.usuario, accessToken: datos.accessToken };
+    await localdb.put('sesion', actualizada);
+    return actualizada.accessToken;
+  } catch {
+    return null;
+  }
+}
+
 export const auth = {
   /**
    * Intenta iniciar sesión contra el backend. Si no hay conexión (o el
@@ -85,8 +108,18 @@ export const auth = {
     await localdb.eliminar('sesion', CLAVE_SESION);
   },
 
+  /**
+   * Token listo para usar en una llamada al backend. Si el accessToken
+   * guardado ya venció y hay red, lo renueva primero con el refreshToken —
+   * sin esto, una sesión de más de 12h quedaba sincronizando en error para
+   * siempre hasta que el usuario cerraba sesión manualmente.
+   */
   async obtenerToken() {
     const sesion = await this.sesionActual();
-    return sesion ? sesion.accessToken : null;
+    if (!sesion) return null;
+    if (navigator.onLine && tokenExpirado(sesion.accessToken)) {
+      return renovarToken(sesion);
+    }
+    return sesion.accessToken;
   },
 };
