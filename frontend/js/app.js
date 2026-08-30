@@ -3,14 +3,39 @@ import { auth } from './modules/auth.js';
 import { fincas } from './modules/fincas.js';
 import { iniciarIndicadorConexion } from './modules/estadoConexion.js';
 import { iniciarSyncClient, sincronizarAhora } from './sync/syncClient.js';
+import { renderizarDashboard } from './modules/dashboard.js';
+import { produccionModulo } from './modules/produccion.js';
+import { laboresModulo } from './modules/labores.js';
+import { calendarioModulo } from './modules/calendario.js';
+import { inventarioModulo } from './modules/inventario.js';
+import { incidenciasModulo } from './modules/incidencias.js';
+import { planillaModulo } from './modules/planilla.js';
+import { ventasModulo } from './modules/ventas.js';
+import { embolseCortaModulo } from './modules/embolseCorta.js';
+import { reportesModulo } from './modules/reportes.js';
+import { alertasModulo } from './modules/alertas.js';
 
 const ICONOS_FINCA = ['🌱', '🍌', '🌴', '🚜'];
+
+const MODULOS = {
+  produccion: produccionModulo,
+  labores: laboresModulo,
+  calendario: calendarioModulo,
+  inventario: inventarioModulo,
+  incidencias: incidenciasModulo,
+  planilla: planillaModulo,
+  ventas: ventasModulo,
+  'embolse-corta': embolseCortaModulo,
+  reportes: reportesModulo,
+  notificaciones: alertasModulo,
+};
 
 const vistas = {
   login: document.getElementById('vista-login'),
   selectorFinca: document.getElementById('vista-selector-finca'),
   selectorArea: document.getElementById('vista-selector-area'),
   inicio: document.getElementById('vista-inicio'),
+  modulo: document.getElementById('vista-modulo'),
 };
 
 const el = {
@@ -27,12 +52,20 @@ const el = {
   contexto: document.getElementById('barra-contexto'),
   bienvenidaUsuario: document.getElementById('bienvenida-usuario'),
   contextoInicio: document.getElementById('contexto-inicio'),
+  contenedorDashboard: document.getElementById('contenedor-dashboard'),
+  cuadriculaModulos: document.getElementById('cuadricula-modulos'),
+  botonVolverInicio: document.getElementById('boton-volver-inicio'),
+  tituloModulo: document.getElementById('titulo-modulo'),
+  contenedorModulo: document.getElementById('contenedor-modulo'),
 };
 
 let cacheUsuario = null;
 let cacheFincas = [];
+let vistaActual = 'login';
+let moduloActivoClave = null;
 
 function mostrarVista(nombre) {
+  vistaActual = nombre;
   for (const [clave, nodo] of Object.entries(vistas)) {
     if (!nodo) continue;
     nodo.hidden = clave !== nombre;
@@ -40,11 +73,16 @@ function mostrarVista(nombre) {
   const enSesion = nombre !== 'login';
   el.botonCambiarFinca.hidden = !enSesion || nombre === 'selectorFinca';
   el.botonSalir.hidden = !enSesion;
+  if (nombre !== 'modulo') moduloActivoClave = null;
 }
 
 function nombreFinca(id) {
   if (id === 'todas') return 'Todas las fincas';
   return cacheFincas.find((f) => f.id === id)?.nombre ?? 'Finca';
+}
+
+function contextoActual() {
+  return { fincaId: fincas.obtenerFincaActiva(), areaId: fincas.obtenerAreaActiva() };
 }
 
 async function actualizarContexto() {
@@ -87,7 +125,7 @@ async function seleccionarFinca(fincaId) {
   await actualizarContexto();
   if (fincaId === 'todas') {
     mostrarVista('inicio');
-    renderizarInicio();
+    await renderizarInicio();
     return;
   }
   await renderizarSelectorArea(fincaId);
@@ -116,7 +154,7 @@ async function renderizarSelectorArea(fincaId) {
       fincas.guardarAreaActiva(area.id);
       await actualizarContexto();
       mostrarVista('inicio');
-      renderizarInicio();
+      await renderizarInicio();
     });
     el.listaAreas.appendChild(item);
   });
@@ -133,10 +171,79 @@ el.botonAgregarArea?.addEventListener('click', async () => {
   await renderizarSelectorArea(fincaId);
 });
 
-function renderizarInicio() {
+// Módulos con datos sensibles (nómina, precios de venta) que no todo rol
+// debería ver, aunque el backend ya rechace escrituras de esos roles — sin
+// esto el usuario ve una tarjeta que lleva a una pantalla vacía o rechazada.
+const MODULOS_RESTRINGIDOS = {
+  planilla: ['administrador', 'encargado_finca', 'planilla'],
+  ventas: ['administrador', 'encargado_finca'],
+};
+
+function actualizarVisibilidadModulos() {
+  el.cuadriculaModulos?.querySelectorAll('.tarjeta-modulo').forEach((boton) => {
+    const rolesPermitidos = MODULOS_RESTRINGIDOS[boton.dataset.modulo];
+    boton.hidden = !!rolesPermitidos && !rolesPermitidos.includes(cacheUsuario?.rol);
+  });
+}
+
+async function renderizarInicio() {
   el.bienvenidaUsuario.textContent = cacheUsuario ? `Hola, ${cacheUsuario.nombre}` : '';
   el.contextoInicio.textContent = el.contexto.textContent;
+  actualizarVisibilidadModulos();
+  try {
+    await renderizarDashboard(el.contenedorDashboard, contextoActual());
+  } catch (error) {
+    console.warn('[app] No se pudo calcular el dashboard:', error);
+  }
 }
+
+// -------------------- Router de módulos --------------------
+
+el.cuadriculaModulos?.addEventListener('click', async (evento) => {
+  const boton = evento.target.closest('.tarjeta-modulo');
+  if (!boton) return;
+  await abrirModulo(boton.dataset.modulo);
+});
+
+async function abrirModulo(clave) {
+  const modulo = MODULOS[clave];
+  if (!modulo) return;
+  moduloActivoClave = clave;
+  el.tituloModulo.textContent = modulo.etiqueta;
+  el.contenedorModulo.innerHTML = '';
+  mostrarVista('modulo');
+  try {
+    await modulo.render(el.contenedorModulo, contextoActual());
+  } catch (error) {
+    console.error(`[app] Error mostrando el módulo ${clave}:`, error);
+    el.contenedorModulo.appendChild(
+      Object.assign(document.createElement('p'), {
+        className: 'mensaje-error mensaje-error--error',
+        textContent: 'No se pudo cargar este módulo. Intenta de nuevo.',
+      })
+    );
+  }
+}
+
+el.botonVolverInicio?.addEventListener('click', async () => {
+  mostrarVista('inicio');
+  await renderizarInicio();
+});
+
+// Cuando termina de sincronizar (llegaron cambios de otro dispositivo), se
+// refresca la pantalla que esté abierta para que se vean sin tener que
+// navegar manualmente.
+document.addEventListener('bananera:estado-sync', async (evento) => {
+  if (evento.detail.estado !== 'sincronizado') return;
+  if (vistaActual === 'inicio') await renderizarInicio();
+  else if (vistaActual === 'modulo' && moduloActivoClave) {
+    try {
+      await MODULOS[moduloActivoClave].render(el.contenedorModulo, contextoActual());
+    } catch {
+      /* si el módulo activo falla al refrescar en segundo plano, se deja como estaba */
+    }
+  }
+});
 
 el.botonCambiarFinca?.addEventListener('click', () => {
   fincas.limpiarSeleccion();
@@ -182,7 +289,7 @@ async function continuarDespuesDeLogin() {
   await actualizarContexto();
   if (fincaId === 'todas') {
     mostrarVista('inicio');
-    renderizarInicio();
+    await renderizarInicio();
     return;
   }
   const areaId = fincas.obtenerAreaActiva();
@@ -192,7 +299,7 @@ async function continuarDespuesDeLogin() {
     return;
   }
   mostrarVista('inicio');
-  renderizarInicio();
+  await renderizarInicio();
 }
 
 async function iniciar() {

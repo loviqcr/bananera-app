@@ -12,17 +12,56 @@
  */
 
 const NOMBRE_DB = 'bananera-app';
-const VERSION_DB = 1;
+const VERSION_DB = 2;
 
-// Cada almacén sincronizable, con su índice por finca_id cuando aplica.
-// Fase 1 solo usa 'fincas' y 'areas'; las fases futuras agregan aquí su
-// almacén (por ejemplo: entregas_platano, incidencias, ventas_platano...).
+// Cada almacén sincronizable, con su índice por finca_id cuando aplica (para
+// poder filtrar por finca activa sin conexión). Un almacén nuevo aquí queda
+// disponible de inmediato para repos.js — no hace falta tocar nada más en
+// esta capa.
 const ALMACENES = {
+  // núcleo (Fase 1)
   fincas: { keyPath: 'id', indices: [] },
   areas: { keyPath: 'id', indices: [{ nombre: 'finca_id', ruta: 'finca_id' }] },
   sesion: { keyPath: 'clave', indices: [] },
   meta: { keyPath: 'clave', indices: [] },
   sync_queue: { keyPath: 'clave', autoIncrement: true, indices: [{ nombre: 'tabla', ruta: 'tabla' }] },
+
+  // Fase 2: producción
+  variedades: { keyPath: 'id', indices: [] },
+  entregas_platano: { keyPath: 'id', indices: [{ nombre: 'finca_id', ruta: 'finca_id' }] },
+  entregas_banano: { keyPath: 'id', indices: [{ nombre: 'finca_id', ruta: 'finca_id' }] },
+
+  // Fase 3: labores y calendario
+  configuracion_frecuencias: { keyPath: 'id', indices: [] },
+  labores_siembra: { keyPath: 'id', indices: [{ nombre: 'finca_id', ruta: 'finca_id' }] },
+  labores_deshija: { keyPath: 'id', indices: [{ nombre: 'finca_id', ruta: 'finca_id' }] },
+  labores_dermaticida: { keyPath: 'id', indices: [{ nombre: 'finca_id', ruta: 'finca_id' }] },
+  labores_fertilizacion: { keyPath: 'id', indices: [{ nombre: 'finca_id', ruta: 'finca_id' }] },
+
+  // Fase 4: inventario, equipos y bodegas
+  insumos: { keyPath: 'id', indices: [{ nombre: 'finca_id', ruta: 'finca_id' }] },
+  movimientos_insumo: { keyPath: 'id', indices: [{ nombre: 'insumo_id', ruta: 'insumo_id' }] },
+  equipos: { keyPath: 'id', indices: [{ nombre: 'finca_id', ruta: 'finca_id' }] },
+  bodegas: { keyPath: 'id', indices: [] },
+  bodega_items: { keyPath: 'id', indices: [{ nombre: 'bodega_id', ruta: 'bodega_id' }] },
+  movimientos_bodega: { keyPath: 'id', indices: [{ nombre: 'bodega_item_id', ruta: 'bodega_item_id' }] },
+
+  // Fase 5: incidencias
+  incidencias: { keyPath: 'id', indices: [{ nombre: 'finca_id', ruta: 'finca_id' }] },
+
+  // Fase 6: planilla
+  empleados: { keyPath: 'id', indices: [{ nombre: 'finca_id', ruta: 'finca_id' }] },
+  asistencia: { keyPath: 'id', indices: [{ nombre: 'empleado_id', ruta: 'empleado_id' }] },
+
+  // Fase 7: ventas
+  clientes: { keyPath: 'id', indices: [] },
+  ventas_platano: { keyPath: 'id', indices: [{ nombre: 'finca_id', ruta: 'finca_id' }] },
+  ventas_banano: { keyPath: 'id', indices: [{ nombre: 'finca_id', ruta: 'finca_id' }] },
+
+  // Fase 8: embolse y corta
+  colores_cinta: { keyPath: 'id', indices: [] },
+  embolse: { keyPath: 'id', indices: [{ nombre: 'finca_id', ruta: 'finca_id' }] },
+  corta: { keyPath: 'id', indices: [{ nombre: 'finca_id', ruta: 'finca_id' }] },
 };
 
 let promesaDB = null;

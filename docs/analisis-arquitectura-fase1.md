@@ -358,3 +358,166 @@ un backend y una base de datos reales (PostgreSQL local):
   finca", indicadores de estado de sincronización, y guardado 100% offline
   verificado (crear un registro sin internet, cerrar la app, reabrir,
   reconectar, confirmar que sincroniza sin duplicar).
+
+## 11. Adenda — Fases 2 a 9 (implementación completa)
+
+Última actualización: 2026-08-30. Tras la Fase 1, Jafet pidió avanzar el
+proyecto completo (todas las fases) en la misma entrega. Esta sección deja
+registradas las decisiones nuevas y, sobre todo, los errores reales que
+apareció la verificación de punta a punta — no solo revisión de código — y
+cómo se corrigieron, siguiendo el mismo estándar de "no prototipo vacío" de
+la Fase 1.
+
+### 11.1 Decisiones de diseño de las fases 2-9
+
+- **`append_only` reconsiderado a `lww` casi en todas partes.** El plan
+  original de sincronización proponía "solo agregar" (sin edición) para
+  entregas, labores, incidencias, ventas, embolse y corta. En la práctica
+  de campo, un capataz necesita poder corregir una entrega mal digitada
+  (cantidad, calidad, área) sin crear un registro duplicado ni pedirle a un
+  administrador que edite la base de datos a mano. Se cambió esa estrategia
+  a `lww` (last-write-wins) para todas esas tablas — solo `movimientos_insumo`
+  y `movimientos_bodega` (el kárdex de inventario/bodega) se mantienen
+  estrictamente de solo-agregar, porque un movimiento de inventario nunca
+  debe "corregirse" retroactivamente — se compensa con un movimiento nuevo.
+- **`equipos.responsable_nombre` en vez de un selector de usuarios.** La
+  especificación pide un responsable con nombre y apellido, pero muchos
+  responsables de campo no tienen (ni necesitan) usuario en el sistema, y
+  los roles no-administradores no pueden consultar `/usuarios` para llenar
+  un selector. Se agregó una columna de texto libre (migración 002) en vez
+  de forzar una relación con `usuarios`.
+- **Notificaciones calculadas en el cliente, no un backend de push real.**
+  Confirmado en el análisis de Fase 1 y mantenido: `alertas.js` combina
+  inventario bajo, labores atrasadas/próximas e incidencias urgentes ya
+  sincronizadas en IndexedDB, sin necesitar infraestructura de push (FCM,
+  web push) que no formaba parte del alcance aprobado.
+- **Exportación de reportes**: CSV con Blob nativo, Excel con SheetJS
+  (cargado desde cdnjs), PDF con `window.print()` y una hoja de estilos
+  `@media print` dedicada — sin backend de generación de PDF, evita una
+  dependencia pesada del lado del servidor para un requisito que el
+  navegador ya resuelve bien.
+- **Auditoría (`audit_logs`) no se sincroniza a los dispositivos.** Se
+  consulta bajo demanda vía `GET /auditoria` (solo administrador), en línea,
+  con filtros — descargar todo el historial de cambios a cada celular de
+  campo no tiene sentido y crecería sin límite.
+- **`movimientos_insumo` y `movimientos_bodega` no están acotados por
+  finca (`fincaScoped: false`) a nivel de motor de sincronización.** El
+  acceso real se controla porque el `insumo_id`/`bodega_item_id` al que
+  apuntan sí pertenece a una finca — queda documentado como limitación
+  conocida: un usuario con acceso a una sola finca puede en teoría enviar
+  un movimiento para un `insumo_id` de otra finca si lo adivina. No se
+  explotó en las pruebas porque la UI nunca ofrece ids ajenos, pero es un
+  endurecimiento pendiente si se requiere blindaje contra manipulación
+  directa de la API (fuera del alcance normal de la app de campo).
+
+### 11.2 Errores reales encontrados y corregidos en la verificación
+
+La verificación de Fase 1 ya había establecido el estándar de probar contra
+Postgres real y navegador real en vez de solo leer el código. Aplicar el
+mismo estándar a las fases 2-9 encontró tres fallas reales que una simple
+revisión de código no hubiera detectado, las tres con corrección aplicada y
+reverificada:
+
+1. **`/sync/pull` completamente roto para todo dispositivo.** Las tablas
+   `clientes`, `variedades`, `colores_cinta` y `configuracion_frecuencias`
+   quedaron registradas en el motor de sincronización (`REGISTRO_SYNC`)
+   pero su definición en `schema.sql` nunca recibió las columnas de
+   auditoría estándar (`creado_por`, `dispositivo_id`, `created_at`,
+   `updated_at`, `eliminado_at`) que el motor asume para *cualquier* tabla
+   registrada. Como `obtenerCambiosPendientes` hace `ORDER BY updated_at`
+   sobre cada tabla registrada sin excepción, **todo** `GET /sync/pull`
+   fallaba con error 500 — no solo para esas tablas, para el dispositivo
+   completo — desde el momento en que se agregaron esas cuatro tablas al
+   registro. Se corrigió con la migración `003_clientes_columnas_sync.sql`
+   (agrega las columnas faltantes a las cuatro tablas) y se reverificó que
+   `/sync/pull` devuelve las 25 tablas correctamente.
+2. **Toda edición parcial sobre una tabla con alcance de finca se
+   rechazaba.** `repos.editar()` del cliente manda solo los campos que
+   cambiaron (no la fila completa), pero el backend exigía que el payload
+   incluyera `finca_id` para validar el acceso, cosa que un diff parcial
+   normalmente no trae. Además, el camino de escritura para `lww` usaba
+   `INSERT ... ON CONFLICT DO UPDATE`, y Postgres evalúa las restricciones
+   `NOT NULL` de la fila candidata del INSERT *antes* de llegar a resolver
+   el conflicto — así que aunque se resolviera lo de `finca_id`, cualquier
+   edición parcial que no repitiera columnas `NOT NULL` sin default (por
+   ejemplo, cambiar solo el `estado` de un equipo, sin repetir `codigo`/
+   `nombre`/`tipo`) igual hubiera fallado. Esto afectaba **cualquier**
+   edición sobre **cualquier** tabla — el cambio de estado de un equipo, la
+   actualización de estado de una incidencia, y cualquier corrección futura
+   sobre datos ya sincronizados. Se corrigió en dos partes: (a) si el
+   payload de una edición no trae `finca_id`, el servidor busca la
+   `finca_id` de la fila existente para validar el acceso; (b) se separó el
+   camino de edición de tablas `lww` a un `UPDATE` real que solo toca las
+   columnas presentes en el diff, en vez de reutilizar el `INSERT ... ON
+   CONFLICT` pensado para altas completas. Reverificado con una edición
+   vieja (debe perder contra LWW), una edición nueva (debe ganar) y una
+   edición parcial de un solo campo (debe conservar el resto de la fila
+   intacto) — los tres casos pasaron.
+3. **Los cálculos de "hoy" quedaban en cero después de sincronizar.** El
+   driver `pg` devuelve las columnas `DATE` como objetos `Date` de
+   JavaScript, que al serializarse a JSON se convierten en un timestamp
+   completo (`"2026-08-30T00:00:00.000Z"`) en vez de la fecha simple
+   (`"2026-08-30"`) que el dispositivo generó al crear el registro. Como
+   varios módulos comparan fechas por igualdad exacta de texto
+   (`fila.fecha === hoyISO()` en las tarjetas "hoy" del dashboard, en
+   `laboresConEstado`, en el calendario, y en el upsert por llave natural
+   de asistencia), cualquier dato que ya hubiera pasado por el servidor
+   dejaba de coincidir con la fecha de "hoy" generada localmente — las
+   tarjetas de producción del día mostraban 0 aunque sí había entregas
+   registradas hoy. Se corrigió con un solo cambio en el pool de conexión
+   (`types.setTypeParser` para el OID 1082 de Postgres), forzando que toda
+   columna `DATE` viaje siempre como texto plano `YYYY-MM-DD` sin pasar por
+   el constructor `Date` — corrige el problema de raíz para cualquier
+   columna de fecha, actual o futura, sin tocar cada módulo por separado.
+   Reverificado en el navegador: tras la corrección, "Dedos de plátano hoy"
+   y "Manos de banano hoy" mostraron los valores reales en vez de 0.
+
+### 11.3 Verificación realizada para las fases 2-9
+
+- `npm run typecheck` sin errores después de cada corrección.
+- Migraciones 002 y 003 aplicadas sobre PostgreSQL real y reverificadas con
+  consultas directas (bodegas por finca, variedades sembradas, columna
+  `responsable_nombre`, columnas de auditoría en las cuatro tablas de
+  catálogo).
+- Backend real levantado (`npm run dev`) y probado con lotes de
+  `/sync/push` que cubren las 25 tablas sincronizables: producción
+  (plátano/banano), labores con frecuencia auto-calculada, insumos +
+  kárdex, equipos, bodegas + transferencia entre bodega de finca y bodega
+  principal (verificado matemáticamente: origen −5, destino +5, ambos
+  kárdex independientes), incidencias, empleados + asistencia, clientes +
+  ventas, embolse y corta — las 25 tablas devolvieron `estado: 'ok'` tras
+  las correcciones.
+- Casos de conflicto probados explícitamente contra el servidor real: LWW
+  con edición vieja (rechazada) y nueva (aceptada), edición parcial de un
+  campo sin perder el resto de la fila, upsert por llave natural de
+  asistencia (dos UUIDs de dispositivos distintos para el mismo
+  empleado+fecha convergen en una sola fila), y rechazo controlado de un
+  código de equipo duplicado (`23505` → `'rechazado'`, no un error que
+  reintente para siempre).
+- **Prueba de punta a punta con navegador real (Playwright)**: login →
+  selector "todas las fincas" (dashboard consolidado sin colgarse) →
+  cambio a Finca 1 → los 10 módulos nuevos (Producción, Labores,
+  Calendario, Inventario, Incidencias, Planilla, Ventas, Embolse/Corta,
+  Reportes, Notificaciones) abren sin mensajes de error → flujo funcional
+  completo de registrar una entrega de plátano (aparece en la lista de
+  inmediato) → registrar un insumo y confirmar que la alerta de inventario
+  bajo aparece → reportar una incidencia urgente y confirmar que sube el
+  contador de "Incidencias pendientes" del dashboard → abrir Reportes y
+  confirmar que los botones de exportación (CSV/Excel/PDF) están
+  presentes y el filtro funciona. Capturas de pantalla guardadas para
+  revisión visual de cada módulo.
+- Verificación cruzada de cada módulo de campos contra el `schema.sql` real
+  (no contra lo que el módulo "debería" tener) para los nueve módulos de
+  negocio — se encontraron y corrigieron los tres problemas de la sección
+  11.2 precisamente por hacer esta verificación contra el servidor real en
+  vez de solo revisar el código.
+
+### 11.4 Qué queda pendiente / fuera de alcance
+
+- Blindaje adicional de `movimientos_insumo`/`movimientos_bodega` contra un
+  `insumo_id`/`bodega_item_id` de otra finca enviado directamente a la API
+  (no a través de la UI) — ver nota en 11.1.
+- Notificaciones push reales (fuera de alcance aprobado; el cálculo
+  client-side cubre el requisito funcional).
+- PIN de acceso rápido en campo (la columna `pin_hash` sigue lista desde
+  Fase 1, sin usarse todavía).

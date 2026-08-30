@@ -6,6 +6,7 @@ import { authRouter } from './routes/auth.routes';
 import { fincasRouter } from './routes/fincas.routes';
 import { syncRouter } from './routes/sync.routes';
 import { usuariosRouter } from './routes/usuarios.routes';
+import { auditoriaRouter } from './routes/auditoria.routes';
 import { manejadorErrores, rutaNoEncontrada } from './middleware/errorHandler';
 import { pool } from './db/pool';
 
@@ -17,7 +18,7 @@ app.use(
     origin: env.corsOrigins.includes('*') ? true : env.corsOrigins,
   })
 );
-app.use(express.json({ limit: '5mb' })); // 5mb: los lotes de sync pueden traer varios registros con observaciones largas
+app.use(express.json({ limit: '20mb' })); // 20mb: los lotes de sync pueden traer fotos de incidencias en base64
 
 app.get('/health', async (_req, res) => {
   try {
@@ -32,6 +33,7 @@ app.use('/auth', authRouter);
 app.use('/fincas', fincasRouter);
 app.use('/sync', syncRouter);
 app.use('/usuarios', usuariosRouter);
+app.use('/auditoria', auditoriaRouter);
 
 app.use(rutaNoEncontrada);
 app.use(manejadorErrores);

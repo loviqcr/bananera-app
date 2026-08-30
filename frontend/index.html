@@ -62,61 +62,64 @@
       <button class="boton boton--fantasma" id="boton-agregar-area" hidden>+ Agregar área</button>
     </section>
 
-    <!-- ============== INICIO / SHELL DE MÓDULOS ============== -->
+    <!-- ============== INICIO / DASHBOARD ============== -->
     <section class="pantalla" id="vista-inicio" hidden>
       <h1 class="titulo-pantalla" id="bienvenida-usuario"></h1>
       <p class="subtitulo-pantalla" id="contexto-inicio"></p>
 
-      <div class="tarjeta centro-texto">
-        <span class="chip">Fase 1 activa</span>
-        <p class="subtitulo-pantalla" style="margin-top:10px">
-          Arquitectura, base de datos, usuarios, fincas/áreas y sincronización offline
-          ya están funcionando. Los módulos de abajo se activan en las próximas fases.
-        </p>
-      </div>
+      <div id="contenedor-dashboard"></div>
 
-      <div class="cuadricula-modulos">
-        <div class="tarjeta-modulo tarjeta-modulo--proximamente">
+      <div class="cuadricula-modulos" id="cuadricula-modulos">
+        <button class="tarjeta-modulo" data-modulo="produccion">
           <span class="tarjeta-modulo__icono">🍌</span>
           <span>Producción</span>
-          <span class="etiqueta-proximamente">Fase 2</span>
-        </div>
-        <div class="tarjeta-modulo tarjeta-modulo--proximamente">
+        </button>
+        <button class="tarjeta-modulo" data-modulo="labores">
           <span class="tarjeta-modulo__icono">🌱</span>
           <span>Labores</span>
-          <span class="etiqueta-proximamente">Fase 3</span>
-        </div>
-        <div class="tarjeta-modulo tarjeta-modulo--proximamente">
+        </button>
+        <button class="tarjeta-modulo" data-modulo="calendario">
+          <span class="tarjeta-modulo__icono">📅</span>
+          <span>Calendario</span>
+        </button>
+        <button class="tarjeta-modulo" data-modulo="inventario">
           <span class="tarjeta-modulo__icono">📦</span>
           <span>Inventario / Bodega</span>
-          <span class="etiqueta-proximamente">Fase 4</span>
-        </div>
-        <div class="tarjeta-modulo tarjeta-modulo--proximamente">
+        </button>
+        <button class="tarjeta-modulo" data-modulo="incidencias">
           <span class="tarjeta-modulo__icono">🚨</span>
           <span>Incidencias</span>
-          <span class="etiqueta-proximamente">Fase 5</span>
-        </div>
-        <div class="tarjeta-modulo tarjeta-modulo--proximamente">
+        </button>
+        <button class="tarjeta-modulo" data-modulo="planilla">
           <span class="tarjeta-modulo__icono">👷</span>
           <span>Planilla</span>
-          <span class="etiqueta-proximamente">Fase 6</span>
-        </div>
-        <div class="tarjeta-modulo tarjeta-modulo--proximamente">
+        </button>
+        <button class="tarjeta-modulo" data-modulo="ventas">
           <span class="tarjeta-modulo__icono">💰</span>
           <span>Ventas</span>
-          <span class="etiqueta-proximamente">Fase 7</span>
-        </div>
-        <div class="tarjeta-modulo tarjeta-modulo--proximamente">
+        </button>
+        <button class="tarjeta-modulo" data-modulo="embolse-corta">
           <span class="tarjeta-modulo__icono">🎗️</span>
           <span>Embolse / Corta</span>
-          <span class="etiqueta-proximamente">Fase 8</span>
-        </div>
-        <div class="tarjeta-modulo tarjeta-modulo--proximamente">
+        </button>
+        <button class="tarjeta-modulo" data-modulo="reportes">
           <span class="tarjeta-modulo__icono">📊</span>
           <span>Reportes</span>
-          <span class="etiqueta-proximamente">Fase 9</span>
-        </div>
+        </button>
+        <button class="tarjeta-modulo" data-modulo="notificaciones">
+          <span class="tarjeta-modulo__icono">🔔</span>
+          <span>Alertas</span>
+        </button>
       </div>
+    </section>
+
+    <!-- ============== VISTA DE MÓDULO (contenedor genérico) ============== -->
+    <section class="pantalla" id="vista-modulo" hidden>
+      <div class="encabezado-modulo">
+        <button class="boton-icono" id="boton-volver-inicio" title="Volver" style="background:var(--verde-100);color:var(--primario-fuerte)">←</button>
+        <h1 class="encabezado-modulo__titulo" id="titulo-modulo"></h1>
+      </div>
+      <div id="contenedor-modulo"></div>
     </section>
 
   </main>
@@ -124,6 +127,7 @@
   <script>
     window.BANANERA_API_URL = 'https://bananera-backend.onrender.com';
   </script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
   <script type="module" src="./js/app.js"></script>
 </body>
 </html>

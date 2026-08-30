@@ -1,12 +1,19 @@
-# App Bananera — Fase 1
+# App Bananera — Proyecto completo (Fases 1 a 9)
 
-Gestión operativa de 4 fincas bananeras, offline-first. Esta entrega cubre la
-**Fase 1**: arquitectura, base de datos, login, usuarios, fincas, áreas,
-guardado sin internet y sincronización.
+Gestión operativa de 4 fincas bananeras, offline-first. Esta entrega cubre
+las **9 fases completas**: arquitectura y base de datos, login/usuarios/
+fincas/áreas, producción (plátano/banano), labores agrícolas con calendario,
+inventario/equipos/bodegas (con kárdex y transferencias), incidencias con
+foto y alertas, planilla/asistencia, ventas con reportes por cliente,
+embolse/corta con rendimiento, y dashboard consolidado + reportes
+exportables (CSV/Excel/PDF) + auditoría.
 
 Lee primero `docs/analisis-arquitectura-fase1.md` — ahí está el análisis
 completo, las decisiones tomadas, la arquitectura y el diseño de base de
-datos de las 9 fases.
+datos de las 9 fases (sección 0-10), **más la adenda de las fases 2-9**
+(sección 11) con las decisiones de esas fases y — importante — tres errores
+reales que encontró la verificación de punta a punta contra un servidor y
+navegador reales, y cómo se corrigieron.
 
 ## Estructura
 
@@ -93,16 +100,30 @@ sin conexión.
 Esto ya se verificó de punta a punta con una prueba automatizada (ver
 sección 9 de `docs/analisis-arquitectura-fase1.md`).
 
-## Próximas fases
+## Módulos incluidos
 
-El orden confirmado con Jafet (sección 8 del documento de arquitectura):
-Fase 2 dashboard/producción, Fase 3 labores/calendario, Fase 4
-inventario/bodegas, Fase 5 incidencias/notificaciones, Fase 6
-planilla/asistencia, Fase 7 ventas/reportes, Fase 8 embolse/corta, Fase 9
-dashboard avanzado/exportación/auditoría.
+Desde la pantalla de inicio (una vez elegida una finca) quedan disponibles:
+Producción, Labores, Calendario, Inventario / Bodega, Incidencias, Planilla,
+Ventas, Embolse / Corta, Reportes y Notificaciones (alertas). El dashboard
+de inicio resume producción del día, ventas del mes, personal presente/
+ausente, insumos bajos, incidencias pendientes y labores atrasadas/próximas
+— y, si eliges "Todas las fincas", agrega una comparativa por finca.
 
-Cada fase se agrega sin rediseñar lo ya construido: nuevas rutas en
-`backend/src/routes/`, una entrada nueva en
-`backend/src/services/syncRegistry.ts`, y un módulo nuevo en
-`frontend/js/modules/` que reutiliza `localdb.js` y `syncClient.js` tal
-como están.
+Cada módulo se agregó sin rediseñar lo ya construido: una entrada nueva en
+`backend/src/services/syncRegistry.ts` (sin rutas nuevas — el motor de
+sincronización genérico de la Fase 1 ya da CRUD offline-first a cualquier
+tabla registrada), y un módulo nuevo en `frontend/js/modules/` que reutiliza
+`localdb.js`, `repos.js` y `syncClient.js` tal como están.
+
+## Antes de usar esto con datos reales
+
+1. Aplica las migraciones en orden: `001_init` (esquema completo) → `002_ajustes_fases`
+   (bodega por finca, variedades base, `equipos.responsable_nombre`) →
+   `003_clientes_columnas_sync` (columnas de auditoría en `clientes`,
+   `variedades`, `colores_cinta`, `configuracion_frecuencias` — sin esto
+   `/sync/pull` falla, ver adenda sección 11.2). `npm run migrate` las
+   aplica todas en orden automáticamente.
+2. Cambia `JWT_SECRET`, `JWT_REFRESH_SECRET` y `ADMIN_PASSWORD` — los
+   valores de `.env.example` son solo para desarrollo.
+3. Revisa la sección 11.4 de la adenda ("Qué queda pendiente / fuera de
+   alcance") antes de considerar esto listo para producción sin supervisión.

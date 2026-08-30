@@ -108,9 +108,14 @@ CREATE TABLE audit_logs (
 -- ============================================================================
 
 CREATE TABLE variedades (
-  id    UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  nombre TEXT NOT NULL,
-  tipo  TEXT NOT NULL CHECK (tipo IN ('platano','banano'))
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nombre         TEXT NOT NULL,
+  tipo           TEXT NOT NULL CHECK (tipo IN ('platano','banano')),
+  creado_por     UUID REFERENCES usuarios(id),
+  dispositivo_id TEXT,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  eliminado_at   TIMESTAMPTZ
 );
 
 CREATE TABLE entregas_platano (
@@ -156,9 +161,14 @@ CREATE TABLE entregas_banano (
 -- ============================================================================
 
 CREATE TABLE configuracion_frecuencias (
-  id         UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  tipo_labor TEXT NOT NULL UNIQUE, -- 'deshija' | 'dermaticida' | 'fertilizacion'
-  dias       INTEGER NOT NULL
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  tipo_labor     TEXT NOT NULL UNIQUE, -- 'deshija' | 'dermaticida' | 'fertilizacion'
+  dias           INTEGER NOT NULL,
+  creado_por     UUID REFERENCES usuarios(id),
+  dispositivo_id TEXT,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  eliminado_at   TIMESTAMPTZ
 );
 
 CREATE TABLE labores_siembra (
@@ -277,9 +287,9 @@ CREATE TABLE equipos (
   dispositivo_id     TEXT,
   created_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
   updated_at         TIMESTAMPTZ NOT NULL DEFAULT now(),
-  eliminado_at       TIMESTAMPTZ,
-  UNIQUE (codigo)
+  eliminado_at       TIMESTAMPTZ
 );
+CREATE UNIQUE INDEX equipos_codigo_activo_key ON equipos (codigo) WHERE eliminado_at IS NULL;
 
 -- ============================================================================
 -- BODEGAS [FASE 4]
@@ -369,7 +379,7 @@ CREATE TABLE empleados (
   id             UUID PRIMARY KEY,
   finca_id       UUID NOT NULL REFERENCES fincas(id),
   area_id        UUID REFERENCES areas(id),
-  codigo         TEXT NOT NULL UNIQUE,
+  codigo         TEXT NOT NULL,
   nombre         TEXT NOT NULL,
   puesto         TEXT,
   estado         TEXT NOT NULL DEFAULT 'activo' CHECK (estado IN ('activo','inactivo')),
@@ -380,6 +390,7 @@ CREATE TABLE empleados (
   updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
   eliminado_at   TIMESTAMPTZ
 );
+CREATE UNIQUE INDEX empleados_codigo_activo_key ON empleados (codigo) WHERE eliminado_at IS NULL;
 
 CREATE TABLE asistencia (
   id            UUID PRIMARY KEY,
@@ -400,9 +411,14 @@ CREATE TABLE asistencia (
 -- ============================================================================
 
 CREATE TABLE clientes (
-  id       UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  nombre   TEXT NOT NULL,
-  contacto TEXT
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nombre         TEXT NOT NULL,
+  contacto       TEXT,
+  creado_por     UUID REFERENCES usuarios(id),
+  dispositivo_id TEXT,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  eliminado_at   TIMESTAMPTZ
 );
 
 CREATE TABLE ventas_platano (
@@ -444,9 +460,14 @@ CREATE TABLE ventas_banano (
 -- ============================================================================
 
 CREATE TABLE colores_cinta (
-  id     UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-  nombre TEXT NOT NULL UNIQUE,
-  activo BOOLEAN NOT NULL DEFAULT true
+  id             UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  nombre         TEXT NOT NULL UNIQUE,
+  activo         BOOLEAN NOT NULL DEFAULT true,
+  creado_por     UUID REFERENCES usuarios(id),
+  dispositivo_id TEXT,
+  created_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  updated_at     TIMESTAMPTZ NOT NULL DEFAULT now(),
+  eliminado_at   TIMESTAMPTZ
 );
 
 CREATE TABLE embolse (

@@ -4,7 +4,7 @@
  * este caché — esas las maneja directamente el Sync Client contra
  * IndexedDB, que es la fuente de verdad local.
  */
-const CACHE = 'bananera-shell-v1';
+const CACHE = 'bananera-shell-v2';
 
 const ARCHIVOS_SHELL = [
   './',
@@ -13,11 +13,24 @@ const ARCHIVOS_SHELL = [
   './css/estilos.css',
   './js/app.js',
   './js/config.js',
+  './js/ui.js',
   './js/db/localdb.js',
+  './js/db/repos.js',
   './js/sync/syncClient.js',
   './js/modules/auth.js',
   './js/modules/fincas.js',
   './js/modules/estadoConexion.js',
+  './js/modules/produccion.js',
+  './js/modules/labores.js',
+  './js/modules/calendario.js',
+  './js/modules/inventario.js',
+  './js/modules/incidencias.js',
+  './js/modules/alertas.js',
+  './js/modules/planilla.js',
+  './js/modules/ventas.js',
+  './js/modules/embolseCorta.js',
+  './js/modules/dashboard.js',
+  './js/modules/reportes.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
 ];

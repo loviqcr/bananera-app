@@ -348,6 +348,34 @@ button {
   font-weight: 600;
   font-size: 0.92rem;
   color: var(--texto);
+  cursor: pointer;
+  min-height: 92px;
+  justify-content: center;
+  transition: border-color 0.15s ease, transform 0.12s ease;
+}
+
+.tarjeta-modulo:active {
+  transform: scale(0.97);
+}
+
+.tarjeta-modulo:hover {
+  border-color: var(--primario);
+}
+
+.tarjeta-modulo .etiqueta-contador {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--primario-fuerte);
+  background: var(--verde-100);
+  padding: 2px 8px;
+  border-radius: 999px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tarjeta-modulo .etiqueta-contador {
+    background: rgba(62, 168, 102, 0.18);
+    color: var(--verde-500);
+  }
 }
 
 .tarjeta-modulo__icono {
@@ -420,4 +448,375 @@ button {
 .marca-login__subtitulo {
   color: var(--texto-suave);
   font-size: 0.9rem;
+}
+
+/* ============================================================================
+   Componentes de módulo (fases 2-9): pestañas, listas, tarjetas de
+   estadística, calendario, insignias de estado/prioridad, tablas de reporte.
+   ========================================================================= */
+
+.encabezado-modulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.encabezado-modulo__titulo {
+  font-size: 1.25rem;
+  font-weight: 700;
+  flex: 1;
+  text-wrap: balance;
+}
+
+.pestanas {
+  display: flex;
+  gap: 6px;
+  overflow-x: auto;
+  padding-bottom: 4px;
+  margin-bottom: 16px;
+}
+
+.pestana {
+  flex: none;
+  padding: 9px 14px;
+  border-radius: 999px;
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  color: var(--texto-suave);
+  font-size: 0.86rem;
+  font-weight: 700;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.pestana--activa {
+  background: var(--primario);
+  border-color: var(--primario);
+  color: var(--blanco);
+}
+
+.rejilla-estadisticas {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: var(--espacio);
+}
+
+.estadistica {
+  padding: 14px;
+  text-align: center;
+}
+
+.estadistica__valor {
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--primario-fuerte);
+}
+
+@media (prefers-color-scheme: dark) {
+  .estadistica__valor { color: var(--verde-500); }
+}
+
+.estadistica__etiqueta {
+  font-size: 0.76rem;
+  color: var(--texto-suave);
+  margin-top: 2px;
+}
+
+.estadistica--alerta .estadistica__valor { color: var(--rojo-500); }
+.estadistica--pendiente .estadistica__valor { color: var(--ambar-600); }
+
+.lista-registros {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.fila-registro {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 12px 14px;
+}
+
+.fila-registro__titulo {
+  font-weight: 700;
+  font-size: 0.94rem;
+}
+
+.fila-registro__subtitulo {
+  font-size: 0.8rem;
+  color: var(--texto-suave);
+  margin-top: 2px;
+}
+
+.fila-registro__valor {
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.fila-registro__valor.tono-alerta { color: var(--rojo-500); }
+.fila-registro__valor.tono-ambar { color: var(--ambar-600); }
+.fila-registro__valor.tono-verde { color: var(--primario); }
+
+.insignia {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.insignia--gris { background: var(--gris-300); color: var(--gris-900); }
+.insignia--verde { background: var(--verde-100); color: var(--primario-fuerte); }
+.insignia--ambar { background: rgba(247, 181, 56, 0.22); color: var(--ambar-600); }
+.insignia--rojo { background: rgba(229, 72, 77, 0.16); color: var(--rojo-500); }
+.insignia--azul { background: rgba(60, 120, 200, 0.16); color: #2f6fb3; }
+
+@media (prefers-color-scheme: dark) {
+  .insignia--gris { background: #2a352d; color: var(--texto-suave); }
+}
+
+.barra-acciones {
+  display: flex;
+  gap: 10px;
+  margin-bottom: var(--espacio);
+}
+
+.barra-acciones > .boton {
+  width: auto;
+  min-height: 44px;
+  padding: 0 16px;
+  flex: none;
+}
+
+.tabla-envoltorio {
+  overflow-x: auto;
+  border-radius: var(--radio);
+  border: 1px solid var(--borde);
+  margin-bottom: var(--espacio);
+}
+
+.tabla-reporte {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  background: var(--superficie);
+}
+
+.tabla-reporte th,
+.tabla-reporte td {
+  padding: 10px 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--borde);
+  white-space: nowrap;
+}
+
+.tabla-reporte th {
+  background: var(--fondo);
+  font-weight: 700;
+  color: var(--texto-suave);
+  font-size: 0.74rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.tabla-reporte tfoot td {
+  font-weight: 800;
+  border-bottom: none;
+  border-top: 2px solid var(--borde);
+}
+
+/* ---------- Calendario agrícola ---------- */
+
+.calendario-cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.calendario-cabecera__mes {
+  font-weight: 700;
+  font-size: 1.05rem;
+}
+
+.rejilla-calendario {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: var(--espacio);
+}
+
+.calendario-diasemana {
+  text-align: center;
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--texto-suave);
+  text-transform: uppercase;
+}
+
+.calendario-dia {
+  aspect-ratio: 1;
+  border-radius: 10px;
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+  position: relative;
+  gap: 2px;
+}
+
+.calendario-dia--vacio {
+  border: none;
+  background: transparent;
+  cursor: default;
+}
+
+.calendario-dia--hoy {
+  border-color: var(--primario);
+  border-width: 2px;
+}
+
+.calendario-dia--seleccionado {
+  background: var(--primario);
+  color: var(--blanco);
+}
+
+.calendario-dia__puntos {
+  display: flex;
+  gap: 2px;
+}
+
+.punto {
+  width: 6px;
+  height: 6px;
+  border-radius: 999px;
+}
+
+.punto--rojo { background: var(--rojo-500); }
+.punto--ambar { background: var(--ambar-500); }
+.punto--verde { background: var(--verde-500); }
+
+/* ---------- Comparativa entre las 4 fincas ---------- */
+
+.comparativa-fincas {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tarjeta-finca-resumen {
+  padding: 14px;
+}
+
+.tarjeta-finca-resumen__cabecera {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-weight: 800;
+  margin-bottom: 8px;
+}
+
+.tarjeta-finca-resumen__metricas {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 6px;
+  font-size: 0.82rem;
+}
+
+.tarjeta-finca-resumen__metrica {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  color: var(--texto-suave);
+}
+
+.tarjeta-finca-resumen__metrica strong {
+  color: var(--texto);
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---------- Vista previa de foto (incidencias) ---------- */
+
+.previa-foto {
+  width: 100%;
+  max-height: 220px;
+  object-fit: cover;
+  border-radius: 12px;
+  margin-top: 8px;
+  border: 1px solid var(--borde);
+}
+
+/* ---------- Impresión de reportes (exportar a PDF vía el navegador) ---------- */
+
+/* ---------- Diálogo modal pequeño (transferencias, acciones rápidas) ---------- */
+
+.dialogo-fondo {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 21, 18, 0.5);
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  z-index: 50;
+  padding: 0;
+}
+
+@media (min-width: 480px) {
+  .dialogo-fondo {
+    align-items: center;
+    padding: var(--espacio);
+  }
+}
+
+.dialogo-caja {
+  width: 100%;
+  max-width: 420px;
+  margin: 0;
+  border-radius: 18px 18px 0 0;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+@media (min-width: 480px) {
+  .dialogo-caja {
+    border-radius: var(--radio);
+  }
+}
+
+@media print {
+  .barra-superior,
+  .aviso-offline,
+  .banner-preview,
+  .pestanas,
+  .barra-acciones,
+  #boton-cambiar-finca,
+  #boton-salir,
+  .no-imprimir {
+    display: none !important;
+  }
+  body {
+    background: white;
+    color: black;
+  }
+  .pantalla {
+    max-width: none;
+    padding: 0;
+  }
 }
