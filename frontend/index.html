@@ -1,0 +1,126 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#1b5e3a" />
+  <title>App Bananera</title>
+  <link rel="manifest" href="./manifest.json" />
+  <link rel="icon" href="./icons/icon-192.png" />
+  <link rel="apple-touch-icon" href="./icons/icon-192.png" />
+  <link rel="stylesheet" href="./css/estilos.css" />
+</head>
+<body>
+
+  <header class="barra-superior">
+    <span class="barra-superior__marca">🍌 Bananera</span>
+    <span class="barra-superior__contexto" id="barra-contexto"></span>
+    <span class="indicador-conexion" id="indicador-conexion">⏳</span>
+    <button class="boton-icono" id="boton-cambiar-finca" title="Cambiar finca" hidden>🔁</button>
+    <button class="boton-icono" id="boton-salir" title="Salir" hidden>⎋</button>
+  </header>
+
+  <div class="aviso-offline" id="aviso-offline" hidden></div>
+
+  <main>
+
+    <!-- ============== LOGIN ============== -->
+    <section class="pantalla" id="vista-login">
+      <div class="marca-login">
+        <div class="marca-login__icono">🍌</div>
+        <div class="marca-login__titulo">App Bananera</div>
+        <div class="marca-login__subtitulo">Gestión de las 4 fincas — funciona sin internet</div>
+      </div>
+
+      <form id="form-login" class="tarjeta">
+        <div class="campo">
+          <label for="campo-usuario">Usuario</label>
+          <input id="campo-usuario" name="usuario" type="text" autocomplete="username" required />
+        </div>
+        <div class="campo">
+          <label for="campo-password">Contraseña</label>
+          <input id="campo-password" name="password" type="password" autocomplete="current-password" required />
+        </div>
+        <div class="mensaje-error" id="error-login"></div>
+        <button type="submit" class="boton boton--primario">Ingresar</button>
+      </form>
+    </section>
+
+    <!-- ============== SELECTOR DE FINCA ============== -->
+    <section class="pantalla" id="vista-selector-finca" hidden>
+      <h1 class="titulo-pantalla">Selecciona una finca</h1>
+      <p class="subtitulo-pantalla">Se recordará tu selección — no tendrás que elegirla de nuevo cada vez.</p>
+      <div class="cuadricula-fincas" id="cuadricula-fincas"></div>
+    </section>
+
+    <!-- ============== SELECTOR DE ÁREA ============== -->
+    <section class="pantalla" id="vista-selector-area" hidden>
+      <h1 class="titulo-pantalla">Selecciona un área</h1>
+      <p class="subtitulo-pantalla" id="nombre-finca-seleccion-area"></p>
+      <div class="lista-areas" id="lista-areas"></div>
+      <div class="espaciador"></div>
+      <button class="boton boton--fantasma" id="boton-agregar-area" hidden>+ Agregar área</button>
+    </section>
+
+    <!-- ============== INICIO / SHELL DE MÓDULOS ============== -->
+    <section class="pantalla" id="vista-inicio" hidden>
+      <h1 class="titulo-pantalla" id="bienvenida-usuario"></h1>
+      <p class="subtitulo-pantalla" id="contexto-inicio"></p>
+
+      <div class="tarjeta centro-texto">
+        <span class="chip">Fase 1 activa</span>
+        <p class="subtitulo-pantalla" style="margin-top:10px">
+          Arquitectura, base de datos, usuarios, fincas/áreas y sincronización offline
+          ya están funcionando. Los módulos de abajo se activan en las próximas fases.
+        </p>
+      </div>
+
+      <div class="cuadricula-modulos">
+        <div class="tarjeta-modulo tarjeta-modulo--proximamente">
+          <span class="tarjeta-modulo__icono">🍌</span>
+          <span>Producción</span>
+          <span class="etiqueta-proximamente">Fase 2</span>
+        </div>
+        <div class="tarjeta-modulo tarjeta-modulo--proximamente">
+          <span class="tarjeta-modulo__icono">🌱</span>
+          <span>Labores</span>
+          <span class="etiqueta-proximamente">Fase 3</span>
+        </div>
+        <div class="tarjeta-modulo tarjeta-modulo--proximamente">
+          <span class="tarjeta-modulo__icono">📦</span>
+          <span>Inventario / Bodega</span>
+          <span class="etiqueta-proximamente">Fase 4</span>
+        </div>
+        <div class="tarjeta-modulo tarjeta-modulo--proximamente">
+          <span class="tarjeta-modulo__icono">🚨</span>
+          <span>Incidencias</span>
+          <span class="etiqueta-proximamente">Fase 5</span>
+        </div>
+        <div class="tarjeta-modulo tarjeta-modulo--proximamente">
+          <span class="tarjeta-modulo__icono">👷</span>
+          <span>Planilla</span>
+          <span class="etiqueta-proximamente">Fase 6</span>
+        </div>
+        <div class="tarjeta-modulo tarjeta-modulo--proximamente">
+          <span class="tarjeta-modulo__icono">💰</span>
+          <span>Ventas</span>
+          <span class="etiqueta-proximamente">Fase 7</span>
+        </div>
+        <div class="tarjeta-modulo tarjeta-modulo--proximamente">
+          <span class="tarjeta-modulo__icono">🎗️</span>
+          <span>Embolse / Corta</span>
+          <span class="etiqueta-proximamente">Fase 8</span>
+        </div>
+        <div class="tarjeta-modulo tarjeta-modulo--proximamente">
+          <span class="tarjeta-modulo__icono">📊</span>
+          <span>Reportes</span>
+          <span class="etiqueta-proximamente">Fase 9</span>
+        </div>
+      </div>
+    </section>
+
+  </main>
+
+  <script type="module" src="./js/app.js"></script>
+</body>
+</html>
