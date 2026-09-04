@@ -14,6 +14,7 @@ import { ventasModulo } from './modules/ventas.js';
 import { embolseCortaModulo } from './modules/embolseCorta.js';
 import { reportesModulo } from './modules/reportes.js';
 import { alertasModulo } from './modules/alertas.js';
+import { usuariosModulo } from './modules/usuarios.js';
 
 const ICONOS_FINCA = ['🌱', '🍌', '🌴', '🚜'];
 
@@ -28,6 +29,7 @@ const MODULOS = {
   'embolse-corta': embolseCortaModulo,
   reportes: reportesModulo,
   notificaciones: alertasModulo,
+  usuarios: usuariosModulo,
 };
 
 const vistas = {
@@ -177,6 +179,7 @@ el.botonAgregarArea?.addEventListener('click', async () => {
 const MODULOS_RESTRINGIDOS = {
   planilla: ['administrador', 'encargado_finca', 'planilla'],
   ventas: ['administrador', 'encargado_finca'],
+  usuarios: ['administrador'],
 };
 
 function actualizarVisibilidadModulos() {
