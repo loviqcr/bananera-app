@@ -1,11 +1,24 @@
 import { Router } from 'express';
 import bcrypt from 'bcryptjs';
+import rateLimit from 'express-rate-limit';
 import { z } from 'zod';
 import { pool } from '../db/pool';
 import { firmarAccessToken, firmarRefreshToken, verificarRefreshToken } from '../utils/jwt';
 import type { UsuarioAutenticado } from '../types/express';
 
 export const authRouter = Router();
+
+// Sin esto, /login y /refresh quedan abiertos a fuerza bruta: el backend es
+// público y responde igual de rápido a cada intento. 10 intentos cada 15 min
+// por IP alcanza para que alguien se equivoque escribiendo su contraseña,
+// pero no para probar un diccionario.
+const limitadorAutenticacion = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  limit: 10,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: 'Demasiados intentos. Probá de nuevo en unos minutos.' },
+});
 
 const loginSchema = z.object({
   usuario: z.string().min(1),
@@ -31,7 +44,7 @@ async function cargarUsuarioAutenticado(usuarioId: string): Promise<UsuarioAuten
   return { id: fila.id, usuario: fila.usuario, nombre: fila.nombre, rol: fila.rol, fincaIds };
 }
 
-authRouter.post('/login', async (req, res, next) => {
+authRouter.post('/login', limitadorAutenticacion, async (req, res, next) => {
   try {
     const parsed = loginSchema.safeParse(req.body);
     if (!parsed.success) {
@@ -69,7 +82,7 @@ authRouter.post('/login', async (req, res, next) => {
 
 const refreshSchema = z.object({ refreshToken: z.string().min(1) });
 
-authRouter.post('/refresh', async (req, res, next) => {
+authRouter.post('/refresh', limitadorAutenticacion, async (req, res, next) => {
   try {
     const parsed = refreshSchema.safeParse(req.body);
     if (!parsed.success) {

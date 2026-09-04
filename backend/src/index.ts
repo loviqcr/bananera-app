@@ -12,6 +12,11 @@ import { pool } from './db/pool';
 
 const app = express();
 
+// Render pone la app detrás de un proxy: sin esto, req.ip (y por lo tanto
+// el rate limiting de /auth) ve la IP interna del proxy para todos los
+// clientes y los agrupa a todos en el mismo cupo de intentos.
+app.set('trust proxy', 1);
+
 app.use(helmet());
 app.use(
   cors({
