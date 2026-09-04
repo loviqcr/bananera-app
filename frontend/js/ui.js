@@ -179,7 +179,6 @@ export function mostrarDialogo({ titulo, campos, textoConfirmar = 'Confirmar' })
       resolve(valores);
     }
     botonCancelar.addEventListener('click', () => cerrar(null));
-    fondo.addEventListener('click', (e) => { if (e.target === fondo) cerrar(null); });
     botonConfirmar.addEventListener('click', () => {
       const valores = {};
       for (const [nombre, entrada] of Object.entries(entradas)) valores[nombre] = entrada.value;
