@@ -1,6 +1,6 @@
 {
-  "name": "App Bananera",
-  "short_name": "Bananera",
+  "name": "Cosechas Presbere",
+  "short_name": "Presbere",
   "description": "Gestión operativa de las 4 fincas bananeras, con guardado sin internet.",
   "start_url": "./index.html",
   "scope": "./",
