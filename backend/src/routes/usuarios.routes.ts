@@ -144,3 +144,26 @@ usuariosRouter.patch('/:id', async (req, res, next) => {
     client.release();
   }
 });
+
+/**
+ * Borrado logico (eliminado_at), igual al patron que ya usan fincas/areas.
+ * No se borra la fila para no perder la referencia de quien creo cada
+ * registro sincronizado (creado_por apunta a usuarios.id).
+ */
+usuariosRouter.delete('/:id', async (req, res, next) => {
+  try {
+    if (req.params.id === req.usuario!.id) {
+      return res.status(400).json({ error: 'No podés eliminar tu propio usuario' });
+    }
+    const { rows } = await pool.query(
+      `UPDATE usuarios SET eliminado_at = now(), activo = false
+       WHERE id = $1 AND eliminado_at IS NULL
+       RETURNING id`,
+      [req.params.id]
+    );
+    if (rows.length === 0) return res.status(404).json({ error: 'Usuario no encontrado' });
+    res.status(204).end();
+  } catch (err) {
+    next(err);
+  }
+});

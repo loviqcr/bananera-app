@@ -48,6 +48,17 @@ async function actualizarUsuario(id, datos) {
   return cuerpo;
 }
 
+async function eliminarUsuario(id) {
+  const respuesta = await fetch(`${API_BASE_URL}/usuarios/${id}`, {
+    method: 'DELETE',
+    headers: await cabecerasAuth(),
+  });
+  if (!respuesta.ok) {
+    const cuerpo = await respuesta.json().catch(() => ({}));
+    throw new Error(cuerpo.error || 'No se pudo eliminar el usuario');
+  }
+}
+
 function grupoCasillasFincas(listaFincas, seleccionadas) {
   const contenedor = elemento('div', { class: 'fila', style: 'flex-wrap:wrap;gap:12px' });
   const casillas = {};
@@ -109,7 +120,7 @@ function renderizarFormularioCrear(contenedor, listaFincas, alCrear) {
   contenedor.appendChild(form);
 }
 
-function renderizarFilaUsuario(usuario, listaFincas, alGuardar) {
+function renderizarFilaUsuario(usuario, listaFincas, alGuardar, alEliminar) {
   const fila = elemento('div', { class: 'tarjeta' });
   const encabezado = elemento('div', { class: 'fila', style: 'justify-content:space-between;align-items:center' }, [
     elemento('div', {}, [
@@ -144,12 +155,13 @@ function renderizarFilaUsuario(usuario, listaFincas, alGuardar) {
 
     const mensaje = elemento('div', { class: 'mensaje-error mensaje-error--error' });
     const botonGuardar = elemento('button', { type: 'button', class: 'boton boton--primario', texto: 'Guardar cambios' });
+    const botonEliminar = elemento('button', { type: 'button', class: 'boton boton--fantasma', style: 'color:var(--rojo-500,#ef4444)', texto: '🗑️ Eliminar usuario' });
 
     zonaEdicion.appendChild(elemento('div', { class: 'campo' }, [elemento('label', { texto: 'Rol' }), selectorRol]));
     zonaEdicion.appendChild(elemento('div', { class: 'campo' }, [elemento('label', { texto: 'Fincas asignadas' }), casillasFincas]));
     zonaEdicion.appendChild(elemento('label', { style: 'display:flex;align-items:center;gap:6px;font-weight:400;margin:8px 0' }, [casillaActivo, 'Usuario activo (puede iniciar sesión)']));
     zonaEdicion.appendChild(mensaje);
-    zonaEdicion.appendChild(botonGuardar);
+    zonaEdicion.appendChild(elemento('div', { class: 'fila' }, [botonGuardar, botonEliminar]));
 
     botonGuardar.addEventListener('click', async () => {
       mensaje.textContent = '';
@@ -165,6 +177,18 @@ function renderizarFilaUsuario(usuario, listaFincas, alGuardar) {
         mensaje.textContent = error.message;
       } finally {
         botonGuardar.disabled = false;
+      }
+    });
+
+    botonEliminar.addEventListener('click', async () => {
+      if (!confirm(`¿Eliminar a ${usuario.nombre} (${usuario.usuario})? No podrá volver a iniciar sesión.`)) return;
+      mensaje.textContent = '';
+      botonEliminar.disabled = true;
+      try {
+        await alEliminar(usuario.id);
+      } catch (error) {
+        mensaje.textContent = error.message;
+        botonEliminar.disabled = false;
       }
     });
   });
@@ -192,10 +216,18 @@ export const usuariosModulo = {
         const usuarios = await listarUsuarios();
         for (const usuario of usuarios) {
           zonaLista.appendChild(
-            renderizarFilaUsuario(usuario, listaFincas, async (id, datos) => {
-              await actualizarUsuario(id, datos);
-              await refrescarLista();
-            })
+            renderizarFilaUsuario(
+              usuario,
+              listaFincas,
+              async (id, datos) => {
+                await actualizarUsuario(id, datos);
+                await refrescarLista();
+              },
+              async (id) => {
+                await eliminarUsuario(id);
+                await refrescarLista();
+              }
+            )
           );
         }
       } catch (error) {
