@@ -1,4 +1,5 @@
 import { repos } from '../db/repos.js';
+import { localdb } from '../db/localdb.js';
 import { elemento, formatearFecha, hoyISO } from '../ui.js';
 import { auth } from './auth.js';
 import { API_BASE_URL } from '../config.js';
@@ -264,6 +265,41 @@ async function renderizarReportesEstandar(contenedor, contexto) {
     await actualizar();
 }
 
+async function renderizarColaSync(contenedor) {
+  contenedor.innerHTML = '';
+  contenedor.appendChild(
+    elemento('p', {
+      class: 'subtitulo-pantalla',
+      texto: 'Operaciones de este dispositivo que todavía no se subieron al servidor. Las que llevan errores repetidos probablemente nunca se van a resolver solas (por ejemplo, un dato que hace referencia a otro que nunca se guardó) — desde acá se pueden descartar sin perder el resto de la cola.',
+    })
+  );
+
+  const cola = await localdb.obtenerCola();
+  if (cola.length === 0) {
+    contenedor.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: '✅ No hay nada pendiente en este dispositivo.' }));
+    return;
+  }
+
+  for (const item of cola) {
+    const tarjeta = elemento('div', { class: 'tarjeta' });
+    tarjeta.appendChild(elemento('div', { style: 'font-weight:700' }, `${item.tabla} — ${item.operacion}`));
+    tarjeta.appendChild(elemento('div', { class: 'subtitulo-pantalla', style: 'margin:4px 0' }, `id: ${item.id}`));
+    if (item.intentos > 0) {
+      tarjeta.appendChild(
+        elemento('div', { class: 'mensaje-error mensaje-error--error' }, `${item.intentos} intento(s) fallido(s): ${item.ultimoError ?? 'sin detalle'}`)
+      );
+    }
+    const botonDescartar = elemento('button', { type: 'button', class: 'boton boton--fantasma', style: 'color:var(--rojo-500,#ef4444)', texto: '🗑️ Descartar (no reintentar más)' });
+    botonDescartar.addEventListener('click', async () => {
+      if (!confirm('¿Descartar esta operación? No se va a volver a intentar subir al servidor.')) return;
+      await localdb.quitarDeCola(item.clave);
+      await renderizarColaSync(contenedor);
+    });
+    tarjeta.appendChild(botonDescartar);
+    contenedor.appendChild(tarjeta);
+  }
+}
+
 export const reportesModulo = {
   etiqueta: 'Reportes',
   async render(contenedor, contexto) {
@@ -284,6 +320,7 @@ export const reportesModulo = {
     const tabs = [
       { clave: 'reportes', etiqueta: '📊 Reportes', render: renderizarReportesEstandar },
       { clave: 'auditoria', etiqueta: '🕵️ Auditoría', render: (c) => renderizarAuditoria(c) },
+      { clave: 'sync', etiqueta: '🔄 Sincronización', render: (c) => renderizarColaSync(c) },
     ];
     async function activar(clave) {
       for (const boton of pestanas.children) boton.classList.toggle('pestana--activa', boton.dataset.clave === clave);
