@@ -4,6 +4,7 @@ import { fincas } from './modules/fincas.js';
 import { iniciarIndicadorConexion } from './modules/estadoConexion.js';
 import { iniciarSyncClient, sincronizarAhora } from './sync/syncClient.js';
 import { renderizarDashboard } from './modules/dashboard.js';
+import { hayFormularioSinGuardar } from './ui.js';
 import { produccionModulo } from './modules/produccion.js';
 import { laboresModulo } from './modules/labores.js';
 import { calendarioModulo } from './modules/calendario.js';
@@ -240,6 +241,10 @@ document.addEventListener('bananera:estado-sync', async (evento) => {
   if (evento.detail.estado !== 'sincronizado') return;
   if (vistaActual === 'inicio') await renderizarInicio();
   else if (vistaActual === 'modulo' && moduloActivoClave) {
+    // No pisar un formulario a medio llenar: si el usuario tarda más que un
+    // ciclo de sync (30s) en terminar de escribir, este refresco automático
+    // le borraba lo que llevaba. Se reintenta en el próximo sync exitoso.
+    if (hayFormularioSinGuardar(el.contenedorModulo)) return;
     try {
       await MODULOS[moduloActivoClave].render(el.contenedorModulo, contextoActual());
     } catch {

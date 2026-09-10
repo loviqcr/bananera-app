@@ -71,6 +71,14 @@ export function crearFormulario({ campos, textoBoton = 'Guardar', alGuardar, lim
   const boton = elemento('button', { type: 'submit', class: 'boton boton--primario', texto: textoBoton });
   form.appendChild(boton);
 
+  // El sync en segundo plano (cada 30s) vuelve a dibujar el módulo entero
+  // cuando termina con éxito, para que lleguen cambios de otros dispositivos
+  // sin tener que navegar manualmente (ver app.js). Sin marcar el formulario
+  // como "sucio", ese refresco automático borraba lo que el usuario llevaba
+  // escrito si tardaba más de un ciclo de sync en terminar de llenarlo.
+  form.addEventListener('input', () => { form.dataset.sucio = '1'; });
+  form.addEventListener('change', () => { form.dataset.sucio = '1'; });
+
   form.addEventListener('submit', async (evento) => {
     evento.preventDefault();
     mensajeError.textContent = '';
@@ -86,6 +94,7 @@ export function crearFormulario({ campos, textoBoton = 'Guardar', alGuardar, lim
     try {
       await alGuardar(valores, entradas);
       if (limpiarAlGuardar) form.reset();
+      delete form.dataset.sucio;
     } catch (error) {
       mensajeError.textContent = error.message || 'No se pudo guardar';
     } finally {
@@ -95,6 +104,15 @@ export function crearFormulario({ campos, textoBoton = 'Guardar', alGuardar, lim
   });
 
   return form;
+}
+
+/**
+ * true si dentro de `contenedor` hay un formulario (de crearFormulario) con
+ * cambios sin guardar. Se usa para no pisar la pantalla con un refresco
+ * automático de sync mientras el usuario está a medio llenar algo.
+ */
+export function hayFormularioSinGuardar(contenedor) {
+  return !!contenedor.querySelector('form[data-sucio="1"]');
 }
 
 /** Tarjeta chica de estadística (número + etiqueta), para dashboards. */
