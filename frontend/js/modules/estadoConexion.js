@@ -27,7 +27,9 @@ export function iniciarIndicadorConexion() {
           '📴 Sin conexión — los datos se guardarán en el dispositivo y se sincronizarán automáticamente cuando vuelva Internet.';
       } else if (detalle.estado === 'error') {
         aviso.hidden = false;
-        aviso.textContent = '🔴 Hubo un problema al sincronizar. Se seguirá intentando automáticamente; tus datos están guardados en el dispositivo.';
+        aviso.textContent = detalle.motivo
+          ? `🔴 No se pudo sincronizar: ${detalle.motivo}. Se seguirá intentando automáticamente; tus datos están guardados en el dispositivo.`
+          : '🔴 Hubo un problema al sincronizar. Se seguirá intentando automáticamente; tus datos están guardados en el dispositivo.';
       } else {
         aviso.hidden = true;
       }

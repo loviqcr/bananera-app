@@ -45,6 +45,7 @@ async function empujarCambios(token) {
 
   const cuerpo = await respuesta.json();
   let huboErrores = false;
+  let motivoError = null;
 
   for (let i = 0; i < lote.length; i++) {
     const item = lote[i];
@@ -62,11 +63,13 @@ async function empujarCambios(token) {
       await localdb.quitarDeCola(item.clave);
     } else {
       huboErrores = true;
+      motivoError = `${item.tabla}: ${resultado.motivo || 'Error desconocido'}`;
+      console.error(`[sync] Error aplicando operación (${item.tabla}/${item.id}):`, resultado.motivo);
       await localdb.marcarIntentoFallido(item.clave, resultado.motivo || 'Error desconocido');
     }
   }
 
-  return { huboErrores };
+  return { huboErrores, motivoError };
 }
 
 async function halarCambios(token) {
@@ -115,7 +118,7 @@ export async function sincronizarAhora() {
     const pendientesDespues = await localdb.contarPendientes();
 
     if (resultadoPush.huboErrores || resultadoPull.huboErrores) {
-      emitirEstado('error', { pendientes: pendientesDespues });
+      emitirEstado('error', { pendientes: pendientesDespues, motivo: resultadoPush.motivoError });
     } else if (pendientesDespues > 0) {
       emitirEstado('pendiente', { pendientes: pendientesDespues });
     } else {
