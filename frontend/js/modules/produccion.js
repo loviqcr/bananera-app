@@ -79,7 +79,7 @@ async function renderizarPlatano(contenedor, contexto) {
     );
   } else {
     const form = crearFormulario({
-      textoBoton: '🍌 Registrar entrega de plátano',
+      textoBoton: 'Registrar entrega de plátano',
       campos: [
         { nombre: 'fecha', etiqueta: 'Fecha', tipo: 'date', requerido: true, valor: hoyISO() },
         { nombre: 'area_id', etiqueta: 'Área', tipo: 'select', requerido: true, opciones: areas },
@@ -155,7 +155,7 @@ async function renderizarBanano(contenedor, contexto) {
     );
   } else {
     const form = crearFormulario({
-      textoBoton: '🍌 Registrar entrega de banano',
+      textoBoton: 'Registrar entrega de banano',
       campos: [
         { nombre: 'fecha', etiqueta: 'Fecha', tipo: 'date', requerido: true, valor: hoyISO() },
         { nombre: 'area_id', etiqueta: 'Área', tipo: 'select', requerido: true, opciones: areas },
@@ -212,8 +212,8 @@ export const produccionModulo = {
     contenedor.appendChild(zona);
 
     const tabs = [
-      { clave: 'platano', etiqueta: '🍌 Plátano', render: renderizarPlatano },
-      { clave: 'banano', etiqueta: '🍌 Banano', render: renderizarBanano },
+      { clave: 'platano', etiqueta: 'Plátano', render: renderizarPlatano },
+      { clave: 'banano', etiqueta: 'Banano', render: renderizarBanano },
     ];
 
     async function activar(clave) {

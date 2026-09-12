@@ -137,8 +137,8 @@ export const ventasModulo = {
     contenedor.appendChild(zona);
 
     const tabs = [
-      { clave: 'platano', etiqueta: '🍌 Plátano', render: (c, ctx) => renderizarVenta('ventas_platano', 'cantidad_dedos', 'precio_por_dedo', 'Cantidad de dedos', c, ctx) },
-      { clave: 'banano', etiqueta: '🍌 Banano', render: (c, ctx) => renderizarVenta('ventas_banano', 'cantidad_manos', 'precio_por_mano', 'Cantidad de manos', c, ctx) },
+      { clave: 'platano', etiqueta: 'Plátano', render: (c, ctx) => renderizarVenta('ventas_platano', 'cantidad_dedos', 'precio_por_dedo', 'Cantidad de dedos', c, ctx) },
+      { clave: 'banano', etiqueta: 'Banano', render: (c, ctx) => renderizarVenta('ventas_banano', 'cantidad_manos', 'precio_por_mano', 'Cantidad de manos', c, ctx) },
       { clave: 'reporte', etiqueta: '📊 Reporte', render: renderizarReporteVentas },
     ];
 
