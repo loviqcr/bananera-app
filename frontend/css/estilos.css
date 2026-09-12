@@ -158,12 +158,22 @@ button {
 }
 
 .barra-superior__marca {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-family: var(--fuente-marca);
   text-transform: uppercase;
   letter-spacing: 0.02em;
   font-size: 1.1rem;
   flex: none;
   white-space: nowrap;
+}
+
+.barra-superior__logo {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex: none;
 }
 
 .barra-superior__contexto {
