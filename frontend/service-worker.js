@@ -4,13 +4,18 @@
  * este caché — esas las maneja directamente el Sync Client contra
  * IndexedDB, que es la fuente de verdad local.
  */
-const CACHE = 'bananera-shell-v3';
+const CACHE = 'bananera-shell-v4';
 
 const ARCHIVOS_SHELL = [
   './',
   './index.html',
   './manifest.json',
   './css/estilos.css',
+  './fonts/anton-latin-400.woff2',
+  './fonts/work-sans-latin-400.woff2',
+  './fonts/work-sans-latin-500.woff2',
+  './fonts/work-sans-latin-600.woff2',
+  './fonts/work-sans-latin-700.woff2',
   './js/app.js',
   './js/config.js',
   './js/ui.js',
@@ -31,6 +36,7 @@ const ARCHIVOS_SHELL = [
   './js/modules/embolseCorta.js',
   './js/modules/dashboard.js',
   './js/modules/reportes.js',
+  './js/modules/usuarios.js',
   './icons/icon-192.png',
   './icons/icon-512.png',
 ];

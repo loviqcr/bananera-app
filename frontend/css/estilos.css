@@ -1,57 +1,107 @@
 /* ============================================================================
-   Cosechas Presbere — Sistema visual (Fase 1)
-   Mobile-first, tarjetas, botones grandes para uso en campo, modo claro/oscuro
-   automático según el sistema del dispositivo.
+   Cosechas Presbere — Sistema visual
+   Mobile-first, pensado para trabajo de campo (sol directo, manos ocupadas,
+   señal intermitente). Modo claro/oscuro automático según el dispositivo.
+   Tipografías autoalojadas en ./fonts — cero dependencia de red, igual que
+   el resto de la app.
    ========================================================================= */
 
+@font-face {
+  font-family: 'Anton';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/anton-latin-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Work Sans';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('../fonts/work-sans-latin-400.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Work Sans';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('../fonts/work-sans-latin-500.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Work Sans';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('../fonts/work-sans-latin-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Work Sans';
+  font-style: normal;
+  font-weight: 700;
+  font-display: swap;
+  src: url('../fonts/work-sans-latin-700.woff2') format('woff2');
+}
+
 :root {
-  /* Paleta alineada al ícono/logo de la app (ciclo siembra-riega-corta). */
-  --verde-900: #0a4d18;
-  --verde-800: #0d6b1f;
-  --verde-700: #007820;
-  --verde-600: #1c9236;
-  --verde-500: #34b34f;
-  --verde-100: #e2f5e6;
-  --azul-500: #0068c0;
-  --azul-600: #00579f;
-  --naranja-500: #f87800;
-  --naranja-600: #d66700;
-  --ambar-500: #f7b538;
-  --ambar-600: #e29e1f;
-  --rojo-500: #e5484d;
-  --amarillo-500: #f8d000;
-  --gris-900: #14181a;
-  --gris-700: #3c4448;
-  --gris-500: #6b7578;
-  --gris-300: #c9d1d3;
-  --gris-100: #f4f6f5;
+  /* Paleta con raíz en el propio cultivo: verde de hoja, oro de fruta madura,
+     tierra de bodega/finca y achiote (rojo-anaranjado agrícola local) para
+     alertas — en vez de un verde-corporativo/rojo-genérico de plantilla. */
+  --verde-900: #0c3a1a;
+  --verde-800: #155c29;
+  --verde-700: #1f7a37;
+  --verde-600: #2f9645;
+  --verde-500: #4caf62;
+  --verde-100: #e2f0e0;
+  --azul-500: #2f7f92;
+  --azul-600: #276577;
+  --naranja-500: #d9720a;
+  --naranja-600: #b85f08;
+  --ambar-500: #f0ac1b;
+  --ambar-600: #c98a12;
+  --tierra-700: #4a2f1c;
+  --tierra-500: #8a5a34;
+  --tierra-100: #efe6d8;
+  --rojo-500: #c9502e;
+  --amarillo-500: #f0ac1b;
+  --gris-900: #1c2118;
+  --gris-700: #4b5346;
+  --gris-500: #737d6c;
+  --gris-300: #d9d7c2;
+  --gris-100: #f2f4ea;
   --blanco: #ffffff;
 
   --fondo: var(--gris-100);
-  --superficie: var(--blanco);
+  --superficie: #fffef8;
   --texto: var(--gris-900);
   --texto-suave: var(--gris-700);
   --borde: var(--gris-300);
   --primario: var(--verde-700);
   --primario-fuerte: var(--verde-800);
   --acento: var(--ambar-500);
-  --sombra: 0 2px 10px rgba(20, 53, 31, 0.08);
+  --sombra: 0 2px 10px rgba(28, 33, 24, 0.10);
 
-  --radio: 14px;
+  --fuente-cuerpo: 'Work Sans', 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  --fuente-marca: 'Anton', 'Arial Narrow', sans-serif;
+
+  --radio: 12px;
   --espacio: 16px;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --fondo: #0f1512;
-    --superficie: #182119;
-    --texto: #eef2ef;
-    --texto-suave: #a9b6ae;
-    --borde: #2a352d;
+    --fondo: #11160f;
+    --superficie: #1a2116;
+    --texto: #f1f3ea;
+    --texto-suave: #b7c0ab;
+    --borde: #303829;
     --primario: var(--verde-500);
     --primario-fuerte: var(--verde-600);
-    --sombra: 0 2px 14px rgba(0, 0, 0, 0.4);
+    --sombra: 0 2px 14px rgba(0, 0, 0, 0.45);
     color-scheme: dark;
   }
 }
@@ -70,7 +120,7 @@ body {
 body {
   background: var(--fondo);
   color: var(--texto);
-  font-family: 'Segoe UI', system-ui, -apple-system, Roboto, sans-serif;
+  font-family: var(--fuente-cuerpo);
   -webkit-font-smoothing: antialiased;
   padding-bottom: env(safe-area-inset-bottom);
 }
@@ -81,6 +131,14 @@ body {
 
 button {
   font-family: inherit;
+}
+
+/* Foco visible para navegación por teclado/lector — con el dorado, distinto
+   del contorno verde que ya usan los campos de formulario. */
+:focus-visible {
+  outline: 3px solid var(--ambar-500);
+  outline-offset: 2px;
+  border-radius: 6px;
 }
 
 /* ---------- Barra superior: estado + finca/área activas ---------- */
@@ -95,12 +153,15 @@ button {
   padding: 10px var(--espacio);
   background: var(--primario-fuerte);
   color: var(--blanco);
-  box-shadow: var(--sombra);
+  border-bottom: 4px solid var(--ambar-500);
+  box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
 }
 
 .barra-superior__marca {
-  font-weight: 700;
-  font-size: 1.05rem;
+  font-family: var(--fuente-marca);
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  font-size: 1.1rem;
   flex: none;
   white-space: nowrap;
 }
@@ -143,12 +204,12 @@ button {
 /* ---------- Aviso de estado offline (banner) ---------- */
 
 .aviso-offline {
-  background: #4a3410;
+  background: var(--tierra-700);
   color: var(--ambar-500);
   padding: 10px var(--espacio);
   font-size: 0.85rem;
   text-align: center;
-  border-bottom: 1px solid rgba(247, 181, 56, 0.35);
+  border-bottom: 1px solid rgba(240, 172, 27, 0.35);
 }
 
 /* ---------- Layout general ---------- */
@@ -161,8 +222,11 @@ button {
 }
 
 .titulo-pantalla {
-  font-size: 1.4rem;
-  font-weight: 700;
+  font-family: var(--fuente-marca);
+  font-weight: 400;
+  font-size: 1.55rem;
+  line-height: 1.1;
+  letter-spacing: 0.01em;
   margin: 4px 0 4px;
 }
 
@@ -173,11 +237,13 @@ button {
 }
 
 /* ---------- Tarjetas ---------- */
+/* Sin sombra por defecto: se apoyan en un borde firme, no en el difuminado
+   gris genérico de plantilla — la sombra se reserva para lo que de verdad
+   "flota" (barra superior, diálogo, ícono de marca, tarjeta de login). */
 
 .tarjeta {
   background: var(--superficie);
   border-radius: var(--radio);
-  box-shadow: var(--sombra);
   padding: var(--espacio);
   margin-bottom: var(--espacio);
   border: 1px solid var(--borde);
@@ -205,6 +271,7 @@ button {
   border-radius: 10px;
   padding: 14px;
   font-size: 1rem;
+  font-family: var(--fuente-cuerpo);
   background: var(--fondo);
   color: var(--texto);
 }
@@ -232,8 +299,9 @@ button {
   gap: 10px;
   width: 100%;
   min-height: 56px;
-  border-radius: 14px;
+  border-radius: var(--radio);
   border: none;
+  font-family: var(--fuente-cuerpo);
   font-size: 1.02rem;
   font-weight: 700;
   cursor: pointer;
@@ -305,6 +373,7 @@ button {
   background: var(--primario);
   color: var(--blanco);
   border-color: var(--primario);
+  box-shadow: var(--sombra);
 }
 
 /* ---------- Lista de áreas ---------- */
@@ -343,7 +412,7 @@ button {
   background: var(--superficie);
   border-radius: var(--radio);
   border: 1px solid var(--borde);
-  box-shadow: var(--sombra);
+  border-top: 4px solid var(--borde);
   padding: 18px 10px;
   display: flex;
   flex-direction: column;
@@ -364,8 +433,18 @@ button {
 }
 
 .tarjeta-modulo:hover {
-  border-color: var(--primario);
+  border-left-color: var(--primario);
+  border-right-color: var(--primario);
+  border-bottom-color: var(--primario);
 }
+
+/* Franja superior de color por familia de módulo — ayuda a ubicar de un
+   vistazo en la cuadrícula sin tener que leer cada etiqueta. */
+.tarjeta-modulo--ambar { border-top-color: var(--ambar-500); }
+.tarjeta-modulo--verde { border-top-color: var(--primario); }
+.tarjeta-modulo--azul { border-top-color: var(--azul-500); }
+.tarjeta-modulo--tierra { border-top-color: var(--tierra-500); }
+.tarjeta-modulo--rojo { border-top-color: var(--rojo-500); }
 
 .tarjeta-modulo .etiqueta-contador {
   font-size: 0.68rem;
@@ -455,14 +534,26 @@ button {
 }
 
 .marca-login__titulo {
-  font-size: 1.5rem;
-  font-weight: 800;
-  margin: 6px 0 2px;
+  font-family: var(--fuente-marca);
+  text-transform: uppercase;
+  font-weight: 400;
+  font-size: 1.9rem;
+  letter-spacing: 0.015em;
+  line-height: 1.05;
+  margin: 10px 0 4px;
 }
 
 .marca-login__subtitulo {
   color: var(--texto-suave);
   font-size: 0.9rem;
+}
+
+/* La tarjeta de acceso es la única con remate de color arriba y sombra
+   propia — el momento "de marca" de toda la app; el resto de tarjetas se
+   queda deliberadamente plano. */
+#form-login {
+  border-top: 6px solid var(--ambar-500);
+  box-shadow: var(--sombra);
 }
 
 /* ============================================================================
@@ -478,8 +569,10 @@ button {
 }
 
 .encabezado-modulo__titulo {
-  font-size: 1.25rem;
-  font-weight: 700;
+  font-family: var(--fuente-marca);
+  font-weight: 400;
+  font-size: 1.4rem;
+  letter-spacing: 0.01em;
   flex: 1;
   text-wrap: balance;
 }
@@ -594,13 +687,13 @@ button {
 
 .insignia--gris { background: var(--gris-300); color: var(--gris-900); }
 .insignia--verde { background: var(--verde-100); color: var(--primario-fuerte); }
-.insignia--ambar { background: rgba(247, 181, 56, 0.22); color: var(--ambar-600); }
-.insignia--rojo { background: rgba(229, 72, 77, 0.16); color: var(--rojo-500); }
-.insignia--azul { background: rgba(0, 104, 192, 0.16); color: var(--azul-600); }
-.insignia--naranja { background: rgba(248, 120, 0, 0.16); color: var(--naranja-600); }
+.insignia--ambar { background: rgba(240, 172, 27, 0.22); color: var(--ambar-600); }
+.insignia--rojo { background: rgba(201, 80, 46, 0.16); color: var(--rojo-500); }
+.insignia--azul { background: rgba(47, 127, 146, 0.16); color: var(--azul-600); }
+.insignia--naranja { background: rgba(217, 114, 10, 0.16); color: var(--naranja-600); }
 
 @media (prefers-color-scheme: dark) {
-  .insignia--gris { background: #2a352d; color: var(--texto-suave); }
+  .insignia--gris { background: #303829; color: var(--texto-suave); }
 }
 
 .barra-acciones {
@@ -663,8 +756,10 @@ button {
 }
 
 .calendario-cabecera__mes {
-  font-weight: 700;
-  font-size: 1.05rem;
+  font-family: var(--fuente-marca);
+  font-weight: 400;
+  font-size: 1.15rem;
+  letter-spacing: 0.01em;
 }
 
 .rejilla-calendario {
@@ -808,11 +903,13 @@ button {
   border-radius: 18px 18px 0 0;
   max-height: 85vh;
   overflow-y: auto;
+  box-shadow: 0 -4px 24px rgba(28, 33, 24, 0.22);
 }
 
 @media (min-width: 480px) {
   .dialogo-caja {
     border-radius: var(--radio);
+    box-shadow: var(--sombra);
   }
 }
 
