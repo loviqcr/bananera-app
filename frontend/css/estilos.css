@@ -401,6 +401,32 @@ button {
   font-size: 1.6rem;
 }
 
+.tarjeta-finca-envoltorio {
+  position: relative;
+}
+
+.tarjeta-finca-envoltorio .tarjeta-finca {
+  width: 100%;
+  height: 100%;
+}
+
+.tarjeta-finca__editar {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: none;
+  background: var(--superficie);
+  box-shadow: var(--sombra);
+  font-size: 0.9rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
 .tarjeta-finca--todas {
   grid-column: span 2;
   background: var(--primario);

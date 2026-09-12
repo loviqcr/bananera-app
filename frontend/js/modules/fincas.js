@@ -31,6 +31,24 @@ export const fincas = {
     return cache.sort((a, b) => a.orden - b.orden);
   },
 
+  /**
+   * Renombra una finca (solo administrador; el backend lo valida igual).
+   * Requiere conexión — a diferencia de crearArea(), no se encola porque
+   * fincas no pasa por el motor de sync genérico (son solo 4 filas fijas).
+   */
+  async renombrar(fincaId, nombre) {
+    const token = await auth.obtenerToken();
+    const respuesta = await fetch(`${API_BASE_URL}/fincas/${fincaId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ nombre }),
+    });
+    const cuerpo = await respuesta.json().catch(() => ({}));
+    if (!respuesta.ok) throw new Error(cuerpo.error || 'No se pudo renombrar la finca');
+    await localdb.put('fincas', cuerpo);
+    return cuerpo;
+  },
+
   async listarAreas(fincaId) {
     if (navigator.onLine) {
       try {

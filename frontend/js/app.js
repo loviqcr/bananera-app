@@ -109,11 +109,36 @@ async function renderizarSelectorFinca() {
   el.cuadriculaFincas.innerHTML = '';
 
   cacheFincas.forEach((finca, i) => {
+    const envoltorio = document.createElement('div');
+    envoltorio.className = 'tarjeta-finca-envoltorio';
+
     const tarjeta = document.createElement('button');
     tarjeta.className = 'tarjeta-finca';
     tarjeta.innerHTML = `<span class="tarjeta-finca__icono">${ICONOS_FINCA[i % ICONOS_FINCA.length]}</span><span>${finca.nombre}</span>`;
     tarjeta.addEventListener('click', () => seleccionarFinca(finca.id));
-    el.cuadriculaFincas.appendChild(tarjeta);
+    envoltorio.appendChild(tarjeta);
+
+    if (cacheUsuario?.rol === 'administrador') {
+      const botonEditar = document.createElement('button');
+      botonEditar.type = 'button';
+      botonEditar.className = 'tarjeta-finca__editar';
+      botonEditar.title = 'Renombrar finca';
+      botonEditar.textContent = '✏️';
+      botonEditar.addEventListener('click', async (evento) => {
+        evento.stopPropagation();
+        const nuevoNombre = prompt('Nuevo nombre de la finca:', finca.nombre);
+        if (!nuevoNombre || !nuevoNombre.trim() || nuevoNombre.trim() === finca.nombre) return;
+        try {
+          await fincas.renombrar(finca.id, nuevoNombre.trim());
+          await renderizarSelectorFinca();
+        } catch (error) {
+          alert(error.message);
+        }
+      });
+      envoltorio.appendChild(botonEditar);
+    }
+
+    el.cuadriculaFincas.appendChild(envoltorio);
   });
 
   const todas = document.createElement('button');
