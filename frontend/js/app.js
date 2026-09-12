@@ -17,7 +17,7 @@ import { reportesModulo } from './modules/reportes.js';
 import { alertasModulo } from './modules/alertas.js';
 import { usuariosModulo } from './modules/usuarios.js';
 
-const ICONOS_FINCA = ['🌱', '🍌', '🌴', '🚜'];
+const ICONOS_FINCA = ['🌄', '🌴', '🌾', '⛰️'];
 
 const MODULOS = {
   produccion: produccionModulo,
