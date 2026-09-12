@@ -123,6 +123,18 @@ body {
   font-family: var(--fuente-cuerpo);
   -webkit-font-smoothing: antialiased;
   padding-bottom: env(safe-area-inset-bottom);
+  display: flex;
+  flex-direction: column;
+  min-height: 100dvh;
+}
+
+/* main crece para llenar el alto disponible bajo la barra superior, así
+   las pantallas que necesitan centrarse verticalmente (selector de finca)
+   pueden hacerlo sin depender de calcular la altura del header a mano. */
+main {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
 }
 
 [hidden] {
@@ -229,6 +241,17 @@ button {
   margin: 0 auto;
   padding: var(--espacio);
   padding-bottom: 48px;
+  width: 100%;
+}
+
+/* Se ve como la primera pantalla real de la app al abrirla (despues del
+   login) — centrada verticalmente en vez de pegada arriba, para que se
+   sienta como una pantalla de selección nativa. */
+#vista-selector-finca {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .titulo-pantalla {
