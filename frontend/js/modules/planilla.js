@@ -187,6 +187,16 @@ export const planillaModulo = {
     await activar('asistencia');
   },
 
+  async totalActivos(fincaId) {
+    if (fincaId === 'todas') {
+      const fincas = await repos.listarTodos('fincas');
+      let total = 0;
+      for (const f of fincas) total += (await empleadosActivos(f.id)).length;
+      return total;
+    }
+    return (await empleadosActivos(fincaId)).length;
+  },
+
   async presentesAusentesHoy(fincaId) {
     if (fincaId === 'todas') {
       const fincas = await repos.listarTodos('fincas');

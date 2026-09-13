@@ -5,20 +5,32 @@
  */
 
 const TEXTOS = {
-  sincronizado: () => '🟢 Sincronizado',
-  pendiente: (n) => `🟡 ${n} pendiente${n === 1 ? '' : 's'}`,
-  error: (n) => `🔴 Error de sincronización${n ? ` (${n} pendientes)` : ''}`,
-  'sin-conexion': () => '📴 Sin conexión',
-  'sin-sesion': () => '⏳ Esperando inicio de sesión',
+  sincronizado: () => 'Sincronizado',
+  pendiente: (n) => `${n} pendiente${n === 1 ? '' : 's'}`,
+  error: (n) => `Error de sync${n ? ` (${n})` : ''}`,
+  'sin-conexion': () => 'Sin conexión',
+  'sin-sesion': () => 'Esperando sesión',
+};
+
+const CLASES_ESTADO = {
+  pendiente: 'indicador-conexion--pendiente',
+  'sin-sesion': 'indicador-conexion--pendiente',
+  error: 'indicador-conexion--error',
+  'sin-conexion': 'indicador-conexion--sin-conexion',
 };
 
 export function iniciarIndicadorConexion() {
   const indicador = document.getElementById('indicador-conexion');
+  const textoNodo = document.getElementById('indicador-conexion-texto');
   const aviso = document.getElementById('aviso-offline');
 
   function actualizar(detalle) {
     const texto = TEXTOS[detalle.estado] ? TEXTOS[detalle.estado](detalle.pendientes) : detalle.estado;
-    if (indicador) indicador.textContent = texto;
+    if (textoNodo) textoNodo.textContent = texto;
+    if (indicador) {
+      indicador.classList.remove('indicador-conexion--pendiente', 'indicador-conexion--error', 'indicador-conexion--sin-conexion');
+      if (CLASES_ESTADO[detalle.estado]) indicador.classList.add(CLASES_ESTADO[detalle.estado]);
+    }
 
     if (aviso) {
       if (detalle.estado === 'sin-conexion') {

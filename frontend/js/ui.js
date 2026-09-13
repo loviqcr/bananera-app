@@ -123,6 +123,67 @@ export function tarjetaEstadistica(valor, etiqueta, tono = '') {
   ]);
 }
 
+/**
+ * Set mínimo de iconos de línea (estilo Feather, trazo simple) dibujados a
+ * mano en el propio código — sin depender de ninguna librería ni red, igual
+ * que el resto de la app. Cada uno es el contenido interno de un <svg
+ * viewBox="0 0 24 24">.
+ */
+const ICONOS_SVG = {
+  home: '<path d="M3 11.5 12 4l9 7.5"/><path d="M5 10v10h14V10"/><path d="M9.5 20v-6h5v6"/>',
+  sprout: '<path d="M12 21v-9"/><path d="M12 12C7 12 4.5 8.5 4.5 5c3.3 0 6 1 7.5 4"/><path d="M12 12c4-.3 6.5-3 7.5-7-3.3 0-6.3 1.3-7.5 4.3"/>',
+  plus: '<path d="M12 5v14"/><path d="M5 12h14"/>',
+  chart: '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><rect x="7" y="13" width="3" height="6" rx="0.5"/><rect x="13" y="9" width="3" height="10" rx="0.5"/><rect x="18" y="6" width="3" height="13" rx="0.5"/>',
+  more: '<circle cx="5" cy="12" r="1.7"/><circle cx="12" cy="12" r="1.7"/><circle cx="19" cy="12" r="1.7"/>',
+  package: '<path d="M21 8 12 3 3 8v8l9 5 9-5Z"/><path d="M3 8l9 5 9-5"/><path d="M12 13v8"/>',
+  alert: '<path d="M10.6 3.5 2.4 18a1.5 1.5 0 0 0 1.3 2.3h16.6a1.5 1.5 0 0 0 1.3-2.3L13.4 3.5a1.5 1.5 0 0 0-2.8 0Z"/><path d="M12 9.5v4"/><path d="M12 17h.01"/>',
+  bell: '<path d="M6 9a6 6 0 0 1 12 0c0 5 2 6 2 6H4s2-1 2-6Z"/><path d="M10 20a2 2 0 0 0 4 0"/>',
+  users: '<circle cx="8.5" cy="8" r="3"/><path d="M2.5 20c0-3.6 2.7-6 6-6s6 2.4 6 6"/><circle cx="16.5" cy="9" r="2.3"/><path d="M15 14.2c2.4.5 4.2 2.4 4.2 5.8"/>',
+  dollar: '<path d="M12 2v20"/><path d="M17 6.2c0-1.8-2.2-2.9-5-2.9s-5 1.1-5 2.9 2.2 2.6 5 2.9 5 1.1 5 2.9-2.2 2.9-5 2.9-5-1.1-5-2.9"/>',
+  crop: '<circle cx="6.2" cy="6.2" r="2.2"/><circle cx="6.2" cy="17.8" r="2.2"/><path d="M19.5 4.5 8 16"/><path d="M14.5 9.5 19.5 14.5"/><path d="M8 8 6.2 6.2"/>',
+  calendar: '<rect x="3" y="5" width="18" height="16" rx="2.5"/><path d="M3 10h18"/><path d="M8 3v4"/><path d="M16 3v4"/>',
+  clipboard: '<rect x="6" y="4" width="12" height="17" rx="2"/><rect x="9" y="2.3" width="6" height="3.4" rx="1"/><path d="M9 11.5h6"/><path d="M9 15.5h6"/>',
+  user: '<circle cx="12" cy="8" r="3.6"/><path d="M4.5 20c0-4 3.4-6.5 7.5-6.5S19.5 16 19.5 20"/>',
+  refresh: '<path d="M20 11.5A8 8 0 0 0 6.3 6.3L4 8.6"/><path d="M4 4v4.6h4.6"/><path d="M4 12.5a8 8 0 0 0 13.7 4.7L20 15"/><path d="M20 19.6V15h-4.6"/>',
+  search: '<circle cx="10.5" cy="10.5" r="6.5"/><path d="M20 20l-4.8-4.8"/>',
+  chevron: '<path d="M9 6l6 6-6 6"/>',
+  logout: '<path d="M9 4H5a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h4"/><path d="M15 16l4-4-4-4"/><path d="M19 12H9"/>',
+  repeat: '<path d="M17 2 21 6l-4 4"/><path d="M3 12v-2a4 4 0 0 1 4-4h14"/><path d="M7 22 3 18l4-4"/><path d="M21 12v2a4 4 0 0 1-4 4H3"/>',
+  pencil: '<path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4Z"/>',
+  droplet: '<path d="M12 3s6.5 7 6.5 11.5a6.5 6.5 0 0 1-13 0C5.5 10 12 3 12 3Z"/>',
+  farm: '<path d="M4 21V10l8-6 8 6v11"/><path d="M9.5 21v-7h5v7"/><path d="M4 10h16"/>',
+  basket: '<path d="M4.5 10h15l-1.6 8.8a2 2 0 0 1-2 1.7H8.1a2 2 0 0 1-2-1.7L4.5 10Z"/><path d="M8.5 10 12 4l3.5 6"/><path d="M9.5 14v3.2"/><path d="M12 14v3.2"/><path d="M14.5 14v3.2"/>',
+};
+
+/** Devuelve el HTML de un <svg> de línea listo para usar en innerHTML. */
+export function icono(nombre, tamano = 20) {
+  const contenido = ICONOS_SVG[nombre] || '';
+  return `<svg viewBox="0 0 24 24" width="${tamano}" height="${tamano}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${contenido}</svg>`;
+}
+
+/**
+ * Reemplaza todo elemento marcado con [data-icono] (en cualquier parte del
+ * documento, incluido dentro de nodos recién insertados) por el <svg>
+ * correspondiente. Se llama una vez al iniciar y de nuevo cada vez que un
+ * módulo dibuja markup estático propio con iconos.
+ */
+export function hidratarIconos(raiz = document) {
+  raiz.querySelectorAll?.('[data-icono]').forEach((nodo) => {
+    const tamano = Number(nodo.dataset.iconoTam) || 20;
+    nodo.innerHTML = icono(nodo.dataset.icono, tamano);
+    nodo.removeAttribute('data-icono');
+  });
+}
+
+/** Tarjeta de estadística con icono circular arriba, para el dashboard. */
+export function tarjetaStat(nombreIcono, valor, etiqueta, tono = '') {
+  return elemento('div', { class: `tarjeta tarjeta-stat ${tono}` }, [
+    elemento('div', { class: 'tarjeta-stat__icono', html: icono(nombreIcono, 18) }),
+    elemento('div', { class: 'tarjeta-stat__valor', texto: String(valor) }),
+    elemento('div', { class: 'tarjeta-stat__etiqueta', texto: etiqueta }),
+  ]);
+}
+
 /** Lista simple de filas con título/subtítulo/valor, más recientes primero. */
 export function listaRegistros(filas, formatearFila, vacioTexto = 'Sin registros todavía.') {
   const contenedor = elemento('div', { class: 'lista-registros' });

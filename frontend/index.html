@@ -14,13 +14,14 @@
 
   <header class="barra-superior">
     <span class="barra-superior__marca">
-      <img class="barra-superior__logo" src="./icons/icon-192.png" alt="" width="28" height="28" />
+      <img class="barra-superior__logo" src="./icons/icon-192.png" alt="" width="26" height="26" />
       Cosechas Presbere
     </span>
     <span class="barra-superior__contexto" id="barra-contexto"></span>
-    <span class="indicador-conexion" id="indicador-conexion">⏳</span>
-    <button class="boton-icono" id="boton-cambiar-finca" title="Cambiar finca" hidden>🔁</button>
-    <button class="boton-icono" id="boton-salir" title="Salir" hidden>⎋</button>
+    <span class="barra-superior__sync">
+      <span class="indicador-conexion" id="indicador-conexion"><span class="indicador-conexion__punto"></span><span id="indicador-conexion-texto">…</span></span>
+      <button class="boton-icono" id="boton-sync-ahora" title="Sincronizar ahora"><span data-icono="refresh"></span></button>
+    </span>
   </header>
 
   <div class="aviso-offline" id="aviso-offline" hidden></div>
@@ -54,7 +55,11 @@
     <!-- ============== SELECTOR DE FINCA ============== -->
     <section class="pantalla" id="vista-selector-finca" hidden>
       <h1 class="titulo-pantalla">Selecciona una finca</h1>
-      <p class="subtitulo-pantalla">Se recordará tu selección — no tendrás que elegirla de nuevo cada vez.</p>
+      <p class="subtitulo-pantalla" id="subtitulo-selector-finca">Aquí puedes ver el estado y detalles de cada finca.</p>
+      <div class="campo-busqueda">
+        <span data-icono="search" data-icono-color="1"></span>
+        <input type="search" id="campo-buscar-finca" placeholder="Buscar finca..." />
+      </div>
       <div class="cuadricula-fincas" id="cuadricula-fincas"></div>
     </section>
 
@@ -67,71 +72,131 @@
       <button class="boton boton--fantasma" id="boton-agregar-area" hidden>+ Agregar área</button>
     </section>
 
+    <!-- ============== DETALLE DE FINCA ============== -->
+    <section class="pantalla" id="vista-finca-detalle" hidden>
+      <div class="encabezado-modulo">
+        <button class="boton-icono" id="boton-volver-fincas" title="Volver" style="background:var(--verde-100);color:var(--primario-fuerte)"><span data-icono="chevron" style="transform:scaleX(-1);display:inline-flex"></span></button>
+        <h1 class="encabezado-modulo__titulo" id="finca-detalle-nombre"></h1>
+      </div>
+      <p class="subtitulo-pantalla" id="finca-detalle-subtitulo"></p>
+      <div class="finca-detalle__banner"><span data-icono="farm" data-icono-tam="40"></span></div>
+      <div class="rejilla-finca-detalle" id="finca-detalle-stats"></div>
+      <h2 class="seccion-dashboard__titulo">Estado de la finca</h2>
+      <div id="finca-detalle-estado"></div>
+      <div class="espaciador"></div>
+      <button class="boton boton--primario" id="boton-entrar-finca">Entrar a esta finca</button>
+    </section>
+
     <!-- ============== INICIO / DASHBOARD ============== -->
     <section class="pantalla" id="vista-inicio" hidden>
       <h1 class="titulo-pantalla" id="bienvenida-usuario"></h1>
       <p class="subtitulo-pantalla" id="contexto-inicio"></p>
 
       <div id="contenedor-dashboard"></div>
+    </section>
+
+    <!-- ============== MÁS: módulos + cuenta ============== -->
+    <section class="pantalla" id="vista-mas" hidden>
+      <h1 class="titulo-pantalla">Más</h1>
+      <p class="subtitulo-pantalla">Todos los módulos y opciones de la cuenta.</p>
 
       <div class="cuadricula-modulos" id="cuadricula-modulos">
         <button class="tarjeta-modulo tarjeta-modulo--ambar" data-modulo="produccion">
-          <span class="tarjeta-modulo__icono">🧺</span>
+          <span class="tarjeta-modulo__icono" data-icono="basket"></span>
           <span>Producción</span>
         </button>
         <button class="tarjeta-modulo tarjeta-modulo--verde" data-modulo="labores">
-          <span class="tarjeta-modulo__icono">🌱</span>
+          <span class="tarjeta-modulo__icono" data-icono="sprout"></span>
           <span>Labores</span>
         </button>
         <button class="tarjeta-modulo tarjeta-modulo--azul" data-modulo="calendario">
-          <span class="tarjeta-modulo__icono">📅</span>
+          <span class="tarjeta-modulo__icono" data-icono="calendar"></span>
           <span>Calendario</span>
         </button>
         <button class="tarjeta-modulo tarjeta-modulo--tierra" data-modulo="inventario">
-          <span class="tarjeta-modulo__icono">📦</span>
+          <span class="tarjeta-modulo__icono" data-icono="package"></span>
           <span>Inventario / Bodega</span>
         </button>
         <button class="tarjeta-modulo tarjeta-modulo--rojo" data-modulo="incidencias">
-          <span class="tarjeta-modulo__icono">🚨</span>
+          <span class="tarjeta-modulo__icono" data-icono="alert"></span>
           <span>Incidencias</span>
         </button>
         <button class="tarjeta-modulo tarjeta-modulo--azul" data-modulo="planilla">
-          <span class="tarjeta-modulo__icono">👷</span>
+          <span class="tarjeta-modulo__icono" data-icono="users"></span>
           <span>Planilla</span>
         </button>
         <button class="tarjeta-modulo tarjeta-modulo--ambar" data-modulo="ventas">
-          <span class="tarjeta-modulo__icono">💰</span>
+          <span class="tarjeta-modulo__icono" data-icono="dollar"></span>
           <span>Ventas</span>
         </button>
         <button class="tarjeta-modulo tarjeta-modulo--verde" data-modulo="embolse-corta">
-          <span class="tarjeta-modulo__icono">🎗️</span>
+          <span class="tarjeta-modulo__icono" data-icono="crop"></span>
           <span>Embolse / Corta</span>
         </button>
         <button class="tarjeta-modulo tarjeta-modulo--tierra" data-modulo="reportes">
-          <span class="tarjeta-modulo__icono">📊</span>
+          <span class="tarjeta-modulo__icono" data-icono="chart"></span>
           <span>Reportes</span>
         </button>
         <button class="tarjeta-modulo tarjeta-modulo--rojo" data-modulo="notificaciones">
-          <span class="tarjeta-modulo__icono">🔔</span>
+          <span class="tarjeta-modulo__icono" data-icono="bell"></span>
           <span>Alertas</span>
         </button>
         <button class="tarjeta-modulo tarjeta-modulo--verde" data-modulo="usuarios">
-          <span class="tarjeta-modulo__icono">👤</span>
+          <span class="tarjeta-modulo__icono" data-icono="user"></span>
           <span>Usuarios</span>
         </button>
+      </div>
+
+      <div class="lista-cuenta">
+        <button class="item-cuenta" id="boton-cambiar-finca-mas"><span data-icono="repeat"></span> Cambiar de finca</button>
+        <button class="item-cuenta item-cuenta--salir" id="boton-salir-mas"><span data-icono="logout"></span> Cerrar sesión</button>
       </div>
     </section>
 
     <!-- ============== VISTA DE MÓDULO (contenedor genérico) ============== -->
     <section class="pantalla" id="vista-modulo" hidden>
       <div class="encabezado-modulo">
-        <button class="boton-icono" id="boton-volver-inicio" title="Volver" style="background:var(--verde-100);color:var(--primario-fuerte)">←</button>
+        <button class="boton-icono" id="boton-volver-inicio" title="Volver" style="background:var(--verde-100);color:var(--primario-fuerte)"><span data-icono="chevron" style="transform:scaleX(-1);display:inline-flex"></span></button>
         <h1 class="encabezado-modulo__titulo" id="titulo-modulo"></h1>
       </div>
       <div id="contenedor-modulo"></div>
     </section>
 
   </main>
+
+  <!-- ============== NAVEGACIÓN INFERIOR ============== -->
+  <nav class="nav-inferior" id="nav-inferior" hidden>
+    <button class="nav-inferior__item" data-nav="inicio"><span data-icono="home"></span>Inicio</button>
+    <button class="nav-inferior__item" data-nav="fincas"><span data-icono="sprout"></span>Fincas</button>
+    <div class="nav-inferior__central">
+      <div style="display:flex;flex-direction:column;align-items:center">
+        <button class="nav-inferior__central-boton" id="boton-registrar" title="Registrar"><span data-icono="plus" data-icono-tam="24"></span></button>
+        <span class="nav-inferior__central-etiqueta">Registrar</span>
+      </div>
+    </div>
+    <button class="nav-inferior__item" data-nav="reportes"><span data-icono="chart"></span>Reportes</button>
+    <button class="nav-inferior__item" data-nav="mas"><span data-icono="more"></span>Más</button>
+  </nav>
+
+  <!-- ============== HOJA DE ACCIONES RÁPIDAS ============== -->
+  <div class="dialogo-fondo" id="hoja-registrar" hidden>
+    <div class="dialogo-caja tarjeta">
+      <h2 class="titulo-pantalla" style="font-size:1.1rem;margin-bottom:2px">Registrar</h2>
+      <p class="subtitulo-pantalla" style="margin-bottom:12px">Elige qué quieres registrar.</p>
+      <div class="rejilla-acciones-rapidas">
+        <button class="accion-rapida" type="button" data-modulo="produccion" data-tab="platano"><span class="accion-rapida__icono" data-icono="basket"></span>Producción</button>
+        <button class="accion-rapida" type="button" data-modulo="labores" data-tab="siembra"><span class="accion-rapida__icono" data-icono="sprout"></span>Labor</button>
+        <button class="accion-rapida" type="button" data-modulo="embolse-corta" data-tab="embolse"><span class="accion-rapida__icono" data-icono="package"></span>Embolse</button>
+        <button class="accion-rapida" type="button" data-modulo="embolse-corta" data-tab="corta"><span class="accion-rapida__icono" data-icono="crop"></span>Corta</button>
+        <button class="accion-rapida" type="button" data-modulo="inventario" data-tab="insumos"><span class="accion-rapida__icono" data-icono="package"></span>Entrada inventario</button>
+        <button class="accion-rapida" type="button" data-modulo="inventario" data-tab="insumos"><span class="accion-rapida__icono" data-icono="package"></span>Salida inventario</button>
+        <button class="accion-rapida" type="button" data-modulo="incidencias"><span class="accion-rapida__icono" data-icono="alert"></span>Incidencia</button>
+        <button class="accion-rapida" type="button" data-modulo="planilla" data-tab="asistencia"><span class="accion-rapida__icono" data-icono="users"></span>Asistencia</button>
+        <button class="accion-rapida accion-rapida--proximamente" type="button" id="accion-gasto"><span class="accion-rapida__icono" data-icono="dollar"></span>Gasto<span class="accion-rapida__badge">Próximamente</span></button>
+        <button class="accion-rapida" type="button" data-modulo="ventas" data-tab="platano"><span class="accion-rapida__icono" data-icono="dollar"></span>Venta</button>
+      </div>
+    </div>
+  </div>
 
   <script>
     window.BANANERA_API_URL = 'https://bananera-backend.onrender.com';

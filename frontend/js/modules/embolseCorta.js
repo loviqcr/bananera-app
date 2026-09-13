@@ -1,6 +1,52 @@
 import { repos } from '../db/repos.js';
 import { auth } from './auth.js';
-import { elemento, crearFormulario, listaRegistros, formatearFecha, hoyISO } from '../ui.js';
+import { elemento, crearFormulario, listaRegistros, tarjetaEstadistica, formatearFecha, hoyISO } from '../ui.js';
+
+// Días típicos entre el embolse de un racimo y su corta (maduración) — se
+// usa solo para estimar la fecha de la pestaña "Seguimiento"; no depende de
+// ninguna configuración del servidor porque no existe un dato real de
+// variedad/clima por área todavía.
+const DIAS_MADURACION_CORTA = 84;
+
+function sumarDias(fechaISO, dias) {
+  const fecha = new Date(fechaISO + 'T00:00:00');
+  fecha.setDate(fecha.getDate() + dias);
+  return fecha.toISOString().slice(0, 10);
+}
+
+/** Racimos embolsados/cortados HOY — usado por el dashboard y por este módulo. */
+export async function estadisticasDia(fincaId) {
+  const hoy = hoyISO();
+  const [embolse, corta, proximos] = await Promise.all([
+    repos.listarPorFinca('embolse', fincaId),
+    repos.listarPorFinca('corta', fincaId),
+    proximosACorta(fincaId),
+  ]);
+  const embolsadoHoy = embolse.filter((f) => f.fecha === hoy).reduce((s, f) => s + Number(f.cantidad || 0), 0);
+  const cortadoHoy = corta.filter((f) => f.fecha === hoy).reduce((s, f) => s + Number(f.racimos_cortados || 0), 0);
+  return { embolsadoHoy, cortadoHoy, proximosACorta: proximos.length };
+}
+
+/**
+ * Áreas embolsadas que todavía no tienen una corta posterior registrada —
+ * es decir, racimos que probablemente sigan en la mata. Se ordenan por
+ * fecha estimada de corta (embolse + tiempo de maduración) más próxima
+ * primero.
+ */
+export async function proximosACorta(fincaId) {
+  const [embolseFilas, cortaFilas] = await Promise.all([
+    repos.listarPorFinca('embolse', fincaId),
+    repos.listarPorFinca('corta', fincaId),
+  ]);
+  const ultimaCortaPorArea = {};
+  for (const c of cortaFilas) {
+    if (!ultimaCortaPorArea[c.area_id] || c.fecha > ultimaCortaPorArea[c.area_id]) ultimaCortaPorArea[c.area_id] = c.fecha;
+  }
+  return embolseFilas
+    .filter((e) => !ultimaCortaPorArea[e.area_id] || e.fecha > ultimaCortaPorArea[e.area_id])
+    .map((e) => ({ ...e, fechaEstimadaCorta: sumarDias(e.fecha, DIAS_MADURACION_CORTA) }))
+    .sort((a, b) => (a.fechaEstimadaCorta < b.fechaEstimadaCorta ? -1 : 1));
+}
 
 async function opcionesAreas(fincaId) {
   const areas = fincaId && fincaId !== 'todas' ? await repos.listarPorFinca('areas', fincaId) : [];
@@ -121,10 +167,43 @@ async function renderizarCorta(contenedor, contexto) {
   );
 }
 
+async function renderizarSeguimiento(contenedor, contexto) {
+  contenedor.innerHTML = '';
+  const pendientes = await proximosACorta(contexto.fincaId);
+  const nombreArea = Object.fromEntries((await repos.listarTodos('areas')).map((a) => [a.id, a.nombre]));
+  const nombreFinca = Object.fromEntries((await repos.listarTodos('fincas')).map((f) => [f.id, f.nombre]));
+
+  contenedor.appendChild(
+    elemento('p', { class: 'subtitulo-pantalla' }, `Áreas embolsadas sin corta registrada todavía, con fecha estimada de corta (maduración de ~${DIAS_MADURACION_CORTA} días).`)
+  );
+  contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: 'Próximos a corta' }));
+  contenedor.appendChild(
+    listaRegistros(
+      pendientes.slice(0, 20),
+      (f) => ({
+        titulo: `${contexto.fincaId === 'todas' ? `${nombreFinca[f.finca_id] ?? 'Finca'} · ` : ''}${nombreArea[f.area_id] ?? 'Área'}`,
+        subtitulo: `${f.cantidad} racimos · estimado ${formatearFecha(f.fechaEstimadaCorta)}`,
+        valor: f.fechaEstimadaCorta < hoyISO() ? 'Vencido' : null,
+        tono: 'tono-alerta',
+      }),
+      'No hay áreas embolsadas pendientes de corta.'
+    )
+  );
+}
+
 export const embolseCortaModulo = {
   etiqueta: 'Embolse / Corta',
   async render(contenedor, contexto) {
     contenedor.innerHTML = '';
+    const dia = await estadisticasDia(contexto.fincaId);
+    contenedor.appendChild(
+      elemento('div', { class: 'rejilla-estadisticas' }, [
+        tarjetaEstadistica(dia.embolsadoHoy.toLocaleString('es-CR'), 'Embolsado hoy'),
+        tarjetaEstadistica(dia.proximosACorta, 'Próximos a corta', dia.proximosACorta > 0 ? 'estadistica--pendiente' : ''),
+        tarjetaEstadistica(dia.cortadoHoy.toLocaleString('es-CR'), 'Cortados hoy'),
+      ])
+    );
+
     const pestanas = elemento('div', { class: 'pestanas' });
     const zona = elemento('div');
     contenedor.appendChild(pestanas);
@@ -133,6 +212,7 @@ export const embolseCortaModulo = {
     const tabs = [
       { clave: 'embolse', etiqueta: '🎗️ Embolse', render: renderizarEmbolse },
       { clave: 'corta', etiqueta: '✂️ Corta', render: renderizarCorta },
+      { clave: 'seguimiento', etiqueta: '📍 Seguimiento', render: renderizarSeguimiento },
     ];
     async function activar(clave) {
       for (const boton of pestanas.children) boton.classList.toggle('pestana--activa', boton.dataset.clave === clave);

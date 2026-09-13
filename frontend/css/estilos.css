@@ -153,7 +153,7 @@ button {
   border-radius: 6px;
 }
 
-/* ---------- Barra superior: estado + finca/área activas ---------- */
+/* ---------- Barra superior: compacta, marca + estado de sync ---------- */
 
 .barra-superior {
   position: sticky;
@@ -161,11 +161,10 @@ button {
   z-index: 20;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 10px var(--espacio);
+  gap: 8px;
+  padding: 9px var(--espacio);
   background: var(--primario-fuerte);
   color: var(--blanco);
-  border-bottom: 4px solid var(--ambar-500);
   box-shadow: 0 1px 0 rgba(0, 0, 0, 0.1);
 }
 
@@ -175,15 +174,16 @@ button {
   gap: 8px;
   font-family: var(--fuente-marca);
   text-transform: uppercase;
-  letter-spacing: 0.02em;
-  font-size: 1.1rem;
+  letter-spacing: 0.01em;
+  font-size: 0.98rem;
   flex: none;
   white-space: nowrap;
+  min-width: 0;
 }
 
 .barra-superior__logo {
-  width: 28px;
-  height: 28px;
+  width: 26px;
+  height: 26px;
   border-radius: 50%;
   flex: none;
 }
@@ -191,37 +191,58 @@ button {
 .barra-superior__contexto {
   flex: 1;
   min-width: 0;
-  font-size: 0.85rem;
+  font-size: 0.78rem;
   opacity: 0.95;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  text-align: right;
+}
+
+.barra-superior__sync {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex: none;
 }
 
 .indicador-conexion {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  padding: 5px 10px;
+  gap: 5px;
+  padding: 5px 9px;
   border-radius: 999px;
   background: rgba(255, 255, 255, 0.14);
-  font-size: 0.78rem;
-  font-weight: 600;
+  font-size: 0.7rem;
+  font-weight: 700;
   white-space: nowrap;
 }
+
+.indicador-conexion__punto {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: var(--verde-500);
+  flex: none;
+}
+.indicador-conexion--pendiente .indicador-conexion__punto { background: var(--ambar-500); }
+.indicador-conexion--error .indicador-conexion__punto,
+.indicador-conexion--sin-conexion .indicador-conexion__punto { background: var(--rojo-500); }
 
 .boton-icono {
   background: rgba(255, 255, 255, 0.14);
   border: none;
   color: var(--blanco);
-  width: 38px;
-  height: 38px;
-  border-radius: 10px;
-  font-size: 1.1rem;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex: none;
 }
+
+.boton-icono svg { width: 17px; height: 17px; }
 
 /* ---------- Aviso de estado offline (banner) ---------- */
 
@@ -367,29 +388,54 @@ button {
   border: 1px dashed var(--borde);
 }
 
-/* ---------- Cuadrícula de selección de finca ---------- */
+/* ---------- Selección de finca: buscador + lista de tarjetas ---------- */
+
+.campo-busqueda {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 11px 14px;
+  margin-bottom: 16px;
+  color: var(--texto-suave);
+}
+
+.campo-busqueda svg { flex: none; }
+
+.campo-busqueda input {
+  border: none;
+  background: none;
+  flex: 1;
+  min-width: 0;
+  font-size: 0.95rem;
+  font-family: var(--fuente-cuerpo);
+  color: var(--texto);
+  outline: none;
+}
 
 .cuadricula-fincas {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.tarjeta-finca-envoltorio {
+  position: relative;
 }
 
 .tarjeta-finca {
-  background: var(--superficie);
-  border: 2px solid var(--borde);
-  border-radius: var(--radio);
-  padding: 20px 12px;
-  text-align: center;
-  cursor: pointer;
-  min-height: 96px;
   display: flex;
-  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 6px;
-  font-weight: 700;
-  font-size: 1.02rem;
+  gap: 12px;
+  width: 100%;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: var(--radio);
+  padding: 12px 14px;
+  text-align: left;
+  cursor: pointer;
   transition: border-color 0.15s ease, background 0.15s ease;
 }
 
@@ -398,22 +444,57 @@ button {
 }
 
 .tarjeta-finca__icono {
-  font-size: 1.6rem;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
+  background: var(--verde-100);
+  color: var(--primario-fuerte);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  font-size: 1.3rem;
 }
 
-.tarjeta-finca-envoltorio {
-  position: relative;
+@media (prefers-color-scheme: dark) {
+  .tarjeta-finca__icono { background: rgba(62, 168, 102, 0.18); color: var(--verde-500); }
 }
 
-.tarjeta-finca-envoltorio .tarjeta-finca {
-  width: 100%;
-  height: 100%;
+.tarjeta-finca__cuerpo {
+  flex: 1;
+  min-width: 0;
+}
+
+.tarjeta-finca__nombre {
+  font-weight: 800;
+  font-size: 1rem;
+}
+
+.tarjeta-finca__detalle {
+  font-size: 0.82rem;
+  color: var(--texto-suave);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tarjeta-finca__pie {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.tarjeta-finca__chevron {
+  color: var(--texto-suave);
+  flex: none;
 }
 
 .tarjeta-finca__editar {
   position: absolute;
-  top: 6px;
-  right: 6px;
+  top: 8px;
+  right: 8px;
   width: 30px;
   height: 30px;
   border-radius: 50%;
@@ -428,11 +509,8 @@ button {
 }
 
 .tarjeta-finca--todas {
-  grid-column: span 2;
-  background: var(--primario);
-  color: var(--blanco);
-  border-color: var(--primario);
-  box-shadow: var(--sombra);
+  justify-content: center;
+  text-align: center;
 }
 
 /* ---------- Lista de áreas ---------- */
@@ -471,18 +549,18 @@ button {
   background: var(--superficie);
   border-radius: var(--radio);
   border: 1px solid var(--borde);
-  border-top: 4px solid var(--borde);
-  padding: 18px 10px;
+  border-top: 3px solid var(--borde);
+  padding: 16px 10px;
   display: flex;
   flex-direction: column;
   align-items: center;
   gap: 8px;
   text-align: center;
   font-weight: 600;
-  font-size: 0.92rem;
+  font-size: 0.86rem;
   color: var(--texto);
   cursor: pointer;
-  min-height: 92px;
+  min-height: 84px;
   justify-content: center;
   transition: border-color 0.15s ease, transform 0.12s ease;
 }
@@ -522,8 +600,24 @@ button {
 }
 
 .tarjeta-modulo__icono {
-  font-size: 1.7rem;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: var(--verde-100);
+  color: var(--primario-fuerte);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
+
+@media (prefers-color-scheme: dark) {
+  .tarjeta-modulo__icono { background: rgba(62, 168, 102, 0.18); color: var(--verde-500); }
+}
+
+.tarjeta-modulo--ambar .tarjeta-modulo__icono { background: rgba(240, 172, 27, 0.18); color: var(--ambar-600); }
+.tarjeta-modulo--azul .tarjeta-modulo__icono { background: rgba(47, 127, 146, 0.16); color: var(--azul-600); }
+.tarjeta-modulo--tierra .tarjeta-modulo__icono { background: var(--tierra-100); color: var(--tierra-700); }
+.tarjeta-modulo--rojo .tarjeta-modulo__icono { background: rgba(201, 80, 46, 0.16); color: var(--rojo-500); }
 
 .tarjeta-modulo--proximamente {
   opacity: 0.55;
@@ -933,6 +1027,318 @@ button {
   border: 1px solid var(--borde);
 }
 
+/* ---------- Navegación inferior fija ---------- */
+
+body.tiene-nav-inferior .pantalla {
+  padding-bottom: 92px;
+}
+
+.nav-inferior {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 30;
+  display: flex;
+  align-items: stretch;
+  background: var(--superficie);
+  border-top: 1px solid var(--borde);
+  padding-bottom: env(safe-area-inset-bottom);
+  box-shadow: 0 -2px 14px rgba(28, 33, 24, 0.1);
+}
+
+.nav-inferior__item {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  padding: 8px 2px 7px;
+  background: none;
+  border: none;
+  color: var(--texto-suave);
+  font-size: 0.65rem;
+  font-weight: 700;
+  min-width: 0;
+}
+
+.nav-inferior__item svg {
+  width: 21px;
+  height: 21px;
+}
+
+.nav-inferior__item--activo {
+  color: var(--primario);
+}
+
+@media (prefers-color-scheme: dark) {
+  .nav-inferior__item--activo { color: var(--verde-500); }
+}
+
+.nav-inferior__central {
+  flex: 1;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+
+.nav-inferior__central-boton {
+  margin-top: -22px;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  background: var(--primario);
+  color: var(--blanco);
+  border: 4px solid var(--superficie);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 4px 14px rgba(21, 92, 41, 0.35);
+}
+
+.nav-inferior__central-boton svg {
+  width: 24px;
+  height: 24px;
+}
+
+.nav-inferior__central-etiqueta {
+  font-size: 0.65rem;
+  font-weight: 700;
+  color: var(--primario);
+  margin-top: 2px;
+}
+
+/* ---------- Hoja de acciones rápidas (botón Registrar) ---------- */
+
+.rejilla-acciones-rapidas {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.accion-rapida {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 8px;
+  border-radius: 14px;
+  border: 1px solid var(--borde);
+  background: var(--fondo);
+  font-weight: 700;
+  font-size: 0.84rem;
+  color: var(--texto);
+  text-align: center;
+}
+
+.accion-rapida:active {
+  background: var(--verde-100);
+}
+
+.accion-rapida__icono {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  background: var(--verde-100);
+  color: var(--primario-fuerte);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+@media (prefers-color-scheme: dark) {
+  .accion-rapida__icono { background: rgba(62, 168, 102, 0.18); color: var(--verde-500); }
+}
+
+.accion-rapida--proximamente {
+  opacity: 0.5;
+}
+
+.accion-rapida__badge {
+  font-size: 0.62rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: var(--ambar-600);
+}
+
+/* ---------- Tarjetas de estadística con icono (dashboard) ---------- */
+
+.tarjeta-stat {
+  padding: 14px;
+}
+
+.tarjeta-stat__icono {
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: var(--verde-100);
+  color: var(--primario-fuerte);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 10px;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tarjeta-stat__icono { background: rgba(62, 168, 102, 0.18); color: var(--verde-500); }
+}
+
+.tarjeta-stat--alerta .tarjeta-stat__icono { background: rgba(201, 80, 46, 0.16); color: var(--rojo-500); }
+.tarjeta-stat--ambar .tarjeta-stat__icono { background: rgba(240, 172, 27, 0.22); color: var(--ambar-600); }
+.tarjeta-stat--azul .tarjeta-stat__icono { background: rgba(47, 127, 146, 0.16); color: var(--azul-600); }
+
+.tarjeta-stat__valor {
+  font-size: 1.5rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--primario-fuerte);
+}
+
+@media (prefers-color-scheme: dark) {
+  .tarjeta-stat__valor { color: var(--verde-500); }
+}
+
+.tarjeta-stat--alerta .tarjeta-stat__valor { color: var(--rojo-500); }
+
+.tarjeta-stat__etiqueta {
+  font-size: 0.78rem;
+  color: var(--texto-suave);
+  margin-top: 2px;
+}
+
+.seccion-dashboard {
+  margin-top: 22px;
+}
+
+.seccion-dashboard__titulo {
+  font-size: 0.78rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--texto-suave);
+  margin: 0 0 10px;
+}
+
+.rejilla-fincas-mini {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.tarjeta-finca-mini {
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  padding: 10px 4px;
+  text-align: center;
+}
+
+.tarjeta-finca-mini__nombre {
+  font-size: 0.68rem;
+  font-weight: 700;
+  color: var(--texto-suave);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.tarjeta-finca-mini__valor {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: var(--primario-fuerte);
+  margin-top: 2px;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-color-scheme: dark) {
+  .tarjeta-finca-mini__valor { color: var(--verde-500); }
+}
+
+/* ---------- Pantalla "Más": lista de módulos + accesos de cuenta ---------- */
+
+.lista-cuenta {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 20px;
+}
+
+.item-cuenta {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 13px 14px;
+  border-radius: 12px;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  font-weight: 700;
+  font-size: 0.92rem;
+  color: var(--texto);
+  width: 100%;
+  text-align: left;
+}
+
+.item-cuenta svg { flex: none; color: var(--texto-suave); }
+.item-cuenta--salir { color: var(--rojo-500); }
+.item-cuenta--salir svg { color: var(--rojo-500); }
+
+/* ---------- Detalle de finca ---------- */
+
+.finca-detalle__banner {
+  height: 120px;
+  border-radius: var(--radio);
+  background: linear-gradient(135deg, var(--verde-700), var(--verde-900));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.85);
+  margin-bottom: 16px;
+}
+
+.finca-detalle__banner svg { width: 40px; height: 40px; }
+
+.rejilla-finca-detalle {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-bottom: var(--espacio);
+}
+
+.rejilla-finca-detalle > *:last-child:nth-child(odd) {
+  grid-column: 1 / -1;
+}
+
+.estado-finca__fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 12px 14px;
+  border: 1px solid var(--borde);
+  border-radius: 12px;
+  background: var(--superficie);
+  margin-bottom: 8px;
+  font-weight: 700;
+  font-size: 0.9rem;
+}
+
+.estado-finca__punto {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  flex: none;
+  margin-right: 8px;
+}
+
+.estado-finca__nombre {
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
 /* ---------- Impresión de reportes (exportar a PDF vía el navegador) ---------- */
 
 /* ---------- Diálogo modal pequeño (transferencias, acciones rápidas) ---------- */
@@ -978,6 +1384,7 @@ button {
   .banner-preview,
   .pestanas,
   .barra-acciones,
+  .nav-inferior,
   #boton-cambiar-finca,
   #boton-salir,
   .no-imprimir {
