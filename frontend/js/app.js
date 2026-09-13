@@ -145,7 +145,14 @@ function detalleFinca(finca) {
   ].filter(Boolean).join(' · ');
 }
 
-async function pintarListaFincas() {
+// Síncrona a propósito: se llama en cada tecla del buscador, y si tuviera
+// que esperar una consulta async por tarjeta, escribir rápido disparaba
+// varias ejecuciones en paralelo que se pisaban entre sí (una limpiaba
+// cuadriculaFincas mientras otra todavía estaba agregando tarjetas viejas),
+// dejando tarjetas duplicadas o de una búsqueda anterior en pantalla. Por
+// eso la urgencia de cada finca se calcula una sola vez en cargarFincas()
+// y se guarda en finca.__urgente antes de que el buscador pueda dispararse.
+function pintarListaFincas() {
   const termino = (el.campoBuscarFinca?.value || '').trim().toLowerCase();
   const enNavegacion = !!fincas.obtenerFincaActiva();
   el.cuadriculaFincas.innerHTML = '';
@@ -157,8 +164,7 @@ async function pintarListaFincas() {
     const envoltorio = document.createElement('div');
     envoltorio.className = 'tarjeta-finca-envoltorio';
 
-    const urgentes = await incidenciasUrgentesPendientes(finca.id).catch(() => []);
-    const insignia = urgentes.length > 0
+    const insignia = finca.__urgente
       ? '<span class="insignia insignia--rojo">🔴 Necesita atención</span>'
       : '<span class="insignia insignia--verde">🟢 Operativa</span>';
     const detalle = detalleFinca(finca);
@@ -228,7 +234,13 @@ async function pintarListaFincas() {
 
 async function renderizarSelectorFinca() {
   cacheFincas = await fincas.listar();
-  await pintarListaFincas();
+  await Promise.all(
+    cacheFincas.map(async (finca) => {
+      const urgentes = await incidenciasUrgentesPendientes(finca.id).catch(() => []);
+      finca.__urgente = urgentes.length > 0;
+    })
+  );
+  pintarListaFincas();
 }
 
 el.campoBuscarFinca?.addEventListener('input', () => pintarListaFincas());
