@@ -261,6 +261,20 @@ export function mostrarToast({ titulo, mensaje, alHacerClick }) {
 }
 
 /**
+ * Visor de imagen a pantalla completa (para fotos de incidencias, etc.) —
+ * tocar la miniatura para agrandarla, tocar de nuevo en cualquier parte
+ * para cerrarla.
+ */
+export function mostrarImagenAmpliada(src) {
+  const overlay = elemento('div', { class: 'visor-imagen' }, [
+    elemento('img', { src, alt: '' }),
+    elemento('button', { type: 'button', class: 'visor-imagen__cerrar', 'aria-label': 'Cerrar' }, '✕'),
+  ]);
+  overlay.addEventListener('click', () => overlay.remove());
+  document.body.appendChild(overlay);
+}
+
+/**
  * Cuadro de diálogo pequeño para acciones rápidas que necesitan más de un
  * campo de texto (por eso no alcanza con prompt()) — por ejemplo elegir una
  * bodega destino y una cantidad al transferir inventario. Devuelve una

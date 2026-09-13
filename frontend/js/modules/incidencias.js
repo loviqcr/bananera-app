@@ -1,6 +1,6 @@
 import { repos } from '../db/repos.js';
 import { auth } from './auth.js';
-import { elemento, crearFormulario, listaRegistros, mostrarDialogo, formatearFecha, hoyISO } from '../ui.js';
+import { elemento, crearFormulario, listaRegistros, mostrarDialogo, mostrarImagenAmpliada, formatearFecha, hoyISO } from '../ui.js';
 
 const TIPOS = ['equipo', 'cultivo', 'riego', 'bodega', 'personal', 'electricidad', 'mantenimiento', 'otro'];
 const PRIORIDADES = [
@@ -145,7 +145,18 @@ export const incidenciasModulo = {
             elemento('span', { class: `insignia ${INSIGNIA_PRIORIDAD[inc.prioridad] ?? 'insignia--gris'}`, texto: PRIORIDADES.find((p) => p.value === inc.prioridad)?.label ?? inc.prioridad }),
             elemento('span', { class: `insignia ${INSIGNIA_ESTADO[inc.estado] ?? 'insignia--gris'}`, texto: ESTADOS.find((e) => e.value === inc.estado)?.label ?? inc.estado }),
           ]),
-          inc.foto_url ? elemento('img', { class: 'previa-foto', src: inc.foto_url, style: 'max-height:140px' }) : null,
+          inc.foto_url
+            ? elemento('img', {
+                class: 'previa-foto previa-foto--tocable',
+                src: inc.foto_url,
+                style: 'max-height:140px',
+                title: 'Tocar para agrandar',
+                onclick: (evento) => {
+                  evento.stopPropagation();
+                  mostrarImagenAmpliada(inc.foto_url);
+                },
+              })
+            : null,
         ]),
         esAdmin
           ? elemento('button', {
