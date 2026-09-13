@@ -92,18 +92,20 @@
   color-scheme: light;
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --fondo: #11160f;
-    --superficie: #1a2116;
-    --texto: #f1f3ea;
-    --texto-suave: #b7c0ab;
-    --borde: #303829;
-    --primario: var(--verde-500);
-    --primario-fuerte: var(--verde-600);
-    --sombra: 0 2px 14px rgba(0, 0, 0, 0.45);
-    color-scheme: dark;
-  }
+/* El tema real a aplicar lo decide app.js (aplicarTema()): "claro"/"oscuro"
+   explícitos elegidos en Más > Apariencia, o el del sistema si está en
+   "Automático" — en los tres casos termina fijando este atributo en <html>,
+   así que las reglas de abajo no dependen directamente de prefers-color-scheme. */
+:root[data-tema-efectivo="oscuro"] {
+  --fondo: #11160f;
+  --superficie: #1a2116;
+  --texto: #f1f3ea;
+  --texto-suave: #b7c0ab;
+  --borde: #303829;
+  --primario: var(--verde-500);
+  --primario-fuerte: var(--verde-600);
+  --sombra: 0 2px 14px rgba(0, 0, 0, 0.45);
+  color-scheme: dark;
 }
 
 * {
@@ -456,9 +458,7 @@ button {
   font-size: 1.3rem;
 }
 
-@media (prefers-color-scheme: dark) {
-  .tarjeta-finca__icono { background: rgba(62, 168, 102, 0.18); color: var(--verde-500); }
-}
+:root[data-tema-efectivo="oscuro"] .tarjeta-finca__icono { background: rgba(62, 168, 102, 0.18); color: var(--verde-500); }
 
 .tarjeta-finca__cuerpo {
   flex: 1;
@@ -592,11 +592,9 @@ button {
   border-radius: 999px;
 }
 
-@media (prefers-color-scheme: dark) {
-  .tarjeta-modulo .etiqueta-contador {
-    background: rgba(62, 168, 102, 0.18);
-    color: var(--verde-500);
-  }
+:root[data-tema-efectivo="oscuro"] .tarjeta-modulo .etiqueta-contador {
+  background: rgba(62, 168, 102, 0.18);
+  color: var(--verde-500);
 }
 
 .tarjeta-modulo__icono {
@@ -610,9 +608,7 @@ button {
   justify-content: center;
 }
 
-@media (prefers-color-scheme: dark) {
-  .tarjeta-modulo__icono { background: rgba(62, 168, 102, 0.18); color: var(--verde-500); }
-}
+:root[data-tema-efectivo="oscuro"] .tarjeta-modulo__icono { background: rgba(62, 168, 102, 0.18); color: var(--verde-500); }
 
 .tarjeta-modulo--ambar .tarjeta-modulo__icono { background: rgba(240, 172, 27, 0.18); color: var(--ambar-600); }
 .tarjeta-modulo--azul .tarjeta-modulo__icono { background: rgba(47, 127, 146, 0.16); color: var(--azul-600); }
@@ -660,11 +656,9 @@ button {
   font-weight: 700;
 }
 
-@media (prefers-color-scheme: dark) {
-  .chip {
-    background: rgba(62, 168, 102, 0.18);
-    color: var(--verde-500);
-  }
+:root[data-tema-efectivo="oscuro"] .chip {
+  background: rgba(62, 168, 102, 0.18);
+  color: var(--verde-500);
 }
 
 .marca-login {
@@ -776,9 +770,7 @@ button {
   color: var(--primario-fuerte);
 }
 
-@media (prefers-color-scheme: dark) {
-  .estadistica__valor { color: var(--verde-500); }
-}
+:root[data-tema-efectivo="oscuro"] .estadistica__valor { color: var(--verde-500); }
 
 .estadistica__etiqueta {
   font-size: 0.76rem;
@@ -845,9 +837,7 @@ button {
 .insignia--azul { background: rgba(47, 127, 146, 0.16); color: var(--azul-600); }
 .insignia--naranja { background: rgba(217, 114, 10, 0.16); color: var(--naranja-600); }
 
-@media (prefers-color-scheme: dark) {
-  .insignia--gris { background: #303829; color: var(--texto-suave); }
-}
+:root[data-tema-efectivo="oscuro"] .insignia--gris { background: #303829; color: var(--texto-suave); }
 
 .barra-acciones {
   display: flex;
@@ -1072,9 +1062,7 @@ body.tiene-nav-inferior .pantalla {
   color: var(--primario);
 }
 
-@media (prefers-color-scheme: dark) {
-  .nav-inferior__item--activo { color: var(--verde-500); }
-}
+:root[data-tema-efectivo="oscuro"] .nav-inferior__item--activo { color: var(--verde-500); }
 
 .nav-inferior__central {
   flex: 1;
@@ -1148,9 +1136,7 @@ body.tiene-nav-inferior .pantalla {
   justify-content: center;
 }
 
-@media (prefers-color-scheme: dark) {
-  .accion-rapida__icono { background: rgba(62, 168, 102, 0.18); color: var(--verde-500); }
-}
+:root[data-tema-efectivo="oscuro"] .accion-rapida__icono { background: rgba(62, 168, 102, 0.18); color: var(--verde-500); }
 
 .accion-rapida--proximamente {
   opacity: 0.5;
@@ -1182,9 +1168,7 @@ body.tiene-nav-inferior .pantalla {
   margin-bottom: 10px;
 }
 
-@media (prefers-color-scheme: dark) {
-  .tarjeta-stat__icono { background: rgba(62, 168, 102, 0.18); color: var(--verde-500); }
-}
+:root[data-tema-efectivo="oscuro"] .tarjeta-stat__icono { background: rgba(62, 168, 102, 0.18); color: var(--verde-500); }
 
 .tarjeta-stat--alerta .tarjeta-stat__icono { background: rgba(201, 80, 46, 0.16); color: var(--rojo-500); }
 .tarjeta-stat--ambar .tarjeta-stat__icono { background: rgba(240, 172, 27, 0.22); color: var(--ambar-600); }
@@ -1197,9 +1181,7 @@ body.tiene-nav-inferior .pantalla {
   color: var(--primario-fuerte);
 }
 
-@media (prefers-color-scheme: dark) {
-  .tarjeta-stat__valor { color: var(--verde-500); }
-}
+:root[data-tema-efectivo="oscuro"] .tarjeta-stat__valor { color: var(--verde-500); }
 
 .tarjeta-stat--alerta .tarjeta-stat__valor { color: var(--rojo-500); }
 
@@ -1253,9 +1235,7 @@ body.tiene-nav-inferior .pantalla {
   font-variant-numeric: tabular-nums;
 }
 
-@media (prefers-color-scheme: dark) {
-  .tarjeta-finca-mini__valor { color: var(--verde-500); }
-}
+:root[data-tema-efectivo="oscuro"] .tarjeta-finca-mini__valor { color: var(--verde-500); }
 
 /* ---------- Pantalla "Más": lista de módulos + accesos de cuenta ---------- */
 
@@ -1284,6 +1264,39 @@ body.tiene-nav-inferior .pantalla {
 .item-cuenta svg { flex: none; color: var(--texto-suave); }
 .item-cuenta--salir { color: var(--rojo-500); }
 .item-cuenta--salir svg { color: var(--rojo-500); }
+
+.selector-tema {
+  display: flex;
+  gap: 8px;
+}
+
+.selector-tema__opcion {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 6px;
+  border-radius: 12px;
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  color: var(--texto-suave);
+  font-size: 0.76rem;
+  font-weight: 700;
+}
+
+.selector-tema__opcion svg { width: 18px; height: 18px; }
+
+.selector-tema__opcion--activa {
+  border-color: var(--primario);
+  background: var(--verde-100);
+  color: var(--primario-fuerte);
+}
+
+:root[data-tema-efectivo="oscuro"] .selector-tema__opcion--activa {
+  background: rgba(62, 168, 102, 0.18);
+  color: var(--verde-500);
+}
 
 /* ---------- Detalle de finca ---------- */
 

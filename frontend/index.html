@@ -9,6 +9,16 @@
   <link rel="icon" href="./icons/icon-192.png" />
   <link rel="apple-touch-icon" href="./icons/icon-192.png" />
   <link rel="stylesheet" href="./css/estilos.css" />
+  <script>
+    // Fija el tema ANTES de que se pinte la página, para que no haya un
+    // parpadeo del tema equivocado al cargar. La misma lógica vive en
+    // aplicarTema() en app.js, que es quien reacciona a cambios en caliente.
+    (function () {
+      var pref = localStorage.getItem('bananera:tema');
+      var oscuro = pref === 'oscuro' || (pref !== 'claro' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+      document.documentElement.setAttribute('data-tema-efectivo', oscuro ? 'oscuro' : 'claro');
+    })();
+  </script>
 </head>
 <body>
 
@@ -150,6 +160,13 @@
       <div class="lista-cuenta">
         <button class="item-cuenta" id="boton-cambiar-finca-mas"><span data-icono="repeat"></span> Cambiar de finca</button>
         <button class="item-cuenta item-cuenta--salir" id="boton-salir-mas"><span data-icono="logout"></span> Cerrar sesión</button>
+      </div>
+
+      <h2 class="seccion-dashboard__titulo" style="margin-top:24px">Apariencia</h2>
+      <div class="selector-tema" id="selector-tema">
+        <button type="button" class="selector-tema__opcion" data-tema="claro"><span data-icono="sun"></span>Claro</button>
+        <button type="button" class="selector-tema__opcion" data-tema="oscuro"><span data-icono="moon"></span>Oscuro</button>
+        <button type="button" class="selector-tema__opcion" data-tema="auto"><span data-icono="monitor"></span>Automático</button>
       </div>
     </section>
 

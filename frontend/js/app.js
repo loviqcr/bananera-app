@@ -71,6 +71,7 @@ const el = {
   cuadriculaModulos: document.getElementById('cuadricula-modulos'),
   botonCambiarFincaMas: document.getElementById('boton-cambiar-finca-mas'),
   botonSalirMas: document.getElementById('boton-salir-mas'),
+  selectorTema: document.getElementById('selector-tema'),
   botonVolverInicio: document.getElementById('boton-volver-inicio'),
   tituloModulo: document.getElementById('titulo-modulo'),
   contenedorModulo: document.getElementById('contenedor-modulo'),
@@ -356,6 +357,48 @@ function actualizarVisibilidadModulos() {
   });
 }
 
+// -------------------- Apariencia (claro / oscuro / automático) --------------------
+
+const CLAVE_TEMA = 'bananera:tema';
+const consultaTemaSistema = window.matchMedia('(prefers-color-scheme: dark)');
+
+function preferenciaTema() {
+  const guardada = localStorage.getItem(CLAVE_TEMA);
+  return guardada === 'claro' || guardada === 'oscuro' ? guardada : 'auto';
+}
+
+function calcularTemaEfectivo() {
+  const preferencia = preferenciaTema();
+  if (preferencia !== 'auto') return preferencia;
+  return consultaTemaSistema.matches ? 'oscuro' : 'claro';
+}
+
+function actualizarBotonesTema() {
+  const preferencia = preferenciaTema();
+  el.selectorTema?.querySelectorAll('.selector-tema__opcion').forEach((boton) => {
+    boton.classList.toggle('selector-tema__opcion--activa', boton.dataset.tema === preferencia);
+  });
+}
+
+function aplicarTema() {
+  document.documentElement.setAttribute('data-tema-efectivo', calcularTemaEfectivo());
+  actualizarBotonesTema();
+}
+
+el.selectorTema?.addEventListener('click', (evento) => {
+  const boton = evento.target.closest('.selector-tema__opcion');
+  if (!boton) return;
+  if (boton.dataset.tema === 'auto') localStorage.removeItem(CLAVE_TEMA);
+  else localStorage.setItem(CLAVE_TEMA, boton.dataset.tema);
+  aplicarTema();
+});
+
+// Si el usuario dejó "Automático" y cambia el tema del sistema operativo
+// mientras la app está abierta, se refleja sin que tenga que recargar.
+consultaTemaSistema.addEventListener('change', () => {
+  if (preferenciaTema() === 'auto') aplicarTema();
+});
+
 async function renderizarInicio() {
   el.bienvenidaUsuario.textContent = cacheUsuario ? `Hola, ${cacheUsuario.nombre}` : '';
   el.contextoInicio.textContent = el.contexto.textContent;
@@ -418,6 +461,7 @@ el.navInferior?.addEventListener('click', async (evento) => {
     await abrirModulo('reportes');
   } else if (destino === 'mas') {
     actualizarVisibilidadModulos();
+    actualizarBotonesTema();
     mostrarVista('mas');
   }
 });
@@ -523,6 +567,7 @@ async function continuarDespuesDeLogin() {
 
 async function iniciar() {
   hidratarIconos();
+  aplicarTema();
   await obtenerIdDispositivo();
   iniciarIndicadorConexion();
 

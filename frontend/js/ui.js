@@ -153,6 +153,9 @@ const ICONOS_SVG = {
   droplet: '<path d="M12 3s6.5 7 6.5 11.5a6.5 6.5 0 0 1-13 0C5.5 10 12 3 12 3Z"/>',
   farm: '<path d="M4 21V10l8-6 8 6v11"/><path d="M9.5 21v-7h5v7"/><path d="M4 10h16"/>',
   basket: '<path d="M4.5 10h15l-1.6 8.8a2 2 0 0 1-2 1.7H8.1a2 2 0 0 1-2-1.7L4.5 10Z"/><path d="M8.5 10 12 4l3.5 6"/><path d="M9.5 14v3.2"/><path d="M12 14v3.2"/><path d="M14.5 14v3.2"/>',
+  sun: '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6"/><path d="M12 18.9v2.6"/><path d="M4.6 4.6l1.8 1.8"/><path d="M17.6 17.6l1.8 1.8"/><path d="M2.5 12h2.6"/><path d="M18.9 12h2.6"/><path d="M4.6 19.4l1.8-1.8"/><path d="M17.6 6.4l1.8-1.8"/>',
+  moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5Z"/>',
+  monitor: '<rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M8 20h8"/><path d="M12 16.5V20"/>',
 };
 
 /** Devuelve el HTML de un <svg> de línea listo para usar en innerHTML. */
