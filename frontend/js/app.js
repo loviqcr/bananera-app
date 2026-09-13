@@ -5,7 +5,8 @@ import { iniciarIndicadorConexion } from './modules/estadoConexion.js';
 import { iniciarSyncClient, sincronizarAhora } from './sync/syncClient.js';
 import { renderizarDashboard, estadisticasDeFinca } from './modules/dashboard.js';
 import { incidenciasUrgentesPendientes } from './modules/incidencias.js';
-import { hayFormularioSinGuardar, hidratarIconos, tarjetaStat, elemento } from './ui.js';
+import { hayFormularioSinGuardar, hidratarIconos, tarjetaStat, elemento, mostrarToast } from './ui.js';
+import { API_BASE_URL } from './config.js';
 import { produccionModulo } from './modules/produccion.js';
 import { laboresModulo } from './modules/labores.js';
 import { calendarioModulo } from './modules/calendario.js';
@@ -72,6 +73,7 @@ const el = {
   botonCambiarFincaMas: document.getElementById('boton-cambiar-finca-mas'),
   botonSalirMas: document.getElementById('boton-salir-mas'),
   selectorTema: document.getElementById('selector-tema'),
+  botonNotificaciones: document.getElementById('boton-notificaciones'),
   botonVolverInicio: document.getElementById('boton-volver-inicio'),
   tituloModulo: document.getElementById('titulo-modulo'),
   contenedorModulo: document.getElementById('contenedor-modulo'),
@@ -399,6 +401,118 @@ consultaTemaSistema.addEventListener('change', () => {
   if (preferenciaTema() === 'auto') aplicarTema();
 });
 
+// -------------------- Notificaciones push (incidencias urgentes) --------------------
+
+/** applicationServerKey debe ir como Uint8Array, no como el string base64url que da el servidor. */
+function urlBase64ToUint8Array(base64String) {
+  const relleno = '='.repeat((4 - (base64String.length % 4)) % 4);
+  const base64 = (base64String + relleno).replace(/-/g, '+').replace(/_/g, '/');
+  const binario = atob(base64);
+  return Uint8Array.from([...binario].map((c) => c.charCodeAt(0)));
+}
+
+function soportaPush() {
+  return 'serviceWorker' in navigator && 'PushManager' in window && 'Notification' in window;
+}
+
+async function suscripcionActual() {
+  if (!soportaPush()) return null;
+  const registro = await navigator.serviceWorker.ready;
+  return registro.pushManager.getSubscription();
+}
+
+async function actualizarBotonNotificaciones() {
+  if (!el.botonNotificaciones) return;
+  if (!soportaPush()) {
+    el.botonNotificaciones.hidden = true;
+    return;
+  }
+  el.botonNotificaciones.hidden = false;
+  const suscripcion = await suscripcionActual().catch(() => null);
+  const activo = !!suscripcion && Notification.permission === 'granted';
+  el.botonNotificaciones.classList.toggle('item-cuenta--activo', activo);
+  const texto = el.botonNotificaciones.querySelector('.texto-notificaciones');
+  if (texto) texto.textContent = activo ? '🔔 Notificaciones activadas (tocar para desactivar)' : 'Activar notificaciones de incidencias urgentes';
+}
+
+async function enviarSuscripcionAlServidor(suscripcion) {
+  const token = await auth.obtenerToken();
+  await fetch(`${API_BASE_URL}/notificaciones/suscribir`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+    body: JSON.stringify(suscripcion.toJSON()),
+  });
+}
+
+async function activarNotificaciones() {
+  const permiso = await Notification.requestPermission();
+  if (permiso !== 'granted') {
+    alert('No se otorgó permiso de notificaciones. Puedes activarlo luego desde los ajustes del navegador para este sitio.');
+    return;
+  }
+  const respuesta = await fetch(`${API_BASE_URL}/notificaciones/clave-publica`);
+  const { clavePublica, disponible } = await respuesta.json();
+  if (!disponible || !clavePublica) {
+    alert('Las notificaciones todavía no están configuradas en el servidor. Avísale al administrador del sistema.');
+    return;
+  }
+  const registro = await navigator.serviceWorker.ready;
+  const suscripcion = await registro.pushManager.subscribe({
+    userVisibleOnly: true,
+    applicationServerKey: urlBase64ToUint8Array(clavePublica),
+  });
+  await enviarSuscripcionAlServidor(suscripcion);
+}
+
+async function desactivarNotificaciones(suscripcion) {
+  try {
+    const token = await auth.obtenerToken();
+    await fetch(`${API_BASE_URL}/notificaciones/suscribir`, {
+      method: 'DELETE',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ endpoint: suscripcion.endpoint }),
+    });
+  } catch {
+    // si falla el aviso al servidor, igual se desuscribe localmente abajo —
+    // la fila queda huérfana en el servidor pero el push a un endpoint
+    // muerto simplemente falla y se limpia sola del lado del servidor.
+  }
+  await suscripcion.unsubscribe();
+}
+
+el.botonNotificaciones?.addEventListener('click', async () => {
+  el.botonNotificaciones.disabled = true;
+  try {
+    const existente = await suscripcionActual();
+    if (existente && Notification.permission === 'granted') {
+      await desactivarNotificaciones(existente);
+    } else {
+      await activarNotificaciones();
+    }
+  } catch (error) {
+    console.error('[app] Error activando/desactivando notificaciones:', error);
+    alert('No se pudo cambiar el estado de las notificaciones en este dispositivo.');
+  } finally {
+    el.botonNotificaciones.disabled = false;
+    await actualizarBotonNotificaciones();
+  }
+});
+
+// Aviso dentro de la app cuando llega un push con la página abierta (además
+// de la notificación real del sistema, que siempre la muestra el service
+// worker aunque la app esté cerrada — ver service-worker.js).
+if ('serviceWorker' in navigator) {
+  navigator.serviceWorker.addEventListener('message', (evento) => {
+    if (evento.data?.tipo !== 'bananera:push') return;
+    const payload = evento.data.payload || {};
+    mostrarToast({
+      titulo: payload.titulo || 'Nueva notificación',
+      mensaje: payload.mensaje,
+      alHacerClick: () => abrirModulo('incidencias'),
+    });
+  });
+}
+
 async function renderizarInicio() {
   el.bienvenidaUsuario.textContent = cacheUsuario ? `Hola, ${cacheUsuario.nombre}` : '';
   el.contextoInicio.textContent = el.contexto.textContent;
@@ -462,6 +576,7 @@ el.navInferior?.addEventListener('click', async (evento) => {
   } else if (destino === 'mas') {
     actualizarVisibilidadModulos();
     actualizarBotonesTema();
+    await actualizarBotonNotificaciones();
     mostrarVista('mas');
   }
 });

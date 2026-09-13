@@ -1298,6 +1298,42 @@ body.tiene-nav-inferior .pantalla {
   color: var(--verde-500);
 }
 
+.item-cuenta--activo { border-color: var(--primario); color: var(--primario-fuerte); }
+.item-cuenta--activo svg { color: var(--primario-fuerte); }
+:root[data-tema-efectivo="oscuro"] .item-cuenta--activo,
+:root[data-tema-efectivo="oscuro"] .item-cuenta--activo svg { color: var(--verde-500); }
+
+/* ---------- Aviso emergente dentro de la app (notificaciones push) ---------- */
+
+.toast-notificacion {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 84px;
+  z-index: 60;
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: var(--rojo-500);
+  color: var(--blanco);
+  border-radius: 14px;
+  padding: 14px 16px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  cursor: pointer;
+  animation: toast-entrada 0.25s ease;
+  max-width: 480px;
+  margin: 0 auto;
+}
+
+@keyframes toast-entrada {
+  from { transform: translateY(16px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+.toast-notificacion__icono { flex: none; font-size: 1.25rem; line-height: 1; }
+.toast-notificacion__titulo { font-weight: 800; font-size: 0.9rem; }
+.toast-notificacion__mensaje { font-size: 0.82rem; opacity: 0.92; margin-top: 2px; }
+
 /* ---------- Detalle de finca ---------- */
 
 .finca-detalle__banner {

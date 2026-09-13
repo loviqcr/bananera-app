@@ -27,6 +27,17 @@ services:
         value: Administrador
       - key: CORS_ORIGINS
         value: https://bananera-app.web.app,https://platanos-app-e8208.web.app
+      # Notificaciones push (Web Push / VAPID). La pública es segura de
+      # commitear (para eso es pública). La privada NUNCA va en el repo:
+      # "sync: false" hace que Render la deje vacía acá — hay que pegarla a
+      # mano en el dashboard del servicio (Environment). Ver docs/notas del
+      # commit que agregó esto para el valor generado.
+      - key: VAPID_PUBLIC_KEY
+        value: BFFHzoo2iZ9l3vm17V7h2Gb5jTSf-UWSoCdKVxBorZMAuHn9d2cAB7QF1ves5FEubduIHsW98GthFi7qwO_8Who
+      - key: VAPID_PRIVATE_KEY
+        sync: false
+      - key: VAPID_CONTACT_EMAIL
+        value: mailto:soporte@cosechaspresbere.com
 
 databases:
   - name: bananera-db

@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { pool } from '../db/pool';
 import { requiereAutenticacion } from '../middleware/auth';
 import { aplicarOperacion, obtenerCambiosPendientes, type OperacionSync } from '../services/syncService';
+import { notificarIncidenciaUrgente } from '../services/pushService';
 
 export const syncRouter = Router();
 syncRouter.use(requiereAutenticacion);
@@ -44,6 +45,18 @@ syncRouter.post('/push', async (req, res, next) => {
         const resultado = await aplicarOperacion(client, usuario, op);
         await client.query('COMMIT');
         resultados.push(resultado);
+
+        // Aviso push (no bloquea la respuesta ni afecta el resultado de la
+        // operación si falla — es un "extra", no parte de guardar el dato).
+        if (resultado.estado === 'ok' && op.tabla === 'incidencias' && op.operacion === 'crear' && op.datos?.prioridad === 'urgente') {
+          const fincaId = op.datos.finca_id as string | undefined;
+          const descripcion = op.datos.descripcion as string | undefined;
+          if (fincaId) {
+            notificarIncidenciaUrgente(fincaId, descripcion ?? '').catch((err) => {
+              console.error('[sync] Error enviando notificación push:', err);
+            });
+          }
+        }
       } catch (err) {
         await client.query('ROLLBACK');
         resultados.push({

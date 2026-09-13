@@ -19,4 +19,10 @@ export const env = {
   adminPassword: required('ADMIN_PASSWORD'),
   adminNombre: process.env.ADMIN_NOMBRE ?? 'Administrador',
   corsOrigins: (process.env.CORS_ORIGINS ?? '*').split(',').map((s) => s.trim()),
+  // Notificaciones push (Web Push / VAPID). Opcionales a propósito: si no
+  // están configuradas, pushService.ts deshabilita el envío sin romper nada
+  // más del backend (ver notas ahí).
+  vapidPublicKey: process.env.VAPID_PUBLIC_KEY || null,
+  vapidPrivateKey: process.env.VAPID_PRIVATE_KEY || null,
+  vapidContactEmail: process.env.VAPID_CONTACT_EMAIL || 'mailto:soporte@cosechaspresbere.com',
 };

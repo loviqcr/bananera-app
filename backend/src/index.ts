@@ -7,6 +7,7 @@ import { fincasRouter } from './routes/fincas.routes';
 import { syncRouter } from './routes/sync.routes';
 import { usuariosRouter } from './routes/usuarios.routes';
 import { auditoriaRouter } from './routes/auditoria.routes';
+import { notificacionesRouter } from './routes/notificaciones.routes';
 import { manejadorErrores, rutaNoEncontrada } from './middleware/errorHandler';
 import { pool } from './db/pool';
 
@@ -39,6 +40,7 @@ app.use('/fincas', fincasRouter);
 app.use('/sync', syncRouter);
 app.use('/usuarios', usuariosRouter);
 app.use('/auditoria', auditoriaRouter);
+app.use('/notificaciones', notificacionesRouter);
 
 app.use(rutaNoEncontrada);
 app.use(manejadorErrores);

@@ -219,6 +219,35 @@ export function hoyISO() {
   return new Date().toISOString().slice(0, 10);
 }
 
+let toastActual = null;
+
+/**
+ * Aviso flotante dentro de la propia app (el "popup" para cuando se está
+ * navegando en el navegador) — se usa para las notificaciones push que
+ * llegan con la app abierta. Se cierra solo o al tocarlo.
+ */
+export function mostrarToast({ titulo, mensaje, alHacerClick }) {
+  toastActual?.remove();
+  const nodo = elemento('div', { class: 'toast-notificacion', role: 'alert' }, [
+    elemento('span', { class: 'toast-notificacion__icono' }, '🚨'),
+    elemento('div', { class: 'toast-notificacion__cuerpo' }, [
+      elemento('div', { class: 'toast-notificacion__titulo', texto: titulo }),
+      mensaje ? elemento('div', { class: 'toast-notificacion__mensaje', texto: mensaje }) : null,
+    ]),
+  ]);
+  nodo.addEventListener('click', () => {
+    nodo.remove();
+    if (toastActual === nodo) toastActual = null;
+    alHacerClick?.();
+  });
+  document.body.appendChild(nodo);
+  toastActual = nodo;
+  setTimeout(() => {
+    if (nodo.isConnected) nodo.remove();
+    if (toastActual === nodo) toastActual = null;
+  }, 8000);
+}
+
 /**
  * Cuadro de diálogo pequeño para acciones rápidas que necesitan más de un
  * campo de texto (por eso no alcanza con prompt()) — por ejemplo elegir una

@@ -4,7 +4,7 @@
  * este caché — esas las maneja directamente el Sync Client contra
  * IndexedDB, que es la fuente de verdad local.
  */
-const CACHE = 'bananera-shell-v7';
+const CACHE = 'bananera-shell-v8';
 
 const ARCHIVOS_SHELL = [
   './',
@@ -73,6 +73,54 @@ self.addEventListener('fetch', (evento) => {
         })
         .catch(() => cacheada);
       return cacheada || redFetch;
+    })
+  );
+});
+
+/**
+ * Notificaciones push reales (Web Push): el navegador/SO entrega este
+ * evento al service worker aunque la app esté cerrada del todo — por eso
+ * SIEMPRE se muestra la notificación del sistema acá (satisface "cuando
+ * está instalada, que avise en pantalla"). Además, si hay alguna pestaña/PWA
+ * de la app abierta en ese momento, se le manda un mensaje para que muestre
+ * también un aviso dentro de la propia app (el popup que se ve navegando).
+ */
+self.addEventListener('push', (evento) => {
+  let datos = {};
+  try {
+    datos = evento.data ? evento.data.json() : {};
+  } catch {
+    datos = { titulo: 'Cosechas Presbere', mensaje: evento.data ? evento.data.text() : '' };
+  }
+
+  const titulo = datos.titulo || 'Cosechas Presbere';
+  const opciones = {
+    body: datos.mensaje || '',
+    icon: './icons/icon-192.png',
+    badge: './icons/icon-192.png',
+    vibrate: [120, 60, 120],
+    data: { url: datos.url || './' },
+  };
+
+  evento.waitUntil(
+    Promise.all([
+      self.registration.showNotification(titulo, opciones),
+      self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((lista) => {
+        for (const cliente of lista) cliente.postMessage({ tipo: 'bananera:push', payload: datos });
+      }),
+    ])
+  );
+});
+
+self.addEventListener('notificationclick', (evento) => {
+  evento.notification.close();
+  const url = evento.notification.data?.url || './';
+  evento.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((lista) => {
+      for (const cliente of lista) {
+        if ('focus' in cliente) return cliente.focus();
+      }
+      if (self.clients.openWindow) return self.clients.openWindow(url);
     })
   );
 });
