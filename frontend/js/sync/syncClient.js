@@ -137,6 +137,16 @@ export async function sincronizarAhora() {
 export function iniciarSyncClient() {
   window.addEventListener('online', () => sincronizarAhora());
   window.addEventListener('offline', () => sincronizarAhora());
+  // En Android (APK/TWA) el sistema pausa el setInterval de abajo cuando la
+  // app queda en segundo plano (pantalla apagada, se cambia de app) para
+  // ahorrar batería. Sin esto, al volver a abrirla se seguía viendo lo
+  // último que había en IndexedDB hasta que por casualidad tocara el
+  // siguiente ciclo de 30s — por eso el mismo usuario administrador veía
+  // datos distintos en el celular que en el navegador de escritorio.
+  document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'visible') sincronizarAhora();
+  });
+  window.addEventListener('pageshow', () => sincronizarAhora());
   document.addEventListener('bananera:cola-cambio', async () => {
     // Actualización optimista inmediata del indicador (no espera red) para
     // que el usuario vea al instante que su registro quedó guardado y
