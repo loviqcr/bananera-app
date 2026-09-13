@@ -37,9 +37,10 @@ async function cargarUsuarioAutenticado(usuarioId: string): Promise<UsuarioAuten
   const fila = rows[0];
 
   const fincasResult = await pool.query('SELECT finca_id FROM usuario_fincas WHERE usuario_id = $1', [usuarioId]);
-  // administrador y bodega ven todas las fincas aunque no tengan filas en usuario_fincas
-  const fincaIds =
-    fila.rol === 'administrador' || fila.rol === 'bodega' ? [] : fincasResult.rows.map((r) => r.finca_id);
+  // Solo administrador ve todas las fincas aunque no tenga filas en
+  // usuario_fincas. Bodega (y el resto de roles) quedan limitados a las
+  // fincas que se le asignen explícitamente en Usuarios.
+  const fincaIds = fila.rol === 'administrador' ? [] : fincasResult.rows.map((r) => r.finca_id);
 
   return { id: fila.id, usuario: fila.usuario, nombre: fila.nombre, rol: fila.rol, fincaIds };
 }

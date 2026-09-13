@@ -89,7 +89,7 @@ function renderizarFormularioCrear(contenedor, listaFincas, alCrear) {
     elemento('div', { class: 'campo' }, [elemento('label', { texto: 'Contraseña' }), campoPassword]),
     elemento('div', { class: 'campo' }, [elemento('label', { texto: 'Rol' }), selectorRol]),
     elemento('div', { class: 'campo' }, [
-      elemento('label', { texto: 'Fincas asignadas (no aplica si el rol es Administrador o Bodega, que ven todas)' }),
+      elemento('label', { texto: 'Fincas asignadas (no aplica si el rol es Administrador, que ve todas)' }),
       casillasFincas,
     ]),
     mensaje,

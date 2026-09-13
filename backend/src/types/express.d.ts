@@ -5,7 +5,7 @@ export interface UsuarioAutenticado {
   usuario: string;
   nombre: string;
   rol: string;
-  fincaIds: string[]; // fincas a las que tiene acceso; vacío = todas (admin/bodega)
+  fincaIds: string[]; // fincas a las que tiene acceso; vacío = todas (solo administrador)
 }
 
 declare global {

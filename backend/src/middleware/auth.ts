@@ -40,7 +40,7 @@ export function requiereRol(...rolesPermitidos: string[]) {
 
 /**
  * true si el usuario autenticado tiene acceso a la finca indicada
- * (fincaIds vacío = administrador/bodega, ven todas las fincas).
+ * (fincaIds vacío = administrador, ve todas las fincas).
  */
 export function tieneAccesoAFinca(usuario: { rol: string; fincaIds: string[] }, fincaId: string): boolean {
   if (usuario.fincaIds.length === 0) return true;
