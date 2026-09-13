@@ -1,0 +1,20 @@
+# Todo esto se regenera solo a partir de twa-manifest.json (bubblewrap
+# build/update) — no hace falta versionarlo, y el keystore NUNCA debe subirse
+# a git (es la llave de firma de la app).
+android.keystore
+*.keystore
+/app/
+/gradle/
+/build.gradle
+/settings.gradle
+/gradlew
+/gradlew.bat
+/gradle.properties
+/local.properties
+manifest-checksum.txt
+*.apk
+*.apk.idsig
+*.aab
+.gradle/
+/build/
+store_icon.png

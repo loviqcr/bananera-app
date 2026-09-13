@@ -2,7 +2,7 @@
   "hosting": {
     "site": "bananera-app",
     "public": "frontend",
-    "ignore": ["firebase.json", "**/.*", "**/node_modules/**"],
+    "ignore": ["firebase.json", "**/.*", "!/.well-known/**", "**/node_modules/**"],
     "rewrites": [
       {
         "source": "**",

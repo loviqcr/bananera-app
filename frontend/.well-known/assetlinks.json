@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.jcstechsolutions.cosechaspresbere",
+      "sha256_cert_fingerprints": [
+        "05:73:92:AF:85:6A:CF:50:43:71:F1:3D:A2:0F:3F:53:DD:02:F1:D1:C9:AA:45:BE:56:26:49:C1:92:E6:F1:22"
+      ]
+    }
+  }
+]
