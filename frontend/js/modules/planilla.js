@@ -40,6 +40,19 @@ async function mapaNombresFincas() {
   return Object.fromEntries(fincas.map((f) => [f.id, f.nombre]));
 }
 
+/**
+ * Un trabajador con al menos un día de asistencia no se puede borrar de
+ * verdad: asistencia.empleado_id no tiene ON DELETE CASCADE a propósito
+ * (para no perder historial de pagos/reportes), así que el servidor
+ * rechazaría el borrado — solo se ofrece "dar de baja" (reversible) en ese
+ * caso. Si nunca tuvo asistencia (se registró por error, por ejemplo), sí
+ * es seguro eliminarlo por completo.
+ */
+async function tieneHistorial(empleadoId) {
+  const registros = await localdb.getPorIndice('asistencia', 'empleado_id', empleadoId);
+  return registros.some((r) => !r.eliminado_at);
+}
+
 /** Vacío para cualquier rol que no sea administrador/planilla — ver la nota en syncRegistry.ts. */
 async function mapaSalarios() {
   const salarios = await repos.listarTodos('salarios');
@@ -131,6 +144,7 @@ async function renderizarEmpleados(contenedor, contexto) {
 
   for (const e of activos) {
     const salario = salarioPorEmpleado?.[e.id];
+    const sinHistorial = !(await tieneHistorial(e.id));
     const partesSubtitulo = [nombreFinca ? nombreFinca[e.finca_id] ?? 'Finca' : null, e.puesto].filter(Boolean);
     const fila = elemento('div', { class: 'fila-registro' }, [
       elemento('div', verSalario ? { style: 'cursor:pointer', onclick: () => abrirTarifa(e, salario) } : {}, [
@@ -145,18 +159,31 @@ async function renderizarEmpleados(contenedor, contexto) {
             onclick: () => abrirTarifa(e, salario),
           })
         : null,
-      elemento('button', {
-        type: 'button',
-        class: 'boton-icono',
-        title: 'Dar de baja',
-        style: 'background:none;color:var(--rojo-500);flex:none',
-        texto: '🚫',
-        onclick: async () => {
-          if (!confirm(`¿Dar de baja a ${e.nombre}? Ya no va a aparecer para pasar lista ni en la planilla, pero su historial se conserva. Se puede reactivar después.`)) return;
-          await repos.editar('empleados', e.id, { estado: 'inactivo' });
-          await renderizarEmpleados(contenedor, contexto);
-        },
-      }),
+      sinHistorial
+        ? elemento('button', {
+            type: 'button',
+            class: 'boton-icono',
+            title: 'Eliminar (nunca tuvo asistencia registrada)',
+            style: 'background:none;color:var(--rojo-500);flex:none',
+            texto: '🗑️',
+            onclick: async () => {
+              if (!confirm(`¿Eliminar a ${e.nombre} por completo? No se puede deshacer.`)) return;
+              await repos.eliminar('empleados', e.id);
+              await renderizarEmpleados(contenedor, contexto);
+            },
+          })
+        : elemento('button', {
+            type: 'button',
+            class: 'boton-icono',
+            title: 'Dar de baja (tiene historial de asistencia, no se puede eliminar)',
+            style: 'background:none;color:var(--rojo-500);flex:none',
+            texto: '🚫',
+            onclick: async () => {
+              if (!confirm(`¿Dar de baja a ${e.nombre}? Ya no va a aparecer para pasar lista ni en la planilla, pero su historial se conserva. Se puede reactivar después.`)) return;
+              await repos.editar('empleados', e.id, { estado: 'inactivo' });
+              await renderizarEmpleados(contenedor, contexto);
+            },
+          }),
     ]);
     lista.appendChild(fila);
   }
