@@ -53,6 +53,12 @@ async function opcionesAreas(fincaId) {
   return areas.sort((a, b) => a.orden - b.orden).map((a) => ({ value: a.id, label: a.nombre }));
 }
 
+/** Solo se necesita cuando se está viendo "todas las fincas" a la vez, para no confundir de cuál es cada incidencia. */
+async function mapaNombresFincas() {
+  const fincas = await repos.listarTodos('fincas');
+  return Object.fromEntries(fincas.map((f) => [f.id, f.nombre]));
+}
+
 export async function incidenciasAbiertas(fincaId) {
   const filas = await repos.listarPorFinca('incidencias', fincaId);
   return filas.filter((f) => f.estado !== 'resuelta' && f.estado !== 'cerrada');
@@ -67,10 +73,11 @@ export const incidenciasModulo = {
   etiqueta: 'Incidencias',
   async render(contenedor, contexto) {
     contenedor.innerHTML = '';
-    const [areas, todas, sesion] = await Promise.all([
+    const [areas, todas, sesion, nombreFinca] = await Promise.all([
       opcionesAreas(contexto.fincaId),
       repos.listarPorFinca('incidencias', contexto.fincaId),
       auth.sesionActual(),
+      contexto.fincaId === 'todas' ? mapaNombresFincas() : Promise.resolve(null),
     ]);
     const esAdmin = sesion?.usuario?.rol === 'administrador';
     const ordenadas = todas.sort((a, b) => (a.fecha + (a.hora || '') < b.fecha + (b.hora || '') ? 1 : -1));
@@ -139,7 +146,12 @@ export const incidenciasModulo = {
     for (const inc of ordenadas) {
       const fila = elemento('div', { class: 'fila-registro', style: 'cursor:pointer;align-items:flex-start' }, [
         elemento('div', {}, [
-          elemento('div', { class: 'fila-registro__titulo', texto: `${formatearFecha(inc.fecha)} · ${inc.tipo}` }),
+          elemento('div', {
+            class: 'fila-registro__titulo',
+            texto: nombreFinca
+              ? `${nombreFinca[inc.finca_id] ?? 'Finca'} · ${formatearFecha(inc.fecha)} · ${inc.tipo}`
+              : `${formatearFecha(inc.fecha)} · ${inc.tipo}`,
+          }),
           elemento('div', { class: 'fila-registro__subtitulo', texto: inc.descripcion }),
           elemento('div', { style: 'margin-top:6px;display:flex;gap:6px;flex-wrap:wrap' }, [
             elemento('span', { class: `insignia ${INSIGNIA_PRIORIDAD[inc.prioridad] ?? 'insignia--gris'}`, texto: PRIORIDADES.find((p) => p.value === inc.prioridad)?.label ?? inc.prioridad }),
