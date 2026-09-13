@@ -125,36 +125,83 @@ async function renderizarEmpleados(contenedor, contexto) {
 
   contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: 'Trabajadores' }));
   const activos = empleados.filter((e) => e.estado === 'activo');
+  const inactivos = empleados.filter((e) => e.estado !== 'activo');
   const lista = elemento('div', { class: 'lista-registros' });
   if (activos.length === 0) lista.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: 'Sin trabajadores registrados todavía.' }));
 
   for (const e of activos) {
     const salario = salarioPorEmpleado?.[e.id];
     const partesSubtitulo = [nombreFinca ? nombreFinca[e.finca_id] ?? 'Finca' : null, e.puesto].filter(Boolean);
-    const fila = elemento('div', { class: 'fila-registro', style: verSalario ? 'cursor:pointer' : '' }, [
-      elemento('div', {}, [
+    const fila = elemento('div', { class: 'fila-registro' }, [
+      elemento('div', verSalario ? { style: 'cursor:pointer', onclick: () => abrirTarifa(e, salario) } : {}, [
         elemento('div', { class: 'fila-registro__titulo', texto: `${e.codigo} · ${e.nombre}` }),
         partesSubtitulo.length ? elemento('div', { class: 'fila-registro__subtitulo', texto: partesSubtitulo.join(' · ') }) : null,
       ]),
       verSalario
-        ? elemento('div', { class: `fila-registro__valor ${salario ? 'tono-verde' : 'tono-ambar'}`, texto: salario ? formatearMoneda(salario.salario_diario) + '/día' : 'Sin tarifa' })
+        ? elemento('div', {
+            class: `fila-registro__valor ${salario ? 'tono-verde' : 'tono-ambar'}`,
+            style: 'cursor:pointer',
+            texto: salario ? formatearMoneda(salario.salario_diario) + '/día' : 'Sin tarifa',
+            onclick: () => abrirTarifa(e, salario),
+          })
         : null,
+      elemento('button', {
+        type: 'button',
+        class: 'boton-icono',
+        title: 'Dar de baja',
+        style: 'background:none;color:var(--rojo-500);flex:none',
+        texto: '🚫',
+        onclick: async () => {
+          if (!confirm(`¿Dar de baja a ${e.nombre}? Ya no va a aparecer para pasar lista ni en la planilla, pero su historial se conserva. Se puede reactivar después.`)) return;
+          await repos.editar('empleados', e.id, { estado: 'inactivo' });
+          await renderizarEmpleados(contenedor, contexto);
+        },
+      }),
     ]);
-    if (verSalario) {
-      fila.addEventListener('click', async () => {
-        const resultado = await mostrarDialogo({
-          titulo: `Tarifa diaria — ${e.nombre}`,
-          textoConfirmar: 'Guardar',
-          campos: [{ nombre: 'salario_diario', etiqueta: 'Salario por día (₡)', tipo: 'number', valor: salario?.salario_diario ?? '' }],
-        });
-        if (!resultado || resultado.salario_diario === '' || isNaN(Number(resultado.salario_diario))) return;
-        await guardarSalario(e.id, Number(resultado.salario_diario));
-        await renderizarEmpleados(contenedor, contexto);
-      });
-    }
     lista.appendChild(fila);
   }
   contenedor.appendChild(lista);
+
+  async function abrirTarifa(empleado, salario) {
+    const resultado = await mostrarDialogo({
+      titulo: `Tarifa diaria — ${empleado.nombre}`,
+      textoConfirmar: 'Guardar',
+      campos: [{ nombre: 'salario_diario', etiqueta: 'Salario por día (₡)', tipo: 'number', valor: salario?.salario_diario ?? '' }],
+    });
+    if (!resultado || resultado.salario_diario === '' || isNaN(Number(resultado.salario_diario))) return;
+    await guardarSalario(empleado.id, Number(resultado.salario_diario));
+    await renderizarEmpleados(contenedor, contexto);
+  }
+
+  if (inactivos.length > 0) {
+    const detalles = elemento('details', { style: 'margin-top:14px' }, [
+      elemento('summary', { texto: `Dados de baja (${inactivos.length})` }),
+    ]);
+    const listaInactivos = elemento('div', { class: 'lista-registros', style: 'margin-top:8px' });
+    for (const e of inactivos) {
+      const partesSubtitulo = [nombreFinca ? nombreFinca[e.finca_id] ?? 'Finca' : null, e.puesto].filter(Boolean);
+      listaInactivos.appendChild(
+        elemento('div', { class: 'fila-registro' }, [
+          elemento('div', {}, [
+            elemento('div', { class: 'fila-registro__titulo', texto: `${e.codigo} · ${e.nombre}` }),
+            partesSubtitulo.length ? elemento('div', { class: 'fila-registro__subtitulo', texto: partesSubtitulo.join(' · ') }) : null,
+          ]),
+          elemento('button', {
+            type: 'button',
+            class: 'boton boton--secundario',
+            style: 'width:auto;min-height:34px;padding:0 12px;font-size:0.8rem',
+            texto: '↩️ Reactivar',
+            onclick: async () => {
+              await repos.editar('empleados', e.id, { estado: 'activo' });
+              await renderizarEmpleados(contenedor, contexto);
+            },
+          }),
+        ])
+      );
+    }
+    detalles.appendChild(listaInactivos);
+    contenedor.appendChild(detalles);
+  }
 }
 
 async function renderizarAsistencia(contenedor, contexto) {
