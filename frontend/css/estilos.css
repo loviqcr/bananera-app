@@ -248,13 +248,25 @@ button {
 
 /* ---------- Aviso de estado offline (banner) ---------- */
 
+/* Flotante sobre el contenido (no en el flujo normal) a propósito: si
+   empuja el contenido de abajo cada vez que aparece/desaparece (por
+   ejemplo cada 30s si hay señal intermitente en el campo), se siente como
+   que la pantalla "salta" mientras alguien está escribiendo un
+   formulario — aunque el texto en sí nunca se borre. Al flotar, aparecer
+   u ocultarse no mueve nada debajo. */
 .aviso-offline {
+  position: fixed;
+  top: 44px;
+  left: 0;
+  right: 0;
+  z-index: 15;
   background: var(--tierra-700);
   color: var(--ambar-500);
   padding: 10px var(--espacio);
   font-size: 0.85rem;
   text-align: center;
   border-bottom: 1px solid rgba(240, 172, 27, 0.35);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25);
 }
 
 /* ---------- Layout general ---------- */
