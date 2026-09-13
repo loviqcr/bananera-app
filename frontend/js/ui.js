@@ -179,8 +179,20 @@ export function hidratarIconos(raiz = document) {
 }
 
 /** Tarjeta de estadística con icono circular arriba, para el dashboard. */
-export function tarjetaStat(nombreIcono, valor, etiqueta, tono = '') {
-  return elemento('div', { class: `tarjeta tarjeta-stat ${tono}` }, [
+export function tarjetaStat(nombreIcono, valor, etiqueta, tono = '', alTocar = null) {
+  const props = { class: `tarjeta tarjeta-stat ${tono} ${alTocar ? 'tarjeta-stat--tocable' : ''}`.trim() };
+  if (alTocar) {
+    props.role = 'button';
+    props.tabindex = '0';
+    props.onclick = alTocar;
+    props.onkeydown = (evento) => {
+      if (evento.key === 'Enter' || evento.key === ' ') {
+        evento.preventDefault();
+        alTocar();
+      }
+    };
+  }
+  return elemento('div', props, [
     elemento('div', { class: 'tarjeta-stat__icono', html: icono(nombreIcono, 18) }),
     elemento('div', { class: 'tarjeta-stat__valor', texto: String(valor) }),
     elemento('div', { class: 'tarjeta-stat__etiqueta', texto: etiqueta }),

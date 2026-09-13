@@ -1191,6 +1191,19 @@ body.tiene-nav-inferior .pantalla {
   margin-top: 2px;
 }
 
+.tarjeta-stat--tocable {
+  cursor: pointer;
+  transition: transform 0.12s ease, border-color 0.15s ease;
+}
+
+.tarjeta-stat--tocable:active {
+  transform: scale(0.97);
+}
+
+.tarjeta-stat--tocable:hover {
+  border-color: var(--primario);
+}
+
 .seccion-dashboard {
   margin-top: 22px;
 }

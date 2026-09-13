@@ -517,7 +517,10 @@ async function renderizarInicio() {
   el.bienvenidaUsuario.textContent = cacheUsuario ? `Hola, ${cacheUsuario.nombre}` : '';
   el.contextoInicio.textContent = el.contexto.textContent;
   try {
-    await renderizarDashboard(el.contenedorDashboard, contextoActual());
+    await renderizarDashboard(el.contenedorDashboard, contextoActual(), {
+      alTocarIncidencias: () => abrirModulo('incidencias'),
+      alTocarPersonal: () => abrirModulo('planilla', 'empleados'),
+    });
   } catch (error) {
     console.warn('[app] No se pudo calcular el dashboard:', error);
   }

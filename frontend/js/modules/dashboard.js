@@ -40,17 +40,18 @@ export async function estadisticasDeFinca(fincaId) {
   };
 }
 
-export async function renderizarDashboard(contenedor, contexto) {
+export async function renderizarDashboard(contenedor, contexto, manejadores = {}) {
   contenedor.innerHTML = '';
   const stats = await estadisticasDeFinca(contexto.fincaId);
+  const { alTocarIncidencias, alTocarPersonal } = manejadores;
 
   // ---- Tarjetas principales (equivalente a la portada del boceto) ----
   contenedor.appendChild(
     elemento('div', { class: 'rejilla-estadisticas' }, [
       tarjetaStat('basket', stats.cortadoHoy.toLocaleString('es-CR'), 'Producción hoy · racimos'),
-      tarjetaStat('users', `${stats.personal.presentes} / ${stats.personal.total}`, 'Personal presente'),
+      tarjetaStat('users', `${stats.personal.presentes} / ${stats.personal.total}`, 'Personal presente', '', alTocarPersonal),
       tarjetaStat('dollar', formatearMoneda(stats.ventasMes), 'Ventas este mes'),
-      tarjetaStat('alert', stats.abiertas.length, 'Alertas — requieren atención', stats.abiertas.length > 0 ? 'tarjeta-stat--alerta' : ''),
+      tarjetaStat('alert', stats.abiertas.length, 'Alertas — requieren atención', stats.abiertas.length > 0 ? 'tarjeta-stat--alerta' : '', alTocarIncidencias),
     ])
   );
 
@@ -62,7 +63,7 @@ export async function renderizarDashboard(contenedor, contexto) {
         tarjetaStat('package', stats.embolsadoHoy.toLocaleString('es-CR'), 'Embolse hoy'),
         tarjetaStat('crop', stats.cortadoHoy.toLocaleString('es-CR'), 'Corta hoy'),
         tarjetaStat('package', stats.insumosBajos.length, 'Inventario bajo', stats.insumosBajos.length > 0 ? 'tarjeta-stat--ambar' : ''),
-        tarjetaStat('alert', stats.abiertas.length, 'Incidencias pendientes', stats.abiertas.length > 0 ? 'tarjeta-stat--alerta' : ''),
+        tarjetaStat('alert', stats.abiertas.length, 'Incidencias pendientes', stats.abiertas.length > 0 ? 'tarjeta-stat--alerta' : '', alTocarIncidencias),
       ]),
     ])
   );
