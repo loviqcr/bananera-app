@@ -56,10 +56,15 @@ async function empujarCambios(token) {
       await localdb.quitarDeCola(item.clave);
     } else if (resultado.estado === 'rechazado') {
       // No es un problema de red: el servidor decidió no aplicarlo
-      // (permiso, validación, o una versión más reciente ya existente por
-      // last-write-wins). Reintentarlo no lo va a resolver, así que se saca
-      // de la cola y se deja constancia en consola para depuración.
+      // (permiso, validación, o un dato duplicado). Reintentarlo no lo va a
+      // resolver, así que se saca de la cola — pero a diferencia de antes,
+      // queda registrado (ver localdb.registrarRechazo) para que el usuario
+      // se entere YA (toast en app.js) en vez de que solo quede en la
+      // consola: eso fue justo lo que causó que una asistencia para un
+      // trabajador cuyo alta se había rechazado por código duplicado
+      // quedara reintentando en silencio para siempre.
       console.warn(`[sync] Operación rechazada (${item.tabla}/${item.id}): ${resultado.motivo}`);
+      await localdb.registrarRechazo({ tabla: item.tabla, operacion: item.operacion, id: item.id, motivo: resultado.motivo });
       await localdb.quitarDeCola(item.clave);
     } else {
       huboErrores = true;

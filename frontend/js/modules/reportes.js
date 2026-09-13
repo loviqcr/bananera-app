@@ -277,7 +277,6 @@ async function renderizarColaSync(contenedor) {
   const cola = await localdb.obtenerCola();
   if (cola.length === 0) {
     contenedor.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: '✅ No hay nada pendiente en este dispositivo.' }));
-    return;
   }
 
   for (const item of cola) {
@@ -297,6 +296,35 @@ async function renderizarColaSync(contenedor) {
     });
     tarjeta.appendChild(botonDescartar);
     contenedor.appendChild(tarjeta);
+  }
+
+  // Historial de lo que el SERVIDOR rechazó (dato inválido/duplicado): esto
+  // no reintenta solo, así que sin este historial el usuario solo se entera
+  // en el momento (por el toast) y después no queda ningún rastro de qué
+  // pasó — que fue justo lo que dejó una asistencia huérfana reintentando
+  // en silencio contra un trabajador que nunca se llegó a crear.
+  const rechazos = await localdb.obtenerRechazos();
+  if (rechazos.length > 0) {
+    contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem;margin-top:20px', texto: 'Rechazados por el servidor' }));
+    contenedor.appendChild(
+      elemento('p', { class: 'subtitulo-pantalla' }, 'Esto NO se reintenta solo — si era un dato real, hay que volver a registrarlo (revisando primero por qué se rechazó, por ejemplo un código duplicado).')
+    );
+    for (const rechazo of rechazos) {
+      contenedor.appendChild(
+        elemento('div', { class: 'fila-registro', style: 'align-items:flex-start' }, [
+          elemento('div', {}, [
+            elemento('div', { class: 'fila-registro__titulo', texto: `${rechazo.tabla} — ${rechazo.operacion}` }),
+            elemento('div', { class: 'fila-registro__subtitulo', texto: `${formatearFecha(rechazo.fecha)} · ${rechazo.motivo}` }),
+          ]),
+        ])
+      );
+    }
+    const botonLimpiar = elemento('button', { type: 'button', class: 'boton boton--fantasma', style: 'margin-top:10px', texto: 'Limpiar este historial' });
+    botonLimpiar.addEventListener('click', async () => {
+      await localdb.limpiarRechazos();
+      await renderizarColaSync(contenedor);
+    });
+    contenedor.appendChild(botonLimpiar);
   }
 }
 

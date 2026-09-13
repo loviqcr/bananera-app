@@ -131,8 +131,19 @@ async function renderizarEquipos(contenedor, contexto) {
         { nombre: 'observaciones', etiqueta: 'Observaciones', tipo: 'textarea' },
       ],
       alGuardar: async (valores) => {
+        // El código de equipo es único en TODO el sistema, no solo en esta
+        // finca — se valida acá antes de guardar para no crear localmente
+        // un equipo "fantasma" que el servidor rechace en silencio al
+        // sincronizar (ver la misma nota en planilla.js, donde pasó justo
+        // esto con un trabajador y dejó una asistencia huérfana).
+        const codigo = valores.codigo.trim();
+        const todosLosEquipos = await repos.listarTodos('equipos');
+        const yaExiste = todosLosEquipos.some((e) => (e.codigo || '').trim().toLowerCase() === codigo.toLowerCase());
+        if (yaExiste) {
+          throw new Error(`Ya existe un equipo con el código "${codigo}" (puede ser en otra finca). Usa un código distinto.`);
+        }
         await repos.crear('equipos', {
-          codigo: valores.codigo,
+          codigo,
           nombre: valores.nombre,
           tipo: valores.tipo,
           finca_id: contexto.fincaId,

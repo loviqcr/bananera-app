@@ -51,10 +51,21 @@ async function renderizarEmpleados(contenedor, contexto) {
         { nombre: 'fecha_ingreso', etiqueta: 'Fecha de ingreso', tipo: 'date', valor: hoyISO() },
       ],
       alGuardar: async (valores) => {
+        // El código de trabajador es único en TODO el sistema, no solo en
+        // esta finca (así lo exige el servidor) — se valida acá antes de
+        // guardar para no crear localmente un trabajador "fantasma" que el
+        // servidor va a rechazar en silencio al sincronizar, dejando
+        // huérfano cualquier registro (asistencia, etc.) que lo use después.
+        const codigo = valores.codigo.trim();
+        const todosLosEmpleados = await repos.listarTodos('empleados');
+        const yaExiste = todosLosEmpleados.some((e) => (e.codigo || '').trim().toLowerCase() === codigo.toLowerCase());
+        if (yaExiste) {
+          throw new Error(`Ya existe un trabajador con el código "${codigo}" (puede ser en otra finca). Usa un código distinto.`);
+        }
         await repos.crear('empleados', {
           finca_id: contexto.fincaId,
           area_id: valores.area_id || null,
-          codigo: valores.codigo,
+          codigo,
           nombre: valores.nombre,
           puesto: valores.puesto || null,
           estado: 'activo',

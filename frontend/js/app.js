@@ -636,6 +636,34 @@ document.addEventListener('bananera:estado-sync', async (evento) => {
   }
 });
 
+const NOMBRE_TABLA_LEGIBLE = {
+  empleados: 'trabajador',
+  equipos: 'equipo',
+  asistencia: 'asistencia',
+  incidencias: 'incidencia',
+  insumos: 'insumo',
+  areas: 'área',
+  entregas_platano: 'entrega de plátano',
+  entregas_banano: 'entrega de banano',
+  ventas_platano: 'venta de plátano',
+  ventas_banano: 'venta de banano',
+  embolse: 'embolse',
+  corta: 'corta',
+};
+
+// El servidor rechazó un registro (dato inválido/duplicado, nunca un
+// problema de red) — se avisa YA, en vez de que quede solo en la consola
+// (ver la nota en syncClient.js sobre por qué esto importa).
+document.addEventListener('bananera:operacion-rechazada', (evento) => {
+  const { tabla, motivo } = evento.detail;
+  const nombre = NOMBRE_TABLA_LEGIBLE[tabla] || tabla;
+  mostrarToast({
+    titulo: `No se pudo guardar (${nombre})`,
+    mensaje: motivo,
+    alHacerClick: () => abrirModulo('reportes', 'sync'),
+  });
+});
+
 el.formLogin?.addEventListener('submit', async (evento) => {
   evento.preventDefault();
   el.errorLogin.textContent = '';

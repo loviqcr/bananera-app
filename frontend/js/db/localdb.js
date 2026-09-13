@@ -12,7 +12,7 @@
  */
 
 const NOMBRE_DB = 'bananera-app';
-const VERSION_DB = 2;
+const VERSION_DB = 3;
 
 // Cada almacén sincronizable, con su índice por finca_id cuando aplica (para
 // poder filtrar por finca activa sin conexión). Un almacén nuevo aquí queda
@@ -25,6 +25,12 @@ const ALMACENES = {
   sesion: { keyPath: 'clave', indices: [] },
   meta: { keyPath: 'clave', indices: [] },
   sync_queue: { keyPath: 'clave', autoIncrement: true, indices: [{ nombre: 'tabla', ruta: 'tabla' }] },
+  // El servidor rechazó estas (dato inválido/duplicado, no error de red) —
+  // a diferencia de sync_queue, NO se reintentan solas. Quedan acá para que
+  // el usuario se entere de inmediato (antes esto solo quedaba en un
+  // console.warn invisible) y para que Reportes > Sincronización pueda
+  // mostrar un historial. Ver syncClient.js.
+  sync_rechazos: { keyPath: 'clave', autoIncrement: true, indices: [] },
 
   // Fase 2: producción
   variedades: { keyPath: 'id', indices: [] },
@@ -191,6 +197,35 @@ export const localdb = {
     item.intentos += 1;
     item.ultimoError = motivo;
     await this.put('sync_queue', item);
+  },
+
+  /**
+   * Registra un rechazo del servidor (dato inválido/duplicado — no un
+   * problema de red) para que quede visible, tanto en el momento (toast en
+   * app.js) como después en Reportes > Sincronización. Se guardan como
+   * máximo los últimos 30 para no acumular basura indefinidamente.
+   */
+  async registrarRechazo({ tabla, operacion, id, motivo }) {
+    const item = { tabla, operacion, id, motivo: motivo || 'Sin detalle', fecha: new Date().toISOString() };
+    await ejecutarTransaccion('sync_rechazos', 'readwrite', (store) => store.add(item));
+    const todos = await this.getAll('sync_rechazos');
+    if (todos.length > 30) {
+      const sobrantes = todos.sort((a, b) => a.clave - b.clave).slice(0, todos.length - 30);
+      await ejecutarTransaccion('sync_rechazos', 'readwrite', (store) => {
+        for (const sobrante of sobrantes) store.delete(sobrante.clave);
+      });
+    }
+    document.dispatchEvent(new CustomEvent('bananera:operacion-rechazada', { detail: item }));
+    return item;
+  },
+
+  async obtenerRechazos() {
+    const todos = await this.getAll('sync_rechazos');
+    return todos.sort((a, b) => b.clave - a.clave);
+  },
+
+  async limpiarRechazos() {
+    return this.vaciar('sync_rechazos');
   },
 };
 
