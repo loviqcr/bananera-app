@@ -21,6 +21,12 @@ async function empleadosActivos(fincaId) {
   return filas.filter((e) => e.estado === 'activo').sort((a, b) => a.nombre.localeCompare(b.nombre));
 }
 
+/** Solo se necesita cuando se está viendo "todas las fincas" a la vez, para no confundir de cuál es cada trabajador. */
+async function mapaNombresFincas() {
+  const fincas = await repos.listarTodos('fincas');
+  return Object.fromEntries(fincas.map((f) => [f.id, f.nombre]));
+}
+
 /** Upsert local real: si ya existe asistencia de ese empleado ese día, la edita en vez de duplicarla. */
 async function marcarAsistencia(empleadoId, fechaISO, estado) {
   const existentes = await localdb.getPorIndice('asistencia', 'empleado_id', empleadoId);
@@ -38,7 +44,11 @@ async function marcarAsistencia(empleadoId, fechaISO, estado) {
 
 async function renderizarEmpleados(contenedor, contexto) {
   contenedor.innerHTML = '';
-  const [areas, empleados] = await Promise.all([opcionesAreas(contexto.fincaId), repos.listarPorFinca('empleados', contexto.fincaId)]);
+  const [areas, empleados, nombreFinca] = await Promise.all([
+    opcionesAreas(contexto.fincaId),
+    repos.listarPorFinca('empleados', contexto.fincaId),
+    contexto.fincaId === 'todas' ? mapaNombresFincas() : Promise.resolve(null),
+  ]);
 
   if (contexto.fincaId !== 'todas') {
     const form = crearFormulario({
@@ -81,7 +91,9 @@ async function renderizarEmpleados(contenedor, contexto) {
   contenedor.appendChild(
     listaRegistros(empleados.filter((e) => e.estado === 'activo'), (e) => ({
       titulo: `${e.codigo} · ${e.nombre}`,
-      subtitulo: e.puesto || '',
+      // Viendo "todas las fincas" a la vez, sin esto no hay forma de saber
+      // de cuál finca es cada trabajador en la lista.
+      subtitulo: nombreFinca ? [nombreFinca[e.finca_id] ?? 'Finca', e.puesto].filter(Boolean).join(' · ') : (e.puesto || ''),
     }), 'Sin trabajadores registrados todavía.')
   );
 }
