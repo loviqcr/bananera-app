@@ -243,6 +243,19 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     rolesLectura: ['administrador', 'encargado_finca', 'planilla'],
     conflictColumns: ['empleado_id', 'fecha'],
   },
+  // Aparte de "empleados" a propósito — ver la nota en la migración
+  // 006_salarios.sql: es lo único de planilla que encargado_finca NO debe
+  // poder leer.
+  salarios: {
+    tabla: 'salarios',
+    columnas: ['empleado_id', 'salario_diario'],
+    fincaScoped: false,
+    permiteEliminar: true,
+    conflictStrategy: 'lww',
+    rolesEscritura: ['administrador', 'planilla'],
+    rolesLectura: ['administrador', 'planilla'],
+    conflictColumns: ['empleado_id'],
+  },
 
   // ---- Fase 7: Ventas ----
   clientes: {

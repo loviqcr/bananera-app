@@ -12,7 +12,7 @@
  */
 
 const NOMBRE_DB = 'bananera-app';
-const VERSION_DB = 3;
+const VERSION_DB = 4;
 
 // Cada almacén sincronizable, con su índice por finca_id cuando aplica (para
 // poder filtrar por finca activa sin conexión). Un almacén nuevo aquí queda
@@ -58,6 +58,10 @@ const ALMACENES = {
   // Fase 6: planilla
   empleados: { keyPath: 'id', indices: [{ nombre: 'finca_id', ruta: 'finca_id' }] },
   asistencia: { keyPath: 'id', indices: [{ nombre: 'empleado_id', ruta: 'empleado_id' }] },
+  // Aparte de empleados a propósito — el backend solo la sincroniza a
+  // administrador/planilla (ver syncRegistry.ts), así que en cualquier
+  // otro rol este almacén simplemente queda vacío en el dispositivo.
+  salarios: { keyPath: 'id', indices: [{ nombre: 'empleado_id', ruta: 'empleado_id' }] },
 
   // Fase 7: ventas
   clientes: { keyPath: 'id', indices: [] },

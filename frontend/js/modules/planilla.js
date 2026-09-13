@@ -1,6 +1,19 @@
 import { repos } from '../db/repos.js';
 import { localdb } from '../db/localdb.js';
-import { elemento, crearFormulario, listaRegistros, formatearFecha, hoyISO } from '../ui.js';
+import { auth } from './auth.js';
+import { elemento, crearFormulario, mostrarDialogo, formatearFecha, hoyISO } from '../ui.js';
+
+const ROLES_VEN_SALARIO = ['administrador', 'planilla'];
+
+function formatearMoneda(valor) {
+  return `₡${Number(valor || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
+function sumarDiasISO(fechaISO, dias) {
+  const fecha = new Date(fechaISO + 'T00:00:00');
+  fecha.setDate(fecha.getDate() + dias);
+  return fecha.toISOString().slice(0, 10);
+}
 
 const ESTADOS_ASISTENCIA = [
   { value: 'presente', label: '✓ Presente' },
@@ -27,6 +40,27 @@ async function mapaNombresFincas() {
   return Object.fromEntries(fincas.map((f) => [f.id, f.nombre]));
 }
 
+/** Vacío para cualquier rol que no sea administrador/planilla — ver la nota en syncRegistry.ts. */
+async function mapaSalarios() {
+  const salarios = await repos.listarTodos('salarios');
+  return Object.fromEntries(salarios.map((s) => [s.empleado_id, s]));
+}
+
+async function puedeVerSalario() {
+  const sesion = await auth.sesionActual();
+  return ROLES_VEN_SALARIO.includes(sesion?.usuario?.rol);
+}
+
+async function guardarSalario(empleadoId, salarioDiario) {
+  const existentes = await localdb.getPorIndice('salarios', 'empleado_id', empleadoId);
+  const activo = existentes.find((s) => !s.eliminado_at);
+  if (activo) {
+    await repos.editar('salarios', activo.id, { empleado_id: empleadoId, salario_diario: salarioDiario });
+  } else {
+    await repos.crear('salarios', { empleado_id: empleadoId, salario_diario: salarioDiario });
+  }
+}
+
 /** Upsert local real: si ya existe asistencia de ese empleado ese día, la edita en vez de duplicarla. */
 async function marcarAsistencia(empleadoId, fechaISO, estado) {
   const existentes = await localdb.getPorIndice('asistencia', 'empleado_id', empleadoId);
@@ -44,10 +78,12 @@ async function marcarAsistencia(empleadoId, fechaISO, estado) {
 
 async function renderizarEmpleados(contenedor, contexto) {
   contenedor.innerHTML = '';
-  const [areas, empleados, nombreFinca] = await Promise.all([
+  const verSalario = await puedeVerSalario();
+  const [areas, empleados, nombreFinca, salarioPorEmpleado] = await Promise.all([
     opcionesAreas(contexto.fincaId),
     repos.listarPorFinca('empleados', contexto.fincaId),
     contexto.fincaId === 'todas' ? mapaNombresFincas() : Promise.resolve(null),
+    verSalario ? mapaSalarios() : Promise.resolve(null),
   ]);
 
   if (contexto.fincaId !== 'todas') {
@@ -88,14 +124,37 @@ async function renderizarEmpleados(contenedor, contexto) {
   }
 
   contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: 'Trabajadores' }));
-  contenedor.appendChild(
-    listaRegistros(empleados.filter((e) => e.estado === 'activo'), (e) => ({
-      titulo: `${e.codigo} · ${e.nombre}`,
-      // Viendo "todas las fincas" a la vez, sin esto no hay forma de saber
-      // de cuál finca es cada trabajador en la lista.
-      subtitulo: nombreFinca ? [nombreFinca[e.finca_id] ?? 'Finca', e.puesto].filter(Boolean).join(' · ') : (e.puesto || ''),
-    }), 'Sin trabajadores registrados todavía.')
-  );
+  const activos = empleados.filter((e) => e.estado === 'activo');
+  const lista = elemento('div', { class: 'lista-registros' });
+  if (activos.length === 0) lista.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: 'Sin trabajadores registrados todavía.' }));
+
+  for (const e of activos) {
+    const salario = salarioPorEmpleado?.[e.id];
+    const partesSubtitulo = [nombreFinca ? nombreFinca[e.finca_id] ?? 'Finca' : null, e.puesto].filter(Boolean);
+    const fila = elemento('div', { class: 'fila-registro', style: verSalario ? 'cursor:pointer' : '' }, [
+      elemento('div', {}, [
+        elemento('div', { class: 'fila-registro__titulo', texto: `${e.codigo} · ${e.nombre}` }),
+        partesSubtitulo.length ? elemento('div', { class: 'fila-registro__subtitulo', texto: partesSubtitulo.join(' · ') }) : null,
+      ]),
+      verSalario
+        ? elemento('div', { class: `fila-registro__valor ${salario ? 'tono-verde' : 'tono-ambar'}`, texto: salario ? formatearMoneda(salario.salario_diario) + '/día' : 'Sin tarifa' })
+        : null,
+    ]);
+    if (verSalario) {
+      fila.addEventListener('click', async () => {
+        const resultado = await mostrarDialogo({
+          titulo: `Tarifa diaria — ${e.nombre}`,
+          textoConfirmar: 'Guardar',
+          campos: [{ nombre: 'salario_diario', etiqueta: 'Salario por día (₡)', tipo: 'number', valor: salario?.salario_diario ?? '' }],
+        });
+        if (!resultado || resultado.salario_diario === '' || isNaN(Number(resultado.salario_diario))) return;
+        await guardarSalario(e.id, Number(resultado.salario_diario));
+        await renderizarEmpleados(contenedor, contexto);
+      });
+    }
+    lista.appendChild(fila);
+  }
+  contenedor.appendChild(lista);
 }
 
 async function renderizarAsistencia(contenedor, contexto) {
@@ -182,6 +241,124 @@ async function renderizarReportes(contenedor, contexto) {
   contenedor.appendChild(lista);
 }
 
+/**
+ * Pago bruto (sin CCSS/renta ni otros rebajos) = días marcados "presente"
+ * en el rango × tarifa diaria configurada en Trabajadores. Solo cuenta
+ * "presente" a propósito — incapacidad/permiso/vacaciones no se pagan
+ * igual según el caso, así que quien calcule la planilla debe revisarlos
+ * aparte y ajustar a mano si corresponde.
+ */
+async function renderizarCalculoPago(contenedor, contexto) {
+  contenedor.innerHTML = '';
+  if (!(await puedeVerSalario())) {
+    contenedor.appendChild(elemento('p', { class: 'mensaje-error mensaje-error--aviso', texto: 'No tienes permiso para ver esta información.' }));
+    return;
+  }
+
+  const hoy = hoyISO();
+  const campoDesde = elemento('input', { type: 'date', value: sumarDiasISO(hoy, -6) });
+  const campoHasta = elemento('input', { type: 'date', value: hoy });
+
+  contenedor.appendChild(
+    elemento('p', { class: 'subtitulo-pantalla' }, 'Pago bruto (sin rebajos) según los días marcados "Presente" en Pasar lista, multiplicado por la tarifa diaria de cada trabajador.')
+  );
+  contenedor.appendChild(
+    elemento('div', { class: 'fila' }, [
+      elemento('div', { class: 'campo' }, [elemento('label', { texto: 'Desde' }), campoDesde]),
+      elemento('div', { class: 'campo' }, [elemento('label', { texto: 'Hasta' }), campoHasta]),
+    ])
+  );
+  const botonCalcular = elemento('button', { type: 'button', class: 'boton boton--primario no-imprimir', texto: '💰 Calcular pago' });
+  contenedor.appendChild(botonCalcular);
+  contenedor.appendChild(elemento('div', { class: 'espaciador' }));
+
+  const zonaResultado = elemento('div');
+  contenedor.appendChild(zonaResultado);
+
+  async function calcular() {
+    zonaResultado.innerHTML = '';
+    const desde = campoDesde.value;
+    const hasta = campoHasta.value;
+    if (!desde || !hasta || desde > hasta) {
+      zonaResultado.appendChild(elemento('p', { class: 'mensaje-error mensaje-error--error', texto: 'Revisa las fechas: "Desde" debe ser antes o igual que "Hasta".' }));
+      return;
+    }
+
+    const [empleados, nombreFinca, salarios] = await Promise.all([
+      empleadosActivos(contexto.fincaId),
+      contexto.fincaId === 'todas' ? mapaNombresFincas() : Promise.resolve(null),
+      mapaSalarios(),
+    ]);
+
+    let totalGeneral = 0;
+    let faltaTarifa = 0;
+    const filas = [];
+    for (const empleado of empleados) {
+      // Por fecha única, no por cantidad de filas: si por algún motivo
+      // quedaron dos registros de asistencia para el mismo día (ej. un
+      // conflicto de sincronización entre dispositivos que no se limpió),
+      // ese día no debe contar doble en el pago.
+      const fechasPresente = new Set(
+        (await localdb.getPorIndice('asistencia', 'empleado_id', empleado.id))
+          .filter((a) => !a.eliminado_at && a.estado === 'presente' && a.fecha >= desde && a.fecha <= hasta)
+          .map((a) => a.fecha)
+      );
+      const dias = fechasPresente.size;
+      const tarifa = salarios[empleado.id]?.salario_diario ?? null;
+      const total = tarifa != null ? dias * tarifa : null;
+      if (tarifa == null && dias > 0) faltaTarifa++;
+      if (total != null) totalGeneral += total;
+      filas.push({ empleado, dias, tarifa, total });
+    }
+
+    zonaResultado.appendChild(elemento('p', { class: 'subtitulo-pantalla' }, `${formatearFecha(desde)} — ${formatearFecha(hasta)}`));
+
+    if (faltaTarifa > 0) {
+      zonaResultado.appendChild(
+        elemento(
+          'div',
+          { class: 'aviso-offline', style: 'display:block' },
+          `⚠️ ${faltaTarifa} trabajador(es) con días presentes no tienen tarifa configurada — tócalos en "Trabajadores" para ponérsela. No se incluyen en el total de abajo.`
+        )
+      );
+    }
+
+    const lista = elemento('div', { class: 'lista-registros' });
+    if (filas.length === 0) lista.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: 'Sin trabajadores activos.' }));
+    for (const { empleado, dias, tarifa, total } of filas) {
+      const partes = [
+        nombreFinca ? nombreFinca[empleado.finca_id] ?? 'Finca' : null,
+        `${dias} día(s) presente`,
+        tarifa != null ? `${formatearMoneda(tarifa)}/día` : 'sin tarifa configurada',
+      ].filter(Boolean);
+      lista.appendChild(
+        elemento('div', { class: 'fila-registro' }, [
+          elemento('div', {}, [
+            elemento('div', { class: 'fila-registro__titulo', texto: empleado.nombre }),
+            elemento('div', { class: 'fila-registro__subtitulo', texto: partes.join(' · ') }),
+          ]),
+          elemento('div', { class: `fila-registro__valor ${total == null ? 'tono-ambar' : 'tono-verde'}`, texto: total != null ? formatearMoneda(total) : '—' }),
+        ])
+      );
+    }
+    zonaResultado.appendChild(lista);
+
+    zonaResultado.appendChild(
+      elemento('div', { class: 'tarjeta estadistica', style: 'margin-top:12px' }, [
+        elemento('div', { class: 'estadistica__valor', texto: formatearMoneda(totalGeneral) }),
+        elemento('div', { class: 'estadistica__etiqueta', texto: 'Total a pagar (trabajadores con tarifa configurada)' }),
+      ])
+    );
+
+    const botonImprimir = elemento('button', { type: 'button', class: 'boton boton--secundario no-imprimir', style: 'margin-top:10px', texto: '🖨️ Imprimir' });
+    botonImprimir.addEventListener('click', () => window.print());
+    zonaResultado.appendChild(botonImprimir);
+  }
+
+  botonCalcular.addEventListener('click', calcular);
+  await calcular();
+}
+
 export const planillaModulo = {
   etiqueta: 'Planilla',
   async render(contenedor, contexto) {
@@ -196,6 +373,11 @@ export const planillaModulo = {
       { clave: 'empleados', etiqueta: '👷 Trabajadores', render: renderizarEmpleados },
       { clave: 'reportes', etiqueta: '📊 Reporte del mes', render: renderizarReportes },
     ];
+    // Aparte porque solo administrador/planilla deben verla — ver la nota
+    // en syncRegistry.ts sobre por qué el salario vive en su propia tabla.
+    if (await puedeVerSalario()) {
+      tabs.push({ clave: 'pago', etiqueta: '💰 Cálculo de pago', render: renderizarCalculoPago });
+    }
 
     async function activar(clave) {
       for (const boton of pestanas.children) boton.classList.toggle('pestana--activa', boton.dataset.clave === clave);
