@@ -119,7 +119,16 @@ function nombreFinca(id) {
 }
 
 function contextoActual() {
-  return { fincaId: fincas.obtenerFincaActiva(), areaId: fincas.obtenerAreaActiva() };
+  return { fincaId: fincas.obtenerFincaActiva(), areaId: fincas.obtenerAreaActiva(), fincaIdsPermitidas: fincasPermitidas() };
+}
+
+/**
+ * null = sin restricción (administrador/bodega, ven todas las fincas —
+ * el backend ya les manda fincaIds: [] por eso). Un array = solo esas
+ * fincas, tal como las asignó el administrador en Usuarios.
+ */
+function fincasPermitidas() {
+  return cacheUsuario?.fincaIds?.length ? cacheUsuario.fincaIds : null;
 }
 
 async function actualizarContexto() {
@@ -217,7 +226,9 @@ function pintarListaFincas() {
     el.cuadriculaFincas.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: 'Ninguna finca coincide con la búsqueda.' }));
   }
 
-  if (!termino) {
+  // Con una sola finca visible (asignada por el administrador) no tiene
+  // sentido ofrecer "Todas las fincas" — es exactamente lo mismo.
+  if (!termino && cacheFincas.length > 1) {
     const todas = document.createElement('button');
     todas.type = 'button';
     todas.className = 'boton boton--primario';
@@ -236,7 +247,9 @@ function pintarListaFincas() {
 }
 
 async function renderizarSelectorFinca() {
-  cacheFincas = await fincas.listar();
+  const todasLasFincas = await fincas.listar();
+  const permitidas = fincasPermitidas();
+  cacheFincas = permitidas ? todasLasFincas.filter((f) => permitidas.includes(f.id)) : todasLasFincas;
   await Promise.all(
     cacheFincas.map(async (finca) => {
       const urgentes = await incidenciasUrgentesPendientes(finca.id).catch(() => []);
@@ -357,6 +370,12 @@ function actualizarVisibilidadModulos() {
     const rolesPermitidos = MODULOS_RESTRINGIDOS[boton.dataset.modulo];
     boton.hidden = !!rolesPermitidos && !rolesPermitidos.includes(cacheUsuario?.rol);
   });
+}
+
+// Con una sola finca asignada no hay nada a lo que "cambiar".
+function actualizarVisibilidadCuenta() {
+  const permitidas = fincasPermitidas();
+  if (el.botonCambiarFincaMas) el.botonCambiarFincaMas.hidden = !!(permitidas && permitidas.length === 1);
 }
 
 // -------------------- Apariencia (claro / oscuro / automático) --------------------
@@ -578,6 +597,7 @@ el.navInferior?.addEventListener('click', async (evento) => {
     await abrirModulo('reportes');
   } else if (destino === 'mas') {
     actualizarVisibilidadModulos();
+    actualizarVisibilidadCuenta();
     actualizarBotonesTema();
     await actualizarBotonNotificaciones();
     mostrarVista('mas');
@@ -688,11 +708,28 @@ el.formLogin?.addEventListener('submit', async (evento) => {
 });
 
 async function continuarDespuesDeLogin() {
-  const fincaId = fincas.obtenerFincaActiva();
+  let fincaId = fincas.obtenerFincaActiva();
+  const permitidas = fincasPermitidas();
+
+  // Si quedó guardada una finca a la que este usuario ya no tiene acceso
+  // (el administrador le reasignó las fincas después de haberla elegido),
+  // se limpia para que vuelva a elegir entre las que sí puede ver.
+  if (fincaId && fincaId !== 'todas' && permitidas && !permitidas.includes(fincaId)) {
+    fincas.limpiarSeleccion();
+    fincaId = null;
+  }
+
   if (!fincaId) {
-    mostrarVista('selectorFinca');
-    await renderizarSelectorFinca();
-    return;
+    // Con una sola finca asignada no hay nada que elegir — se entra
+    // directo, sin mostrar el selector.
+    if (permitidas && permitidas.length === 1) {
+      fincas.guardarFincaActiva(permitidas[0]);
+      fincaId = permitidas[0];
+    } else {
+      mostrarVista('selectorFinca');
+      await renderizarSelectorFinca();
+      return;
+    }
   }
   cacheFincas = await fincas.listar();
   await actualizarContexto();

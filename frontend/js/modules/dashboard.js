@@ -70,7 +70,10 @@ export async function renderizarDashboard(contenedor, contexto, manejadores = {}
 
   // ---- Producción por finca (solo viendo "todas las fincas") ----
   if (contexto.fincaId === 'todas') {
-    const fincas = (await repos.listarTodos('fincas')).sort((a, b) => a.orden - b.orden);
+    let fincas = (await repos.listarTodos('fincas')).sort((a, b) => a.orden - b.orden);
+    if (contexto.fincaIdsPermitidas) {
+      fincas = fincas.filter((f) => contexto.fincaIdsPermitidas.includes(f.id));
+    }
     const rejillaMini = elemento('div', { class: 'rejilla-fincas-mini' });
     const comparativa = elemento('div', { class: 'comparativa-fincas' });
 
