@@ -45,6 +45,10 @@ export async function aplicarOperacion(
     if (!registro.permiteEliminar) {
       return { tabla: op.tabla, id: op.id, estado: 'rechazado', motivo: 'Esta tabla no permite eliminar por sync' };
     }
+    const rolesEliminar = registro.rolesEliminar ?? registro.rolesEscritura;
+    if (!rolesEliminar.includes(usuario.rol)) {
+      return { tabla: op.tabla, id: op.id, estado: 'rechazado', motivo: 'Rol sin permiso para eliminar' };
+    }
     return eliminarConLww(client, usuario, registro, op);
   }
 

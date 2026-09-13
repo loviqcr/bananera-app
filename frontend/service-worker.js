@@ -4,7 +4,7 @@
  * este caché — esas las maneja directamente el Sync Client contra
  * IndexedDB, que es la fuente de verdad local.
  */
-const CACHE = 'bananera-shell-v11';
+const CACHE = 'bananera-shell-v12';
 
 const ARCHIVOS_SHELL = [
   './',

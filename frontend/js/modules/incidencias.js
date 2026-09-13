@@ -67,7 +67,12 @@ export const incidenciasModulo = {
   etiqueta: 'Incidencias',
   async render(contenedor, contexto) {
     contenedor.innerHTML = '';
-    const [areas, todas] = await Promise.all([opcionesAreas(contexto.fincaId), repos.listarPorFinca('incidencias', contexto.fincaId)]);
+    const [areas, todas, sesion] = await Promise.all([
+      opcionesAreas(contexto.fincaId),
+      repos.listarPorFinca('incidencias', contexto.fincaId),
+      auth.sesionActual(),
+    ]);
+    const esAdmin = sesion?.usuario?.rol === 'administrador';
     const ordenadas = todas.sort((a, b) => (a.fecha + (a.hora || '') < b.fecha + (b.hora || '') ? 1 : -1));
 
     const abiertas = ordenadas.filter((f) => f.estado !== 'resuelta' && f.estado !== 'cerrada');
@@ -142,6 +147,21 @@ export const incidenciasModulo = {
           ]),
           inc.foto_url ? elemento('img', { class: 'previa-foto', src: inc.foto_url, style: 'max-height:140px' }) : null,
         ]),
+        esAdmin
+          ? elemento('button', {
+              type: 'button',
+              class: 'boton-icono',
+              title: 'Eliminar incidencia',
+              style: 'background:none;color:var(--rojo-500);flex:none',
+              texto: '🗑️',
+              onclick: async (evento) => {
+                evento.stopPropagation();
+                if (!confirm('¿Eliminar esta incidencia? No se puede deshacer.')) return;
+                await repos.eliminar('incidencias', inc.id);
+                await this.render(contenedor, contexto);
+              },
+            })
+          : null,
       ]);
       fila.addEventListener('click', async () => {
         const resultado = await mostrarDialogo({

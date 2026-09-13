@@ -25,6 +25,15 @@ export interface TablaSincronizable {
   conflictStrategy: 'lww' | 'append_only' | 'kardex';
   rolesEscritura: string[]; // roles que pueden empujar cambios de esta tabla
   /**
+   * Roles que pueden ELIMINAR filas de esta tabla por sync. Por defecto (sin
+   * definir) se usa `rolesEscritura` — es decir, cualquiera que pueda
+   * crear/editar también puede eliminar. Se define explícito solo para
+   * tablas donde borrar debe quedar más restringido que crear/editar (ej.
+   * incidencias: cualquier rol de campo puede reportarlas, pero solo
+   * administrador puede eliminarlas).
+   */
+  rolesEliminar?: string[];
+  /**
    * Roles que pueden descargar (pull) esta tabla. Por defecto (sin definir)
    * cualquier rol autenticado la recibe — correcto para catálogos/datos
    * operativos que todos los roles necesitan para navegar la app (fincas,
@@ -211,6 +220,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     permiteEliminar: true,
     conflictStrategy: 'lww',
     rolesEscritura: ['administrador', 'encargado_finca', 'trabajador'],
+    rolesEliminar: ['administrador'],
   },
 
   // ---- Fase 6: Planilla ----
