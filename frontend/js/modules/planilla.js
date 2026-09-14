@@ -433,6 +433,12 @@ async function renderizarCalculoPago(contenedor, contexto) {
   await calcular();
 }
 
+// Se recuerda fuera de render() porque cada ~30s, al terminar de
+// sincronizar en segundo plano, app.js vuelve a llamar render() para
+// refrescar los datos — sin esto, ese refresco automático regresaba
+// siempre a la primera pestaña aunque el usuario estuviera en otra.
+let pestanaGuardada = 'asistencia';
+
 export const planillaModulo = {
   etiqueta: 'Planilla',
   async render(contenedor, contexto) {
@@ -454,6 +460,7 @@ export const planillaModulo = {
     }
 
     async function activar(clave) {
+      pestanaGuardada = clave;
       for (const boton of pestanas.children) boton.classList.toggle('pestana--activa', boton.dataset.clave === clave);
       const tab = tabs.find((t) => t.clave === clave);
       await tab.render(zona, contexto);
@@ -463,7 +470,7 @@ export const planillaModulo = {
       boton.addEventListener('click', () => activar(tab.clave));
       pestanas.appendChild(boton);
     }
-    await activar('asistencia');
+    await activar(tabs.some((t) => t.clave === pestanaGuardada) ? pestanaGuardada : tabs[0].clave);
   },
 
   async totalActivos(fincaId) {

@@ -202,6 +202,12 @@ async function renderizarBanano(contenedor, contexto) {
   );
 }
 
+// Se recuerda fuera de render() porque cada ~30s, al terminar de
+// sincronizar en segundo plano, app.js vuelve a llamar render() para
+// refrescar los datos — sin esto, ese refresco automático regresaba
+// siempre a la primera pestaña aunque el usuario estuviera en otra.
+let pestanaGuardada = 'platano';
+
 export const produccionModulo = {
   etiqueta: 'Producción',
   async render(contenedor, contexto) {
@@ -217,6 +223,7 @@ export const produccionModulo = {
     ];
 
     async function activar(clave) {
+      pestanaGuardada = clave;
       for (const boton of pestanas.children) {
         boton.classList.toggle('pestana--activa', boton.dataset.clave === clave);
       }
@@ -230,7 +237,7 @@ export const produccionModulo = {
       pestanas.appendChild(boton);
     }
 
-    await activar('platano');
+    await activar(tabs.some((t) => t.clave === pestanaGuardada) ? pestanaGuardada : tabs[0].clave);
   },
 
   /** Usado por el dashboard (Fase 9) para las tarjetas de producción del día/mes. */

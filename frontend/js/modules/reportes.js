@@ -328,6 +328,12 @@ async function renderizarColaSync(contenedor) {
   }
 }
 
+// Se recuerda fuera de render() porque cada ~30s, al terminar de
+// sincronizar en segundo plano, app.js vuelve a llamar render() para
+// refrescar los datos — sin esto, ese refresco automático regresaba
+// siempre a la primera pestaña aunque el usuario estuviera en otra.
+let pestanaGuardada = 'reportes';
+
 export const reportesModulo = {
   etiqueta: 'Reportes',
   async render(contenedor, contexto) {
@@ -351,6 +357,7 @@ export const reportesModulo = {
       { clave: 'sync', etiqueta: '🔄 Sincronización', render: (c) => renderizarColaSync(c) },
     ];
     async function activar(clave) {
+      pestanaGuardada = clave;
       for (const boton of pestanas.children) boton.classList.toggle('pestana--activa', boton.dataset.clave === clave);
       const tab = tabs.find((t) => t.clave === clave);
       await tab.render(zona, contexto);
@@ -360,6 +367,6 @@ export const reportesModulo = {
       boton.addEventListener('click', () => activar(tab.clave));
       pestanas.appendChild(boton);
     }
-    await activar('reportes');
+    await activar(tabs.some((t) => t.clave === pestanaGuardada) ? pestanaGuardada : tabs[0].clave);
   },
 };
