@@ -645,14 +645,28 @@ el.botonSyncAhora?.addEventListener('click', () => {
 // navegar manualmente.
 document.addEventListener('bananera:estado-sync', async (evento) => {
   if (evento.detail.estado !== 'sincronizado') return;
-  if (vistaActual === 'inicio') await renderizarInicio();
-  else if (vistaActual === 'modulo' && moduloActivoClave) {
+  // Cada render() de módulo empieza con contenedor.innerHTML = '' y recién
+  // después espera los datos nuevos — mientras tanto la pantalla queda
+  // momentáneamente vacía, y el navegador "encoge" la página y sube el
+  // scroll hasta el nuevo máximo (0 si estaba vacía del todo). El contenido
+  // vuelve a crecer al terminar, pero el scroll no se restaura solo: se
+  // guarda antes y se repone después para que el refresco automático no se
+  // sienta como si hubiera reiniciado la pantalla (muy notorio en listas
+  // largas como Embolse/Corta).
+  const scrollGuardado = window.scrollY;
+  const restaurarScroll = () => requestAnimationFrame(() => window.scrollTo(0, scrollGuardado));
+
+  if (vistaActual === 'inicio') {
+    await renderizarInicio();
+    restaurarScroll();
+  } else if (vistaActual === 'modulo' && moduloActivoClave) {
     // No pisar un formulario a medio llenar: si el usuario tarda más que un
     // ciclo de sync (30s) en terminar de escribir, este refresco automático
     // le borraba lo que llevaba. Se reintenta en el próximo sync exitoso.
     if (hayFormularioSinGuardar(el.contenedorModulo)) return;
     try {
       await MODULOS[moduloActivoClave].render(el.contenedorModulo, contextoActual());
+      restaurarScroll();
     } catch {
       /* si el módulo activo falla al refrescar en segundo plano, se deja como estaba */
     }
