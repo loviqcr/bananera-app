@@ -69,6 +69,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     permiteEliminar: true,
     conflictStrategy: 'lww',
     rolesEscritura: ['administrador', 'encargado_finca'],
+    rolesEliminar: ['administrador'],
   },
 
   // -------------------------------------------------------------------
@@ -102,6 +103,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     permiteEliminar: true,
     conflictStrategy: 'lww',
     rolesEscritura: ['administrador', 'encargado_finca', 'trabajador'],
+    rolesEliminar: ['administrador'],
   },
   entregas_banano: {
     tabla: 'entregas_banano',
@@ -113,6 +115,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     permiteEliminar: true,
     conflictStrategy: 'lww',
     rolesEscritura: ['administrador', 'encargado_finca', 'trabajador'],
+    rolesEliminar: ['administrador'],
   },
 
   // ---- Fase 3: Labores y calendario ----
@@ -132,6 +135,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     permiteEliminar: true,
     conflictStrategy: 'lww',
     rolesEscritura: ['administrador', 'encargado_finca', 'trabajador'],
+    rolesEliminar: ['administrador'],
   },
   labores_deshija: {
     tabla: 'labores_deshija',
@@ -140,6 +144,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     permiteEliminar: true,
     conflictStrategy: 'lww',
     rolesEscritura: ['administrador', 'encargado_finca', 'trabajador'],
+    rolesEliminar: ['administrador'],
   },
   labores_dermaticida: {
     tabla: 'labores_dermaticida',
@@ -148,6 +153,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     permiteEliminar: true,
     conflictStrategy: 'lww',
     rolesEscritura: ['administrador', 'encargado_finca', 'trabajador'],
+    rolesEliminar: ['administrador'],
   },
   labores_fertilizacion: {
     tabla: 'labores_fertilizacion',
@@ -156,6 +162,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     permiteEliminar: true,
     conflictStrategy: 'lww',
     rolesEscritura: ['administrador', 'encargado_finca', 'trabajador'],
+    rolesEliminar: ['administrador'],
   },
 
   // ---- Fase 4: Inventario, equipos y bodegas ----
@@ -166,6 +173,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     permiteEliminar: true,
     conflictStrategy: 'lww',
     rolesEscritura: ['administrador', 'encargado_finca', 'bodega'],
+    rolesEliminar: ['administrador'],
   },
   movimientos_insumo: {
     // Sin finca_id propio (se deriva de insumo_id → insumos.finca_id); el
@@ -186,6 +194,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     permiteEliminar: true,
     conflictStrategy: 'lww',
     rolesEscritura: ['administrador', 'encargado_finca', 'bodega'],
+    rolesEliminar: ['administrador'],
   },
   bodegas: {
     tabla: 'bodegas',
@@ -202,6 +211,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     permiteEliminar: true,
     conflictStrategy: 'lww',
     rolesEscritura: ['administrador', 'encargado_finca', 'bodega'],
+    rolesEliminar: ['administrador'],
   },
   movimientos_bodega: {
     tabla: 'movimientos_bodega',
@@ -232,6 +242,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     conflictStrategy: 'lww',
     rolesEscritura: ['administrador', 'encargado_finca', 'planilla'],
     rolesLectura: ['administrador', 'encargado_finca', 'planilla'],
+    rolesEliminar: ['administrador'],
   },
   asistencia: {
     tabla: 'asistencia',
@@ -242,6 +253,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     rolesEscritura: ['administrador', 'encargado_finca', 'planilla'],
     rolesLectura: ['administrador', 'encargado_finca', 'planilla'],
     conflictColumns: ['empleado_id', 'fecha'],
+    rolesEliminar: ['administrador'],
   },
   // Aparte de "empleados" a propósito — ver la nota en la migración
   // 006_salarios.sql: es lo único de planilla que encargado_finca NO debe
@@ -255,6 +267,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     rolesEscritura: ['administrador', 'planilla'],
     rolesLectura: ['administrador', 'planilla'],
     conflictColumns: ['empleado_id'],
+    rolesEliminar: ['administrador'],
   },
 
   // ---- Fase 7: Ventas ----
@@ -275,6 +288,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     conflictStrategy: 'lww',
     rolesEscritura: ['administrador', 'encargado_finca'],
     rolesLectura: ['administrador', 'encargado_finca'],
+    rolesEliminar: ['administrador'],
   },
   ventas_banano: {
     tabla: 'ventas_banano',
@@ -284,6 +298,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     conflictStrategy: 'lww',
     rolesEscritura: ['administrador', 'encargado_finca'],
     rolesLectura: ['administrador', 'encargado_finca'],
+    rolesEliminar: ['administrador'],
   },
 
   // ---- Fase 8: Embolse y corta ----
@@ -303,6 +318,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     permiteEliminar: true,
     conflictStrategy: 'lww',
     rolesEscritura: ['administrador', 'encargado_finca', 'trabajador'],
+    rolesEliminar: ['administrador'],
   },
   corta: {
     tabla: 'corta',
@@ -311,6 +327,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     permiteEliminar: true,
     conflictStrategy: 'lww',
     rolesEscritura: ['administrador', 'encargado_finca', 'trabajador'],
+    rolesEliminar: ['administrador'],
   },
 
   // 'notificaciones' y 'audit_logs' se dejan fuera a propósito: las alertas

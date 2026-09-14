@@ -166,18 +166,31 @@ async function renderizarEmpleados(contenedor, contexto) {
           })
         : null,
       sinHistorial
-        ? elemento('button', {
-            type: 'button',
-            class: 'boton-icono',
-            title: 'Eliminar (nunca tuvo asistencia registrada)',
-            style: 'background:none;color:var(--rojo-500);flex:none',
-            texto: '🗑️',
-            onclick: async () => {
-              if (!confirm(`¿Eliminar a ${e.nombre} por completo? No se puede deshacer.`)) return;
-              await repos.eliminar('empleados', e.id);
-              await renderizarEmpleados(contenedor, contexto);
-            },
-          })
+        ? (esAdmin
+            ? elemento('button', {
+                type: 'button',
+                class: 'boton-icono',
+                title: 'Eliminar (nunca tuvo asistencia registrada)',
+                style: 'background:none;color:var(--rojo-500);flex:none',
+                texto: '🗑️',
+                onclick: async () => {
+                  if (!confirm(`¿Eliminar a ${e.nombre} por completo? No se puede deshacer.`)) return;
+                  await repos.eliminar('empleados', e.id);
+                  await renderizarEmpleados(contenedor, contexto);
+                },
+              })
+            : elemento('button', {
+                type: 'button',
+                class: 'boton-icono',
+                title: 'Dar de baja',
+                style: 'background:none;color:var(--rojo-500);flex:none',
+                texto: '🚫',
+                onclick: async () => {
+                  if (!confirm(`¿Dar de baja a ${e.nombre}? Ya no va a aparecer para pasar lista ni en la planilla. Se puede reactivar después.`)) return;
+                  await repos.editar('empleados', e.id, { estado: 'inactivo' });
+                  await renderizarEmpleados(contenedor, contexto);
+                },
+              }))
         : elemento('div', { style: 'display:flex;flex:none' }, [
             elemento('button', {
               type: 'button',

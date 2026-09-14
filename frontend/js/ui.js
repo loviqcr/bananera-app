@@ -200,7 +200,16 @@ export function tarjetaStat(nombreIcono, valor, etiqueta, tono = '', alTocar = n
 }
 
 /** Lista simple de filas con título/subtítulo/valor, más recientes primero. */
-export function listaRegistros(filas, formatearFila, vacioTexto = 'Sin registros todavía.') {
+/**
+ * opciones.vacioTexto: mensaje cuando no hay filas.
+ * opciones.onEliminar(fila): si se pasa, cada fila muestra un botón 🗑️ que
+ * pide confirmación y llama a esto — el módulo que llama decide si mostrarlo
+ * (normalmente solo para administrador) y qué hacer (repos.eliminar + volver
+ * a renderizar). Centralizado acá para que el ícono/confirmación sean
+ * siempre los mismos en todos los módulos.
+ */
+export function listaRegistros(filas, formatearFila, opciones = {}) {
+  const { vacioTexto = 'Sin registros todavía.', onEliminar } = opciones;
   const contenedor = elemento('div', { class: 'lista-registros' });
   if (filas.length === 0) {
     contenedor.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: vacioTexto }));
@@ -215,6 +224,19 @@ export function listaRegistros(filas, formatearFila, vacioTexto = 'Sin registros
           subtitulo ? elemento('div', { class: 'fila-registro__subtitulo', texto: subtitulo }) : null,
         ]),
         valor != null ? elemento('div', { class: `fila-registro__valor ${tono ?? ''}`, texto: String(valor) }) : null,
+        onEliminar
+          ? elemento('button', {
+              type: 'button',
+              class: 'boton-icono',
+              title: 'Eliminar',
+              style: 'background:none;color:var(--rojo-500);flex:none',
+              texto: '🗑️',
+              onclick: async () => {
+                if (!confirm('¿Eliminar este registro? No se puede deshacer.')) return;
+                await onEliminar(fila);
+              },
+            })
+          : null,
       ])
     );
   }

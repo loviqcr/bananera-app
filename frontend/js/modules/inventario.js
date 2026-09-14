@@ -20,6 +20,11 @@ const ESTADOS_EQUIPO = [
   { value: 'fuera_de_servicio', label: '⛔ Fuera de servicio' },
 ];
 
+async function esAdministrador() {
+  const sesion = await auth.sesionActual();
+  return sesion?.usuario?.rol === 'administrador';
+}
+
 function cantidadInsumo(movimientos) {
   return movimientos.reduce((suma, m) => suma + (m.tipo === 'salida' ? -Number(m.cantidad) : Number(m.cantidad)), 0);
 }
@@ -33,7 +38,7 @@ async function renderizarInsumos(contenedor, contexto) {
     return;
   }
 
-  const insumos = await repos.listarPorFinca('insumos', contexto.fincaId);
+  const [insumos, esAdmin] = await Promise.all([repos.listarPorFinca('insumos', contexto.fincaId), esAdministrador()]);
   const bajos = [];
   const filasInfo = [];
 
@@ -106,6 +111,20 @@ async function renderizarInsumos(contenedor, contexto) {
           await renderizarInsumos(contenedor, contexto);
         },
       }),
+      esAdmin
+        ? elemento('button', {
+            type: 'button',
+            class: 'boton-icono',
+            title: 'Eliminar',
+            style: 'background:none;color:var(--rojo-500)',
+            texto: '🗑️',
+            onclick: async () => {
+              if (!confirm(`¿Eliminar "${insumo.nombre}" de Insumos? No se puede deshacer.`)) return;
+              await repos.eliminar('insumos', insumo.id);
+              await renderizarInsumos(contenedor, contexto);
+            },
+          })
+        : null,
     ]);
     const envoltorio = elemento('div', {}, [fila, acciones]);
     lista.appendChild(envoltorio);
@@ -117,7 +136,7 @@ async function renderizarInsumos(contenedor, contexto) {
 
 async function renderizarEquipos(contenedor, contexto) {
   contenedor.innerHTML = '';
-  const equipos = await repos.listarPorFinca('equipos', contexto.fincaId);
+  const [equipos, esAdmin] = await Promise.all([repos.listarPorFinca('equipos', contexto.fincaId), esAdministrador()]);
 
   if (contexto.fincaId !== 'todas') {
     const form = crearFormulario({
@@ -172,6 +191,21 @@ async function renderizarEquipos(contenedor, contexto) {
         elemento('div', { class: 'fila-registro__subtitulo', texto: `${eq.responsable_nombre || 'Sin responsable asignado'}` }),
       ]),
       elemento('span', { class: `insignia ${insigniaEstado[eq.estado] ?? 'insignia--gris'}`, texto: textoEstado[eq.estado] ?? eq.estado }),
+      esAdmin
+        ? elemento('button', {
+            type: 'button',
+            class: 'boton-icono',
+            title: 'Eliminar',
+            style: 'background:none;color:var(--rojo-500);flex:none',
+            texto: '🗑️',
+            onclick: async (evento) => {
+              evento.stopPropagation();
+              if (!confirm(`¿Eliminar el equipo "${eq.codigo} · ${eq.nombre}"? No se puede deshacer.`)) return;
+              await repos.eliminar('equipos', eq.id);
+              await renderizarEquipos(contenedor, contexto);
+            },
+          })
+        : null,
     ]);
     filaBase.style.cursor = 'pointer';
     filaBase.addEventListener('click', async () => {
@@ -213,7 +247,7 @@ function efectoMovimientoBodega(mov, bodegaIdDelItem) {
 
 async function renderizarBodegas(contenedor, contexto) {
   contenedor.innerHTML = '';
-  const todasBodegas = await repos.listarTodos('bodegas');
+  const [todasBodegas, esAdmin] = await Promise.all([repos.listarTodos('bodegas'), esAdministrador()]);
   const bodegaFinca = contexto.fincaId !== 'todas' ? todasBodegas.find((b) => b.finca_id === contexto.fincaId && b.tipo === 'finca') : null;
   const bodegasPrincipales = todasBodegas.filter((b) => b.tipo === 'principal').sort((a, b) => a.nombre.localeCompare(b.nombre));
 
@@ -313,6 +347,20 @@ async function renderizarBodegas(contenedor, contexto) {
             await pintarBodega(bodegaId);
           },
         }),
+        esAdmin
+          ? elemento('button', {
+              type: 'button',
+              class: 'boton-icono',
+              title: 'Eliminar',
+              style: 'background:none;color:var(--rojo-500)',
+              texto: '🗑️',
+              onclick: async () => {
+                if (!confirm(`¿Eliminar "${item.producto}" de esta bodega? No se puede deshacer.`)) return;
+                await repos.eliminar('bodega_items', item.id);
+                await pintarBodega(bodegaId);
+              },
+            })
+          : null,
       ]);
 
       lista.appendChild(elemento('div', {}, [fila, acciones]));

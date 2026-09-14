@@ -31,6 +31,11 @@ function inicioMesISO() {
   return `${hoy.getFullYear()}-${String(hoy.getMonth() + 1).padStart(2, '0')}-01`;
 }
 
+async function esAdministrador() {
+  const sesion = await auth.sesionActual();
+  return sesion?.usuario?.rol === 'administrador';
+}
+
 async function agregarVariedad(tipo) {
   const nombre = prompt(`Nombre de la nueva variedad de ${tipo === 'platano' ? 'plátano' : 'banano'}:`);
   if (!nombre || !nombre.trim()) return null;
@@ -57,10 +62,11 @@ function calcularEstadisticas(filas, campoCantidad) {
 
 async function renderizarPlatano(contenedor, contexto) {
   contenedor.innerHTML = '';
-  const [areas, variedades, todas] = await Promise.all([
+  const [areas, variedades, todas, esAdmin] = await Promise.all([
     opcionesAreas(contexto.fincaId),
     opcionesVariedades('platano'),
     repos.listarPorFinca('entregas_platano', contexto.fincaId),
+    esAdministrador(),
   ]);
   const filas = todas.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
   const stats = calcularEstadisticas(filas, 'cantidad_dedos');
@@ -123,20 +129,32 @@ async function renderizarPlatano(contenedor, contexto) {
 
   contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: 'Entregas recientes' }));
   contenedor.appendChild(
-    listaRegistros(filas.slice(0, 15), (f) => ({
-      titulo: `${formatearFecha(f.fecha)} · ${(f.cantidad_dedos || 0).toLocaleString('es-CR')} dedos`,
-      subtitulo: `${ETIQUETA_CALIDAD[f.calidad] ?? f.calidad ?? ''}${f.cantidad_cajas ? ` · ${f.cantidad_cajas} cajas` : ''}`,
-      valor: f.cantidad_racimos ? `${f.cantidad_racimos} rac.` : null,
-    }))
+    listaRegistros(
+      filas.slice(0, 15),
+      (f) => ({
+        titulo: `${formatearFecha(f.fecha)} · ${(f.cantidad_dedos || 0).toLocaleString('es-CR')} dedos`,
+        subtitulo: `${ETIQUETA_CALIDAD[f.calidad] ?? f.calidad ?? ''}${f.cantidad_cajas ? ` · ${f.cantidad_cajas} cajas` : ''}`,
+        valor: f.cantidad_racimos ? `${f.cantidad_racimos} rac.` : null,
+      }),
+      {
+        onEliminar: esAdmin
+          ? async (f) => {
+              await repos.eliminar('entregas_platano', f.id);
+              await renderizarPlatano(contenedor, contexto);
+            }
+          : undefined,
+      }
+    )
   );
 }
 
 async function renderizarBanano(contenedor, contexto) {
   contenedor.innerHTML = '';
-  const [areas, variedades, todas] = await Promise.all([
+  const [areas, variedades, todas, esAdmin] = await Promise.all([
     opcionesAreas(contexto.fincaId),
     opcionesVariedades('banano'),
     repos.listarPorFinca('entregas_banano', contexto.fincaId),
+    esAdministrador(),
   ]);
   const filas = todas.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
   const stats = calcularEstadisticas(filas, 'cantidad_manos');
@@ -195,10 +213,21 @@ async function renderizarBanano(contenedor, contexto) {
 
   contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: 'Entregas recientes' }));
   contenedor.appendChild(
-    listaRegistros(filas.slice(0, 15), (f) => ({
-      titulo: `${formatearFecha(f.fecha)} · ${(f.cantidad_manos || 0).toLocaleString('es-CR')} manos`,
-      subtitulo: `${ETIQUETA_CALIDAD[f.calidad] ?? f.calidad ?? ''}${f.cantidad_cajas ? ` · ${f.cantidad_cajas} cajas` : ''}`,
-    }))
+    listaRegistros(
+      filas.slice(0, 15),
+      (f) => ({
+        titulo: `${formatearFecha(f.fecha)} · ${(f.cantidad_manos || 0).toLocaleString('es-CR')} manos`,
+        subtitulo: `${ETIQUETA_CALIDAD[f.calidad] ?? f.calidad ?? ''}${f.cantidad_cajas ? ` · ${f.cantidad_cajas} cajas` : ''}`,
+      }),
+      {
+        onEliminar: esAdmin
+          ? async (f) => {
+              await repos.eliminar('entregas_banano', f.id);
+              await renderizarBanano(contenedor, contexto);
+            }
+          : undefined,
+      }
+    )
   );
 }
 

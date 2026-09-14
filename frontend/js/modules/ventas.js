@@ -16,6 +16,11 @@ async function opcionesClientes() {
   return clientes.map((c) => ({ value: c.id, label: c.nombre }));
 }
 
+async function esAdministrador() {
+  const sesion = await auth.sesionActual();
+  return sesion?.usuario?.rol === 'administrador';
+}
+
 async function agregarCliente() {
   const nombre = prompt('Nombre del cliente nuevo:');
   if (!nombre || !nombre.trim()) return null;
@@ -28,10 +33,11 @@ function inicioMesISO() {
 
 async function renderizarVenta(tabla, campoCantidad, campoPrecio, etiquetaCantidad, contenedor, contexto) {
   contenedor.innerHTML = '';
-  const [variedades, clientes, filas] = await Promise.all([
+  const [variedades, clientes, filas, esAdmin] = await Promise.all([
     opcionesVariedades(tabla === 'ventas_platano' ? 'platano' : 'banano'),
     opcionesClientes(),
     repos.listarPorFinca(tabla, contexto.fincaId),
+    esAdministrador(),
   ]);
   const ordenadas = filas.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
 
@@ -83,10 +89,21 @@ async function renderizarVenta(tabla, campoCantidad, campoPrecio, etiquetaCantid
   const nombreCliente = Object.fromEntries(clientes.map((c) => [c.value, c.label]));
   contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: 'Ventas registradas' }));
   contenedor.appendChild(
-    listaRegistros(ordenadas.slice(0, 15), (f) => ({
-      titulo: `${formatearFecha(f.fecha)} · ${formatearMoneda(Number(f[campoCantidad] || 0) * Number(f[campoPrecio] || 0))}`,
-      subtitulo: `${(f[campoCantidad] || 0).toLocaleString('es-CR')} × ${formatearMoneda(f[campoPrecio])}${f.cliente_id ? ` · ${nombreCliente[f.cliente_id] ?? ''}` : ''}`,
-    }))
+    listaRegistros(
+      ordenadas.slice(0, 15),
+      (f) => ({
+        titulo: `${formatearFecha(f.fecha)} · ${formatearMoneda(Number(f[campoCantidad] || 0) * Number(f[campoPrecio] || 0))}`,
+        subtitulo: `${(f[campoCantidad] || 0).toLocaleString('es-CR')} × ${formatearMoneda(f[campoPrecio])}${f.cliente_id ? ` · ${nombreCliente[f.cliente_id] ?? ''}` : ''}`,
+      }),
+      {
+        onEliminar: esAdmin
+          ? async (f) => {
+              await repos.eliminar(tabla, f.id);
+              await renderizarVenta(tabla, campoCantidad, campoPrecio, etiquetaCantidad, contenedor, contexto);
+            }
+          : undefined,
+      }
+    )
   );
 }
 
@@ -122,7 +139,7 @@ async function renderizarReporteVentas(contenedor, contexto) {
     listaRegistros(
       Object.entries(porCliente).sort((a, b) => b[1] - a[1]).map(([nombre, total]) => ({ nombre, total })),
       (f) => ({ titulo: f.nombre, valor: formatearMoneda(f.total) }),
-      'Sin ventas este mes.'
+      { vacioTexto: 'Sin ventas este mes.' }
     )
   );
 }

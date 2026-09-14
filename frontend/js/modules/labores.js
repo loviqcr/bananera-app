@@ -4,6 +4,11 @@ import { elemento, crearFormulario, tarjetaEstadistica, listaRegistros, formatea
 
 const FRECUENCIA_DEFECTO = { deshija: 45, dermaticida: 120, fertilizacion: 22 };
 
+async function esAdministrador() {
+  const sesion = await auth.sesionActual();
+  return sesion?.usuario?.rol === 'administrador';
+}
+
 async function opcionesAreas(fincaId) {
   const areas = fincaId && fincaId !== 'todas' ? await repos.listarPorFinca('areas', fincaId) : [];
   return areas.sort((a, b) => a.orden - b.orden).map((a) => ({ value: a.id, label: a.nombre }));
@@ -56,7 +61,7 @@ function formularioSimple(nombre, fincaId, extraCampos, alGuardarExtra) {
 
 async function renderizarSiembra(contenedor, contexto) {
   contenedor.innerHTML = '';
-  const [areas, filas] = await Promise.all([opcionesAreas(contexto.fincaId), repos.listarPorFinca('labores_siembra', contexto.fincaId)]);
+  const [areas, filas, esAdmin] = await Promise.all([opcionesAreas(contexto.fincaId), repos.listarPorFinca('labores_siembra', contexto.fincaId), esAdministrador()]);
   const ordenadas = filas.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
 
   if (contexto.fincaId !== 'todas') {
@@ -90,20 +95,32 @@ async function renderizarSiembra(contenedor, contexto) {
 
   contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: 'Siembras registradas' }));
   contenedor.appendChild(
-    listaRegistros(ordenadas.slice(0, 15), (f) => ({
-      titulo: `${formatearFecha(f.fecha)} · ${f.nombre || 'Siembra'}`,
-      subtitulo: f.cantidad ? `Cantidad: ${f.cantidad}` : '',
-    }))
+    listaRegistros(
+      ordenadas.slice(0, 15),
+      (f) => ({
+        titulo: `${formatearFecha(f.fecha)} · ${f.nombre || 'Siembra'}`,
+        subtitulo: f.cantidad ? `Cantidad: ${f.cantidad}` : '',
+      }),
+      {
+        onEliminar: esAdmin
+          ? async (f) => {
+              await repos.eliminar('labores_siembra', f.id);
+              await renderizarSiembra(contenedor, contexto);
+            }
+          : undefined,
+      }
+    )
   );
 }
 
 function renderizarLaborConFrecuencia(tabla, tipoLabor, etiquetaAccion, camposExtra, mapearDatos) {
   return async function render(contenedor, contexto) {
     contenedor.innerHTML = '';
-    const [areas, filas, dias] = await Promise.all([
+    const [areas, filas, dias, esAdmin] = await Promise.all([
       opcionesAreas(contexto.fincaId),
       repos.listarPorFinca(tabla, contexto.fincaId),
       obtenerFrecuenciaDias(tipoLabor),
+      esAdministrador(),
     ]);
     const ordenadas = filas.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
 
@@ -151,7 +168,15 @@ function renderizarLaborConFrecuencia(tabla, tipoLabor, etiquetaAccion, camposEx
             tono: estado?.clase === 'insignia--rojo' ? 'tono-alerta' : estado?.clase === 'insignia--ambar' ? 'tono-ambar' : 'tono-verde',
           };
         },
-        'Sin registros todavía.'
+        {
+          vacioTexto: 'Sin registros todavía.',
+          onEliminar: esAdmin
+            ? async (f) => {
+                await repos.eliminar(tabla, f.id);
+                await render(contenedor, contexto);
+              }
+            : undefined,
+        }
       )
     );
   };

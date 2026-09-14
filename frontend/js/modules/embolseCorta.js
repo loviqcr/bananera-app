@@ -48,6 +48,11 @@ export async function proximosACorta(fincaId) {
     .sort((a, b) => (a.fechaEstimadaCorta < b.fechaEstimadaCorta ? -1 : 1));
 }
 
+async function esAdministrador() {
+  const sesion = await auth.sesionActual();
+  return sesion?.usuario?.rol === 'administrador';
+}
+
 async function opcionesAreas(fincaId) {
   const areas = fincaId && fincaId !== 'todas' ? await repos.listarPorFinca('areas', fincaId) : [];
   return areas.sort((a, b) => a.orden - b.orden).map((a) => ({ value: a.id, label: a.nombre }));
@@ -66,7 +71,7 @@ async function agregarColor() {
 
 async function renderizarEmbolse(contenedor, contexto) {
   contenedor.innerHTML = '';
-  const [areas, colores, filas] = await Promise.all([opcionesAreas(contexto.fincaId), opcionesColores(), repos.listarPorFinca('embolse', contexto.fincaId)]);
+  const [areas, colores, filas, esAdmin] = await Promise.all([opcionesAreas(contexto.fincaId), opcionesColores(), repos.listarPorFinca('embolse', contexto.fincaId), esAdministrador()]);
   const ordenadas = filas.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
   const nombreColor = Object.fromEntries((await repos.listarTodos('colores_cinta')).map((c) => [c.id, c.nombre]));
   const nombreArea = Object.fromEntries((await repos.listarTodos('areas')).map((a) => [a.id, a.nombre]));
@@ -107,17 +112,28 @@ async function renderizarEmbolse(contenedor, contexto) {
 
   contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: 'Embolse por área' }));
   contenedor.appendChild(
-    listaRegistros(ordenadas.slice(0, 15), (f) => ({
-      titulo: `${formatearFecha(f.fecha)} · ${nombreArea[f.area_id] ?? 'Área'}`,
-      subtitulo: f.color_cinta_id ? `Cinta ${nombreColor[f.color_cinta_id] ?? ''}` : '',
-      valor: f.cantidad,
-    }))
+    listaRegistros(
+      ordenadas.slice(0, 15),
+      (f) => ({
+        titulo: `${formatearFecha(f.fecha)} · ${nombreArea[f.area_id] ?? 'Área'}`,
+        subtitulo: f.color_cinta_id ? `Cinta ${nombreColor[f.color_cinta_id] ?? ''}` : '',
+        valor: f.cantidad,
+      }),
+      {
+        onEliminar: esAdmin
+          ? async (f) => {
+              await repos.eliminar('embolse', f.id);
+              await renderizarEmbolse(contenedor, contexto);
+            }
+          : undefined,
+      }
+    )
   );
 }
 
 async function renderizarCorta(contenedor, contexto) {
   contenedor.innerHTML = '';
-  const [areas, filas] = await Promise.all([opcionesAreas(contexto.fincaId), repos.listarPorFinca('corta', contexto.fincaId)]);
+  const [areas, filas, esAdmin] = await Promise.all([opcionesAreas(contexto.fincaId), repos.listarPorFinca('corta', contexto.fincaId), esAdministrador()]);
   const ordenadas = filas.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
   const nombreArea = Object.fromEntries((await repos.listarTodos('areas')).map((a) => [a.id, a.nombre]));
 
@@ -160,10 +176,21 @@ async function renderizarCorta(contenedor, contexto) {
 
   contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: 'Cortas registradas' }));
   contenedor.appendChild(
-    listaRegistros(ordenadas.slice(0, 15), (f) => ({
-      titulo: `${formatearFecha(f.fecha)} · ${nombreArea[f.area_id] ?? 'Área'}`,
-      valor: `${f.racimos_cortados} rac.`,
-    }))
+    listaRegistros(
+      ordenadas.slice(0, 15),
+      (f) => ({
+        titulo: `${formatearFecha(f.fecha)} · ${nombreArea[f.area_id] ?? 'Área'}`,
+        valor: `${f.racimos_cortados} rac.`,
+      }),
+      {
+        onEliminar: esAdmin
+          ? async (f) => {
+              await repos.eliminar('corta', f.id);
+              await renderizarCorta(contenedor, contexto);
+            }
+          : undefined,
+      }
+    )
   );
 }
 
@@ -186,7 +213,7 @@ async function renderizarSeguimiento(contenedor, contexto) {
         valor: f.fechaEstimadaCorta < hoyISO() ? 'Vencido' : null,
         tono: 'tono-alerta',
       }),
-      'No hay áreas embolsadas pendientes de corta.'
+      { vacioTexto: 'No hay áreas embolsadas pendientes de corta.' }
     )
   );
 }
