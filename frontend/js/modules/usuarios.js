@@ -96,6 +96,14 @@ function renderizarFormularioCrear(contenedor, listaFincas, alCrear) {
     boton,
   ]);
 
+  // El sync en segundo plano (cada ~30s o al volver del segundo plano) vuelve
+  // a llamar a usuariosModulo.render() cuando termina con éxito, y este
+  // formulario se arma a mano (no con crearFormulario()) — sin esto, ese
+  // refresco automático borraba lo que se llevaba escrito al crear un
+  // usuario, igual que ya se resolvió para el resto de formularios.
+  form.addEventListener('input', () => { form.dataset.sucio = '1'; });
+  form.addEventListener('change', () => { form.dataset.sucio = '1'; });
+
   form.addEventListener('submit', async (evento) => {
     evento.preventDefault();
     mensaje.textContent = '';
@@ -109,6 +117,7 @@ function renderizarFormularioCrear(contenedor, listaFincas, alCrear) {
         fincaIds: obtenerSeleccionadas(),
       });
       form.reset();
+      delete form.dataset.sucio;
     } catch (error) {
       mensaje.textContent = error.message;
     } finally {
@@ -163,6 +172,14 @@ function renderizarFilaUsuario(usuario, listaFincas, alGuardar, alEliminar) {
     zonaEdicion.appendChild(mensaje);
     zonaEdicion.appendChild(elemento('div', { class: 'fila' }, [botonGuardar, botonEliminar]));
 
+    // Este panel no es un <form> (es un <div> armado a mano), pero el
+    // refresco automático de sync igual lo destruye por completo al volver
+    // a llamar a usuariosModulo.render() — se marca "sucio" con el mismo
+    // atributo que usa el resto de la app para que ese refresco lo respete
+    // mientras haya un cambio de rol/finca/activo sin guardar.
+    zonaEdicion.addEventListener('input', () => { zonaEdicion.dataset.sucio = '1'; });
+    zonaEdicion.addEventListener('change', () => { zonaEdicion.dataset.sucio = '1'; });
+
     botonGuardar.addEventListener('click', async () => {
       mensaje.textContent = '';
       botonGuardar.disabled = true;
@@ -173,6 +190,7 @@ function renderizarFilaUsuario(usuario, listaFincas, alGuardar, alEliminar) {
           activo: casillaActivo.checked,
         });
         zonaEdicion.hidden = true;
+        delete zonaEdicion.dataset.sucio;
       } catch (error) {
         mensaje.textContent = error.message;
       } finally {

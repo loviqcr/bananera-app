@@ -112,7 +112,10 @@ export function crearFormulario({ campos, textoBoton = 'Guardar', alGuardar, lim
  * automático de sync mientras el usuario está a medio llenar algo.
  */
 export function hayFormularioSinGuardar(contenedor) {
-  return !!contenedor.querySelector('form[data-sucio="1"]');
+  // No se restringe a <form> a propósito: algunos módulos (ej. usuarios.js)
+  // arman a mano un panel de edición que no es un <form> real y también
+  // necesita poder marcarse "sucio" con este mismo atributo.
+  return !!contenedor.querySelector('[data-sucio="1"]');
 }
 
 /** Tarjeta chica de estadística (número + etiqueta), para dashboards. */
