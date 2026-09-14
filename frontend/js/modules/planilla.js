@@ -59,6 +59,11 @@ async function mapaSalarios() {
   return Object.fromEntries(salarios.map((s) => [s.empleado_id, s]));
 }
 
+async function esAdministrador() {
+  const sesion = await auth.sesionActual();
+  return sesion?.usuario?.rol === 'administrador';
+}
+
 async function puedeVerSalario() {
   const sesion = await auth.sesionActual();
   return ROLES_VEN_SALARIO.includes(sesion?.usuario?.rol);
@@ -92,6 +97,7 @@ async function marcarAsistencia(empleadoId, fechaISO, estado) {
 async function renderizarEmpleados(contenedor, contexto) {
   contenedor.innerHTML = '';
   const verSalario = await puedeVerSalario();
+  const esAdmin = await esAdministrador();
   const [areas, empleados, nombreFinca, salarioPorEmpleado] = await Promise.all([
     opcionesAreas(contexto.fincaId),
     repos.listarPorFinca('empleados', contexto.fincaId),
@@ -172,18 +178,42 @@ async function renderizarEmpleados(contenedor, contexto) {
               await renderizarEmpleados(contenedor, contexto);
             },
           })
-        : elemento('button', {
-            type: 'button',
-            class: 'boton-icono',
-            title: 'Dar de baja (tiene historial de asistencia, no se puede eliminar)',
-            style: 'background:none;color:var(--rojo-500);flex:none',
-            texto: '🚫',
-            onclick: async () => {
-              if (!confirm(`¿Dar de baja a ${e.nombre}? Ya no va a aparecer para pasar lista ni en la planilla, pero su historial se conserva. Se puede reactivar después.`)) return;
-              await repos.editar('empleados', e.id, { estado: 'inactivo' });
-              await renderizarEmpleados(contenedor, contexto);
-            },
-          }),
+        : elemento('div', { style: 'display:flex;flex:none' }, [
+            elemento('button', {
+              type: 'button',
+              class: 'boton-icono',
+              title: 'Dar de baja (recomendado: conserva su historial en Reportes/Cálculo de pago)',
+              style: 'background:none;color:var(--rojo-500)',
+              texto: '🚫',
+              onclick: async () => {
+                if (!confirm(`¿Dar de baja a ${e.nombre}? Ya no va a aparecer para pasar lista ni en la planilla, pero su historial se conserva. Se puede reactivar después.`)) return;
+                await repos.editar('empleados', e.id, { estado: 'inactivo' });
+                await renderizarEmpleados(contenedor, contexto);
+              },
+            }),
+            // Solo administrador: para trabajadores de PRUEBA que ya tienen
+            // asistencia marcada por error, "dar de baja" no es suficiente
+            // porque el usuario quiere que desaparezca de verdad. Eliminar
+            // (soft-delete real, mismo repos.eliminar de siempre) no revienta
+            // nada en el servidor, pero SÍ hace que ese trabajador deje de
+            // aparecer en los reportes de meses donde sí tuvo asistencia —
+            // por eso no se ofrece por defecto a cualquiera, solo admin y con
+            // advertencia explícita.
+            esAdmin
+              ? elemento('button', {
+                  type: 'button',
+                  class: 'boton-icono',
+                  title: 'Eliminar de todas formas (se pierde su historial en Reportes/Cálculo de pago — usar solo con datos de prueba)',
+                  style: 'background:none;color:var(--rojo-500)',
+                  texto: '🗑️',
+                  onclick: async () => {
+                    if (!confirm(`¿Eliminar a ${e.nombre} por completo? Tiene asistencia registrada — al eliminarlo, esos días YA NO van a aparecer en Reportes ni en Cálculo de pago de meses pasados. Úsalo solo si es un trabajador de prueba. No se puede deshacer.`)) return;
+                    await repos.eliminar('empleados', e.id);
+                    await renderizarEmpleados(contenedor, contexto);
+                  },
+                })
+              : null,
+          ]),
     ]);
     lista.appendChild(fila);
   }
