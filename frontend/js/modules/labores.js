@@ -198,7 +198,11 @@ const renderizarDermaticida = renderizarLaborConFrecuencia(
     { nombre: 'cantidad', etiqueta: 'Cantidad', tipo: 'number', paso: '0.01' },
     { nombre: 'unidad', etiqueta: 'Unidad', tipo: 'text' },
   ],
-  (valores) => ({ producto: valores.producto, cantidad: valores.cantidad ? Number(valores.cantidad) : null, unidad: valores.unidad || null })
+  (valores) => ({ producto: valores.producto, cantidad: valores.cantidad ? Number(valores.cantidad) : null, unidad: valores.unidad || null }),
+  (f, nombreArea) => ({
+    titulo: `${formatearFecha(f.fecha)} · ${f.producto || 'Dermaticida'}`,
+    subtitulo: `${nombreArea[f.area_id] ?? 'Área'} · Cantidad: ${f.cantidad ?? '—'}${f.unidad ? ' ' + f.unidad : ''}`,
+  })
 );
 
 const renderizarFertilizacion = renderizarLaborConFrecuencia(
