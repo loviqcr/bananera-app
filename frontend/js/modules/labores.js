@@ -113,15 +113,17 @@ async function renderizarSiembra(contenedor, contexto) {
   );
 }
 
-function renderizarLaborConFrecuencia(tabla, tipoLabor, etiquetaAccion, camposExtra, mapearDatos) {
+function renderizarLaborConFrecuencia(tabla, tipoLabor, etiquetaAccion, camposExtra, mapearDatos, formatearResumen) {
   return async function render(contenedor, contexto) {
     contenedor.innerHTML = '';
-    const [areas, filas, dias, esAdmin] = await Promise.all([
+    const [areas, filas, dias, esAdmin, todasLasAreas] = await Promise.all([
       opcionesAreas(contexto.fincaId),
       repos.listarPorFinca(tabla, contexto.fincaId),
       obtenerFrecuenciaDias(tipoLabor),
       esAdministrador(),
+      repos.listarTodos('areas'),
     ]);
+    const nombreArea = Object.fromEntries(todasLasAreas.map((a) => [a.id, a.nombre]));
     const ordenadas = filas.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
 
     contenedor.appendChild(
@@ -161,9 +163,12 @@ function renderizarLaborConFrecuencia(tabla, tipoLabor, etiquetaAccion, camposEx
         ordenadas.slice(0, 15),
         (f) => {
           const estado = estadoProximaFecha(f.proxima_fecha);
+          const resumen = formatearResumen
+            ? formatearResumen(f, nombreArea)
+            : { titulo: formatearFecha(f.fecha), subtitulo: `Próxima: ${formatearFecha(f.proxima_fecha)}` };
           return {
-            titulo: `${formatearFecha(f.fecha)}`,
-            subtitulo: `Próxima: ${formatearFecha(f.proxima_fecha)}`,
+            titulo: resumen.titulo,
+            subtitulo: resumen.subtitulo,
             valor: estado?.texto,
             tono: estado?.clase === 'insignia--rojo' ? 'tono-alerta' : estado?.clase === 'insignia--ambar' ? 'tono-ambar' : 'tono-verde',
           };
@@ -203,9 +208,12 @@ const renderizarFertilizacion = renderizarLaborConFrecuencia(
   [
     { nombre: 'formula', etiqueta: 'Fórmula', tipo: 'text', requerido: true },
     { nombre: 'cantidad', etiqueta: 'Cantidad', tipo: 'number', paso: '0.01' },
-    { nombre: 'unidad', etiqueta: 'Unidad', tipo: 'text' },
   ],
-  (valores) => ({ formula: valores.formula, cantidad: valores.cantidad ? Number(valores.cantidad) : null, unidad: valores.unidad || null })
+  (valores) => ({ formula: valores.formula, cantidad: valores.cantidad ? Number(valores.cantidad) : null }),
+  (f, nombreArea) => ({
+    titulo: `${formatearFecha(f.fecha)} · ${f.formula || 'Fertilización'}`,
+    subtitulo: `${nombreArea[f.area_id] ?? 'Área'} · Cantidad: ${f.cantidad ?? '—'}`,
+  })
 );
 
 // Se recuerda fuera de render() porque cada ~30s, al terminar de
