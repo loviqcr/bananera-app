@@ -739,6 +739,14 @@ async function continuarDespuesDeLogin() {
     if (permitidas && permitidas.length === 1) {
       fincas.guardarFincaActiva(permitidas[0]);
       fincaId = permitidas[0];
+    } else if (!permitidas) {
+      // Sin restricción (administrador) y sin nada elegido todavía: entra
+      // directo a "Todas las fincas" en vez de obligarlo a elegir una —
+      // ver el consolidado de todo es justo lo que se espera de su rol, y
+      // forzarlo a elegir una finca específica primero hacía que Inicio
+      // pareciera mostrar información incompleta.
+      fincas.guardarFincaActiva('todas');
+      fincaId = 'todas';
     } else {
       mostrarVista('selectorFinca');
       await renderizarSelectorFinca();
