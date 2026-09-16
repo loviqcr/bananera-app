@@ -12,7 +12,7 @@ import { incidenciasUrgentesPendientes, incidenciasAbiertas } from './incidencia
 import { repos } from '../db/repos.js';
 import { elemento, formatearFecha } from '../ui.js';
 
-const NOMBRE_LABOR = { deshija: 'Deshija', dermaticida: 'Dermaticida', fertilizacion: 'Fertilización' };
+const NOMBRE_LABOR = { deshija: 'Deshija', dermaticida: 'Nematicida', fertilizacion: 'Fertilización' };
 
 export async function calcularAlertas(fincaId) {
   const [insumosBajos, labores, urgentes] = await Promise.all([

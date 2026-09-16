@@ -192,7 +192,7 @@ const renderizarDeshija = renderizarLaborConFrecuencia('labores_deshija', 'deshi
 const renderizarDermaticida = renderizarLaborConFrecuencia(
   'labores_dermaticida',
   'dermaticida',
-  '🧪 Registrar aplicación de dermaticida',
+  '🧪 Registrar aplicación de nematicida',
   [
     { nombre: 'producto', etiqueta: 'Producto aplicado', tipo: 'text', requerido: true },
     { nombre: 'cantidad', etiqueta: 'Cantidad', tipo: 'number', paso: '0.01' },
@@ -200,7 +200,7 @@ const renderizarDermaticida = renderizarLaborConFrecuencia(
   ],
   (valores) => ({ producto: valores.producto, cantidad: valores.cantidad ? Number(valores.cantidad) : null, unidad: valores.unidad || null }),
   (f, nombreArea) => ({
-    titulo: `${formatearFecha(f.fecha)} · ${f.producto || 'Dermaticida'}`,
+    titulo: `${formatearFecha(f.fecha)} · ${f.producto || 'Nematicida'}`,
     subtitulo: `${nombreArea[f.area_id] ?? 'Área'} · Cantidad: ${f.cantidad ?? '—'}${f.unidad ? ' ' + f.unidad : ''}`,
   })
 );
@@ -238,7 +238,7 @@ export const laboresModulo = {
     const tabs = [
       { clave: 'siembra', etiqueta: '🌱 Siembra', render: renderizarSiembra },
       { clave: 'deshija', etiqueta: '✂️ Deshija', render: renderizarDeshija },
-      { clave: 'dermaticida', etiqueta: '🧪 Dermaticida', render: renderizarDermaticida },
+      { clave: 'dermaticida', etiqueta: '🧪 Nematicida', render: renderizarDermaticida },
       { clave: 'fertilizacion', etiqueta: '🧪 Fertilización', render: renderizarFertilizacion },
     ];
 

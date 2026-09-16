@@ -43,7 +43,7 @@ export async function estadisticasDeFinca(fincaId) {
 const LABORES_ACCESO_RAPIDO = [
   { clave: 'siembra', etiqueta: '🌱 Siembra' },
   { clave: 'deshija', etiqueta: '✂️ Deshija' },
-  { clave: 'dermaticida', etiqueta: '🧪 Dermaticida' },
+  { clave: 'dermaticida', etiqueta: '🧪 Nematicida' },
   { clave: 'fertilizacion', etiqueta: '🧪 Fertilización' },
 ];
 

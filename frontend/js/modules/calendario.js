@@ -50,7 +50,7 @@ async function recolectarEventos(fincaId) {
     }
   };
   agregarConFrecuencia(deshija, 'deshija', 'Deshija');
-  agregarConFrecuencia(dermaticida, 'dermaticida', 'Dermaticida');
+  agregarConFrecuencia(dermaticida, 'dermaticida', 'Nematicida');
   agregarConFrecuencia(fertilizacion, 'fertilizacion', 'Fertilización');
 
   return eventos;
