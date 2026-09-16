@@ -85,6 +85,7 @@ const el = {
   fincaDetalleSubtitulo: document.getElementById('finca-detalle-subtitulo'),
   fincaDetalleStats: document.getElementById('finca-detalle-stats'),
   fincaDetalleEstado: document.getElementById('finca-detalle-estado'),
+  fincaDetalleAreas: document.getElementById('finca-detalle-areas'),
   botonEntrarFinca: document.getElementById('boton-entrar-finca'),
 };
 
@@ -345,7 +346,58 @@ async function abrirFincaDetalle(finca) {
   el.fincaDetalleEstado.appendChild(filaEstadoFinca('Inventario', stats.insumosBajos.length === 0, 'Normal', `Bajo (${stats.insumosBajos.length})`));
   el.fincaDetalleEstado.appendChild(filaEstadoFinca('Incidencias', stats.abiertas.length === 0, 'Sin pendientes', `${stats.abiertas.length} pendiente(s)`));
 
+  await pintarAreasFincaDetalle(finca, areas);
+
   mostrarVista('fincaDetalle');
+}
+
+/**
+ * Lista de áreas de la finca con opción de eliminar — solo administrador
+ * (el servidor también lo exige, ver rolesEliminar en syncRegistry.ts).
+ * Antes no había ninguna pantalla que mostrara las áreas por nombre, solo
+ * el contador en el subtítulo.
+ */
+async function pintarAreasFincaDetalle(finca, areas) {
+  if (!el.fincaDetalleAreas) return;
+  el.fincaDetalleAreas.innerHTML = '';
+  const esAdmin = cacheUsuario?.rol === 'administrador';
+
+  if (areas.length === 0) {
+    el.fincaDetalleAreas.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: 'Sin áreas registradas todavía.' }));
+  }
+  for (const area of areas) {
+    el.fincaDetalleAreas.appendChild(
+      elemento('div', { class: 'fila-registro' }, [
+        elemento('div', { class: 'fila-registro__titulo', texto: area.nombre }),
+        esAdmin
+          ? elemento('button', {
+              type: 'button',
+              class: 'boton-icono',
+              title: 'Eliminar área',
+              style: 'background:none;color:var(--rojo-500);flex:none',
+              texto: '🗑️',
+              onclick: async () => {
+                if (!confirm(`¿Eliminar el área "${area.nombre}"? Los registros que ya la usaron (labores, entregas, embolse, corta...) no se borran, pero dejan de poder mostrar su nombre. No se puede deshacer.`)) return;
+                await fincas.eliminarArea(area.id);
+                await abrirFincaDetalle(finca);
+              },
+            })
+          : null,
+      ])
+    );
+  }
+
+  const rolesQuePuedenCrearArea = ['administrador', 'encargado_finca'];
+  if (rolesQuePuedenCrearArea.includes(cacheUsuario?.rol)) {
+    const botonAgregar = elemento('button', { type: 'button', class: 'boton boton--fantasma', texto: '+ Agregar área' });
+    botonAgregar.addEventListener('click', async () => {
+      const nombre = prompt('Nombre de la nueva área (por ejemplo "Área 05"):');
+      if (!nombre || !nombre.trim()) return;
+      await fincas.crearArea(finca.id, nombre.trim());
+      await abrirFincaDetalle(finca);
+    });
+    el.fincaDetalleAreas.appendChild(botonAgregar);
+  }
 }
 
 el.botonVolverFincas?.addEventListener('click', () => {
@@ -539,6 +591,7 @@ async function renderizarInicio() {
     await renderizarDashboard(el.contenedorDashboard, contextoActual(), {
       alTocarIncidencias: () => abrirModulo('incidencias'),
       alTocarPersonal: () => abrirModulo('planilla', 'empleados'),
+      alTocarLabor: (tabClave) => abrirModulo('labores', tabClave),
     });
   } catch (error) {
     console.warn('[app] No se pudo calcular el dashboard:', error);

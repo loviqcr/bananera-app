@@ -94,6 +94,21 @@ export const fincas = {
     return registro;
   },
 
+  /**
+   * Solo administrador (el servidor también lo exige — ver rolesEliminar en
+   * syncRegistry.ts). Borrado lógico igual que el resto de la app: los
+   * registros históricos que usaron esta área (labores, entregas, embolse,
+   * corta...) no se tocan, solo dejan de poder mostrar su nombre.
+   */
+  async eliminarArea(areaId) {
+    const actual = await localdb.get('areas', areaId);
+    if (actual) {
+      actual.eliminado_at = new Date().toISOString();
+      await localdb.put('areas', actual);
+    }
+    await localdb.encolarOperacion({ tabla: 'areas', operacion: 'eliminar', id: areaId });
+  },
+
   guardarFincaActiva(fincaId) {
     localStorage.setItem(CLAVE_FINCA, fincaId);
     localStorage.removeItem(CLAVE_AREA);

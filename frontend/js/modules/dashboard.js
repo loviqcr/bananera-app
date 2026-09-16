@@ -40,10 +40,17 @@ export async function estadisticasDeFinca(fincaId) {
   };
 }
 
+const LABORES_ACCESO_RAPIDO = [
+  { clave: 'siembra', etiqueta: '🌱 Siembra' },
+  { clave: 'deshija', etiqueta: '✂️ Deshija' },
+  { clave: 'dermaticida', etiqueta: '🧪 Dermaticida' },
+  { clave: 'fertilizacion', etiqueta: '🧪 Fertilización' },
+];
+
 export async function renderizarDashboard(contenedor, contexto, manejadores = {}) {
   contenedor.innerHTML = '';
   const stats = await estadisticasDeFinca(contexto.fincaId);
-  const { alTocarIncidencias, alTocarPersonal } = manejadores;
+  const { alTocarIncidencias, alTocarPersonal, alTocarLabor } = manejadores;
 
   // ---- Tarjetas principales (equivalente a la portada del boceto) ----
   contenedor.appendChild(
@@ -54,6 +61,28 @@ export async function renderizarDashboard(contenedor, contexto, manejadores = {}
       tarjetaStat('alert', stats.abiertas.length, 'Alertas — requieren atención', stats.abiertas.length > 0 ? 'tarjeta-stat--alerta' : '', alTocarIncidencias),
     ])
   );
+
+  // ---- Acceso rápido a Labores (para no tener que entrar a Labores y
+  // buscar la pestaña correcta cada vez) ----
+  if (alTocarLabor) {
+    contenedor.appendChild(
+      elemento('div', { class: 'seccion-dashboard' }, [
+        elemento('h2', { class: 'seccion-dashboard__titulo', texto: 'Registrar labor' }),
+        elemento(
+          'div',
+          { class: 'pestanas', style: 'flex-wrap:wrap' },
+          LABORES_ACCESO_RAPIDO.map((labor) =>
+            elemento('button', {
+              type: 'button',
+              class: 'pestana',
+              texto: labor.etiqueta,
+              onclick: () => alTocarLabor(labor.clave),
+            })
+          )
+        ),
+      ])
+    );
+  }
 
   // ---- Resumen general ----
   contenedor.appendChild(
