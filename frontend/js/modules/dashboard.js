@@ -125,6 +125,7 @@ export async function renderizarDashboard(contenedor, contexto, manejadores = {}
           ]),
           elemento('div', { class: 'tarjeta-finca-resumen__metricas' }, [
             elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [elemento('span', {}, 'Racimos hoy'), elemento('strong', {}, s.cortadoHoy.toLocaleString('es-CR'))]),
+            elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [elemento('span', {}, 'Cajas hoy (1ª/2ª)'), elemento('strong', {}, `${s.cargaHoy.primera}/${s.cargaHoy.segunda}`)]),
             elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [elemento('span', {}, 'Personal'), elemento('strong', {}, `${s.personal.presentes}/${s.personal.total}`)]),
             elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [elemento('span', {}, 'Ventas mes'), elemento('strong', {}, formatearMoneda(s.ventasMes))]),
             elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [elemento('span', {}, 'Incidencias'), elemento('strong', {}, String(s.abiertas.length))]),
