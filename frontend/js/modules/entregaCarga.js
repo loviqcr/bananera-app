@@ -145,7 +145,26 @@ export const entregaCargaModulo = {
             pintarResponsables();
           },
         });
-        filaResponsables.appendChild(boton);
+        const grupo = elemento('div', { class: 'fila', style: 'gap:2px' }, [
+          boton,
+          esAdmin
+            ? elemento('button', {
+                type: 'button',
+                class: 'boton-icono',
+                title: 'Eliminar de la lista',
+                style: 'background:none;color:var(--rojo-500);flex:none;min-width:0;padding:0 4px',
+                texto: '🗑️',
+                onclick: async () => {
+                  if (!confirm(`¿Eliminar "${r.nombre}" de la lista de "Entregar a"? No se puede deshacer.`)) return;
+                  await repos.eliminar('responsables_carga', r.id);
+                  responsables.splice(responsables.indexOf(r), 1);
+                  if (responsableSeleccionado === r.nombre) responsableSeleccionado = responsables[0]?.nombre ?? null;
+                  pintarResponsables();
+                },
+              })
+            : null,
+        ]);
+        filaResponsables.appendChild(grupo);
       }
       const botonNuevo = elemento('button', {
         type: 'button',

@@ -309,9 +309,10 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     tabla: 'responsables_carga',
     columnas: ['nombre', 'activo'],
     fincaScoped: false,
-    permiteEliminar: false,
+    permiteEliminar: true,
     conflictStrategy: 'lww',
     rolesEscritura: ['administrador', 'encargado_finca', 'trabajador'],
+    rolesEliminar: ['administrador'],
     conflictColumns: ['nombre'],
   },
 
