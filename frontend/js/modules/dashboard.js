@@ -13,6 +13,12 @@ function formatearMoneda(valor) {
   return `₡${Number(valor || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
+/** Evita que la tarjeta de finca crezca sin control si un día hubo entregas a muchos destinatarios distintos. */
+function nombresConLimite(nombres, limite = 2) {
+  if (nombres.length <= limite) return nombres.join(', ');
+  return `${nombres.slice(0, limite).join(', ')} y ${nombres.length - limite} más`;
+}
+
 /** Usado por el dashboard y por la pantalla de detalle de finca. */
 export async function estadisticasDeFinca(fincaId) {
   const [produccion, insumosBajos, abiertas, labores, personal, totalPersonal, ventasMes, dia, cargaHoy] = await Promise.all([
@@ -129,6 +135,12 @@ export async function renderizarDashboard(contenedor, contexto, manejadores = {}
             elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [elemento('span', {}, 'Personal'), elemento('strong', {}, `${s.personal.presentes}/${s.personal.total}`)]),
             elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [elemento('span', {}, 'Ventas mes'), elemento('strong', {}, formatearMoneda(s.ventasMes))]),
             elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [elemento('span', {}, 'Incidencias'), elemento('strong', {}, String(s.abiertas.length))]),
+            s.cargaHoy.destinatarios.length > 0
+              ? elemento('div', { class: 'tarjeta-finca-resumen__metrica', style: 'grid-column:1/-1' }, [
+                  elemento('span', {}, 'Entregado a'),
+                  elemento('strong', { style: 'text-align:right' }, nombresConLimite(s.cargaHoy.destinatarios)),
+                ])
+              : null,
           ]),
         ])
       );
