@@ -15,14 +15,52 @@ function sumarDiasISO(fechaISO, dias) {
   return fecha.toISOString().slice(0, 10);
 }
 
-const ESTADOS_ASISTENCIA = [
-  { value: 'presente', label: '✓ Presente' },
-  { value: 'ausente', label: '❌ Ausente' },
-  { value: 'incapacidad', label: '🏥 Incapacidad' },
-  { value: 'permiso', label: '📝 Permiso' },
-  { value: 'vacaciones', label: '🏖 Vacaciones' },
+// Los 3 estados de "Mano de Obra" (reemplazan los 5 anteriores). Se
+// reutilizan a propósito los mismos valores de estado que ya existían
+// ('presente'/'permiso'/'ausente') en vez de inventar unos nuevos — así
+// Cálculo de pago, el dashboard ("Personal presente") y el historial de
+// Reportes no necesitan ningún cambio para seguir funcionando igual.
+// 'incapacidad'/'vacaciones' ya no se pueden elegir desde acá, pero los
+// registros históricos con esos valores no se tocan ni se pierden.
+const OPCIONES_ASISTENCIA = [
+  { value: 'presente', label: 'Asistencia', clase: 'presente' },
+  { value: 'permiso', label: 'Ausencia c/permiso', clase: 'permiso' },
+  { value: 'ausente', label: 'Ausencia s/permiso', clase: 'ausente' },
 ];
-const ICONO_ESTADO = Object.fromEntries(ESTADOS_ASISTENCIA.map((e) => [e.value, e.label.split(' ')[0]]));
+const HORAS_JORNADA_COMPLETA = 8;
+
+function fechaCorta(fechaISO) {
+  const fecha = new Date(fechaISO + 'T00:00:00');
+  const texto = fecha.toLocaleDateString('es-CR', { weekday: 'short', day: 'numeric', month: 'short' });
+  return texto.charAt(0).toUpperCase() + texto.slice(1).replace('.', '');
+}
+
+/** Control +/- de horas trabajadas, arranca en el valor actual (no siempre en 0 como el de Entrega de Carga). */
+function crearStepperNumerico(valorInicial, onCambio) {
+  let valor = valorInicial;
+  const etiquetaValor = elemento('strong', { class: 'stepper__valor', texto: `${valor} h` });
+  const botonMenos = elemento('button', {
+    type: 'button',
+    class: 'boton-stepper',
+    texto: '−',
+    onclick: () => {
+      valor = Math.max(0, valor - 1);
+      etiquetaValor.textContent = `${valor} h`;
+      onCambio(valor);
+    },
+  });
+  const botonMas = elemento('button', {
+    type: 'button',
+    class: 'boton-stepper boton-stepper--verde',
+    texto: '+',
+    onclick: () => {
+      valor += 1;
+      etiquetaValor.textContent = `${valor} h`;
+      onCambio(valor);
+    },
+  });
+  return { contenedor: elemento('div', { class: 'stepper' }, [botonMenos, etiquetaValor, botonMas]) };
+}
 
 async function opcionesAreas(fincaId) {
   const areas = fincaId && fincaId !== 'todas' ? await repos.listarPorFinca('areas', fincaId) : [];
@@ -80,7 +118,7 @@ async function guardarSalario(empleadoId, salarioDiario) {
 }
 
 /** Upsert local real: si ya existe asistencia de ese empleado ese día, la edita en vez de duplicarla. */
-async function marcarAsistencia(empleadoId, fechaISO, estado) {
+async function marcarAsistencia(empleadoId, fechaISO, estado, horas) {
   const existentes = await localdb.getPorIndice('asistencia', 'empleado_id', empleadoId);
   const deEseDia = existentes.find((a) => a.fecha === fechaISO && !a.eliminado_at);
   if (deEseDia) {
@@ -88,9 +126,9 @@ async function marcarAsistencia(empleadoId, fechaISO, estado) {
     // el servidor pueda resolver por llave natural si este id local no es
     // el que "ganó" en el servidor (dos dispositivos marcando lo mismo
     // offline) — si no, la edición se perdería en silencio.
-    await repos.editar('asistencia', deEseDia.id, { empleado_id: empleadoId, fecha: fechaISO, estado });
+    await repos.editar('asistencia', deEseDia.id, { empleado_id: empleadoId, fecha: fechaISO, estado, horas });
   } else {
-    await repos.crear('asistencia', { empleado_id: empleadoId, fecha: fechaISO, estado, observaciones: null });
+    await repos.crear('asistencia', { empleado_id: empleadoId, fecha: fechaISO, estado, horas, observaciones: null });
   }
 }
 
@@ -274,6 +312,13 @@ async function renderizarEmpleados(contenedor, contexto) {
   }
 }
 
+/**
+ * "Mano de Obra": a diferencia del resto de la app, acá NO se guarda cada
+ * toque al instante — los cambios quedan en memoria (estadoLocal) mientras
+ * se marca a todo el mundo, y recién se guardan todos juntos al tocar
+ * "Guardar planilla". Sin esto, pasar lista para 10+ trabajadores sería 10+
+ * escrituras sueltas en vez de una sola acción clara con confirmación.
+ */
 async function renderizarAsistencia(contenedor, contexto) {
   contenedor.innerHTML = '';
   if (contexto.fincaId === 'todas') {
@@ -281,47 +326,124 @@ async function renderizarAsistencia(contenedor, contexto) {
     return;
   }
 
-  const empleados = await empleadosActivos(contexto.fincaId);
+  const [empleados, fincas] = await Promise.all([empleadosActivos(contexto.fincaId), repos.listarTodos('fincas')]);
+  const finca = fincas.find((f) => f.id === contexto.fincaId);
+
   const campoFecha = elemento('input', { type: 'date', value: hoyISO(), class: 'campo' });
+  const estadoLocal = new Map(); // empleado_id -> { estado, horas }
+
+  contenedor.appendChild(
+    elemento('div', { class: 'banner-mano-obra' }, [
+      elemento('span', { class: 'chip chip--sobre-oscuro', texto: finca?.nombre ?? 'Finca' }),
+      elemento('span', { class: 'banner-mano-obra__fecha', id: 'mano-obra-fecha', texto: fechaCorta(campoFecha.value) }),
+      elemento('h1', { class: 'banner-mano-obra__titulo', texto: 'Mano de Obra' }),
+      elemento('p', { class: 'banner-mano-obra__subtitulo', texto: 'Planilla y asistencia' }),
+    ])
+  );
   contenedor.appendChild(elemento('div', { class: 'campo' }, [elemento('label', { texto: 'Fecha' }), campoFecha]));
 
+  const resumen = elemento('p', { class: 'subtitulo-pantalla' });
   const lista = elemento('div', { class: 'lista-registros' });
-  contenedor.appendChild(lista);
+  const mensaje = elemento('div', { class: 'mensaje-error mensaje-error--error' });
+  const botonGuardar = elemento('button', { type: 'button', class: 'boton boton--primario', style: 'background:var(--tierra-700)', texto: 'Guardar planilla' });
+  const confirmacion = elemento('p', { style: 'color:var(--primario-fuerte);font-weight:700;text-align:center;margin-top:8px' });
+
+  function actualizarResumen() {
+    let presente = 0, permiso = 0, ausente = 0;
+    for (const { estado } of estadoLocal.values()) {
+      if (estado === 'presente') presente++;
+      else if (estado === 'permiso') permiso++;
+      else if (estado === 'ausente') ausente++;
+    }
+    resumen.textContent = `${presente} con asistencia · ${permiso} con permiso · ${ausente} sin permiso`;
+  }
+
+  function pintarFilaEmpleado(empleado) {
+    const local = estadoLocal.get(empleado.id);
+    const stepperHoras = crearStepperNumerico(local.horas, (nuevoValor) => {
+      local.horas = nuevoValor;
+    });
+
+    const filaOpciones = elemento('div', { class: 'opciones-asistencia' });
+    function pintarOpciones() {
+      filaOpciones.innerHTML = '';
+      for (const op of OPCIONES_ASISTENCIA) {
+        filaOpciones.appendChild(
+          elemento('button', {
+            type: 'button',
+            class: `opcion-asistencia opcion-asistencia--${op.clase}${local.estado === op.value ? ' opcion-asistencia--activa' : ''}`,
+            texto: op.label,
+            onclick: () => {
+              local.estado = op.value;
+              pintarOpciones();
+              actualizarResumen();
+            },
+          })
+        );
+      }
+    }
+    pintarOpciones();
+
+    return elemento('div', { class: 'tarjeta', style: 'padding:12px;display:flex;flex-direction:column;gap:10px' }, [
+      elemento('div', { class: 'fila', style: 'justify-content:space-between;align-items:center' }, [
+        elemento('div', {}, [
+          elemento('div', { style: 'font-weight:700', texto: empleado.nombre }),
+          empleado.puesto ? elemento('div', { class: 'fila-registro__subtitulo', texto: empleado.puesto }) : null,
+        ]),
+        stepperHoras.contenedor,
+      ]),
+      filaOpciones,
+    ]);
+  }
 
   async function pintarLista() {
     lista.innerHTML = '';
+    confirmacion.textContent = '';
+    mensaje.textContent = '';
+    document.getElementById('mano-obra-fecha')?.replaceChildren(document.createTextNode(fechaCorta(campoFecha.value)));
+    estadoLocal.clear();
+
     if (empleados.length === 0) {
       lista.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: 'No hay trabajadores activos registrados en esta finca todavía (agrégalos en la pestaña Trabajadores).' }));
+      actualizarResumen();
       return;
     }
+
     for (const empleado of empleados) {
       const registros = await localdb.getPorIndice('asistencia', 'empleado_id', empleado.id);
-      const deHoy = registros.find((a) => a.fecha === campoFecha.value && !a.eliminado_at);
-
-      const fila = elemento('div', { class: 'tarjeta', style: 'padding:12px' }, [
-        elemento('div', { style: 'font-weight:700;margin-bottom:8px', texto: `${empleado.nombre} ${deHoy ? `— ${ICONO_ESTADO[deHoy.estado]}` : ''}` }),
-        elemento(
-          'div',
-          { style: 'display:flex;gap:6px;flex-wrap:wrap' },
-          ESTADOS_ASISTENCIA.map((op) =>
-            elemento('button', {
-              type: 'button',
-              class: `boton ${deHoy?.estado === op.value ? 'boton--primario' : 'boton--secundario'}`,
-              style: 'width:auto;min-height:38px;padding:0 12px;font-size:0.8rem',
-              texto: op.label,
-              onclick: async () => {
-                await marcarAsistencia(empleado.id, campoFecha.value, op.value);
-                await pintarLista();
-              },
-            })
-          )
-        ),
-      ]);
-      lista.appendChild(fila);
+      const deEseDia = registros.find((a) => a.fecha === campoFecha.value && !a.eliminado_at);
+      estadoLocal.set(empleado.id, {
+        estado: deEseDia?.estado ?? 'presente',
+        horas: deEseDia?.horas ?? HORAS_JORNADA_COMPLETA,
+      });
+      lista.appendChild(pintarFilaEmpleado(empleado));
     }
+    actualizarResumen();
   }
 
+  botonGuardar.addEventListener('click', async () => {
+    mensaje.textContent = '';
+    confirmacion.textContent = '';
+    botonGuardar.disabled = true;
+    try {
+      for (const empleado of empleados) {
+        const local = estadoLocal.get(empleado.id);
+        await marcarAsistencia(empleado.id, campoFecha.value, local.estado, local.horas);
+      }
+      confirmacion.textContent = 'Planilla guardada ✓';
+    } catch (error) {
+      mensaje.textContent = error.message || 'No se pudo guardar la planilla';
+    } finally {
+      botonGuardar.disabled = false;
+    }
+  });
+
   campoFecha.addEventListener('change', pintarLista);
+  contenedor.appendChild(resumen);
+  contenedor.appendChild(lista);
+  contenedor.appendChild(mensaje);
+  contenedor.appendChild(botonGuardar);
+  contenedor.appendChild(confirmacion);
   await pintarLista();
 }
 
@@ -377,7 +499,11 @@ async function renderizarCalculoPago(contenedor, contexto) {
   const campoHasta = elemento('input', { type: 'date', value: hoy });
 
   contenedor.appendChild(
-    elemento('p', { class: 'subtitulo-pantalla' }, 'Pago bruto (sin rebajos) según los días marcados "Presente" en Pasar lista, multiplicado por la tarifa diaria de cada trabajador.')
+    elemento(
+      'p',
+      { class: 'subtitulo-pantalla' },
+      `Pago bruto (sin rebajos) según los días marcados "Asistencia" en Mano de Obra: cada día se paga a prorrata de sus horas sobre una jornada de ${HORAS_JORNADA_COMPLETA}h (ej. medio día de ${HORAS_JORNADA_COMPLETA / 2}h paga la mitad de la tarifa diaria).`
+    )
   );
   contenedor.appendChild(
     elemento('div', { class: 'fila' }, [
@@ -414,18 +540,24 @@ async function renderizarCalculoPago(contenedor, contexto) {
       // Por fecha única, no por cantidad de filas: si por algún motivo
       // quedaron dos registros de asistencia para el mismo día (ej. un
       // conflicto de sincronización entre dispositivos que no se limpió),
-      // ese día no debe contar doble en el pago.
-      const fechasPresente = new Set(
-        (await localdb.getPorIndice('asistencia', 'empleado_id', empleado.id))
-          .filter((a) => !a.eliminado_at && a.estado === 'presente' && a.fecha >= desde && a.fecha <= hasta)
-          .map((a) => a.fecha)
-      );
-      const dias = fechasPresente.size;
+      // ese día no debe contar doble en el pago — el último que se procese
+      // gana, da igual cuál sea porque en la práctica siempre coinciden.
+      const registrosPorFecha = new Map();
+      for (const a of await localdb.getPorIndice('asistencia', 'empleado_id', empleado.id)) {
+        if (a.eliminado_at || a.estado !== 'presente' || a.fecha < desde || a.fecha > hasta) continue;
+        registrosPorFecha.set(a.fecha, a);
+      }
+      const dias = registrosPorFecha.size;
+      // Un día sin horas registradas (asistencia marcada antes de que
+      // existiera este campo) se sigue pagando como jornada completa, no
+      // como 0 — así el historial previo no pierde valor de golpe.
+      let horasTotales = 0;
+      for (const a of registrosPorFecha.values()) horasTotales += Number(a.horas ?? HORAS_JORNADA_COMPLETA);
       const tarifa = salarios[empleado.id]?.salario_diario ?? null;
-      const total = tarifa != null ? dias * tarifa : null;
+      const total = tarifa != null ? (horasTotales / HORAS_JORNADA_COMPLETA) * tarifa : null;
       if (tarifa == null && dias > 0) faltaTarifa++;
       if (total != null) totalGeneral += total;
-      filas.push({ empleado, dias, tarifa, total });
+      filas.push({ empleado, dias, horasTotales, tarifa, total });
     }
 
     zonaResultado.appendChild(elemento('p', { class: 'subtitulo-pantalla' }, `${formatearFecha(desde)} — ${formatearFecha(hasta)}`));
@@ -442,10 +574,10 @@ async function renderizarCalculoPago(contenedor, contexto) {
 
     const lista = elemento('div', { class: 'lista-registros' });
     if (filas.length === 0) lista.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: 'Sin trabajadores activos.' }));
-    for (const { empleado, dias, tarifa, total } of filas) {
+    for (const { empleado, dias, horasTotales, tarifa, total } of filas) {
       const partes = [
         nombreFinca ? nombreFinca[empleado.finca_id] ?? 'Finca' : null,
-        `${dias} día(s) presente`,
+        `${dias} día(s) · ${horasTotales}h`,
         tarifa != null ? `${formatearMoneda(tarifa)}/día` : 'sin tarifa configurada',
       ].filter(Boolean);
       lista.appendChild(

@@ -1483,6 +1483,74 @@ body.tiene-nav-inferior .pantalla {
   color: #fff;
 }
 
+/* -------- Mano de Obra (Planilla > Pasar lista) -------- */
+.banner-mano-obra {
+  background: linear-gradient(135deg, var(--tierra-500), var(--tierra-700));
+  border-radius: var(--radio);
+  padding: 16px;
+  margin-bottom: var(--espacio);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.banner-mano-obra__fecha {
+  align-self: flex-end;
+  margin-top: -24px;
+  color: rgba(255, 255, 255, 0.85);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.banner-mano-obra__titulo {
+  font-family: var(--fuente-marca);
+  font-weight: 400;
+  font-size: 1.6rem;
+  color: #fff;
+  margin: 0;
+}
+
+.banner-mano-obra__subtitulo {
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 0.85rem;
+}
+
+.opciones-asistencia {
+  display: flex;
+  gap: 6px;
+}
+
+.opcion-asistencia {
+  flex: 1;
+  padding: 8px 4px;
+  border-radius: 10px;
+  border: 1px solid var(--borde);
+  background: var(--superficie);
+  color: var(--texto-suave);
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-align: center;
+  cursor: pointer;
+}
+
+.opcion-asistencia--presente.opcion-asistencia--activa {
+  background: var(--verde-100);
+  border-color: var(--primario);
+  color: var(--primario-fuerte);
+}
+
+.opcion-asistencia--permiso.opcion-asistencia--activa {
+  background: rgba(240, 172, 27, 0.18);
+  border-color: var(--ambar-500);
+  color: var(--ambar-600);
+}
+
+.opcion-asistencia--ausente.opcion-asistencia--activa {
+  background: rgba(201, 80, 46, 0.14);
+  border-color: var(--rojo-500);
+  color: var(--rojo-500);
+}
+
 .rejilla-finca-detalle {
   display: grid;
   grid-template-columns: repeat(2, 1fr);

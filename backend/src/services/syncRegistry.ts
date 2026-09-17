@@ -247,7 +247,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
   },
   asistencia: {
     tabla: 'asistencia',
-    columnas: ['empleado_id', 'fecha', 'estado', 'observaciones'],
+    columnas: ['empleado_id', 'fecha', 'estado', 'observaciones', 'horas'],
     fincaScoped: false,
     permiteEliminar: true,
     conflictStrategy: 'lww',
