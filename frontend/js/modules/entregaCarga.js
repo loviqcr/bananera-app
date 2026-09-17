@@ -3,6 +3,11 @@ import { localdb, generarUUID } from '../db/localdb.js';
 import { auth } from './auth.js';
 import { elemento, hoyISO } from '../ui.js';
 
+async function esAdministrador() {
+  const sesion = await auth.sesionActual();
+  return sesion?.usuario?.rol === 'administrador';
+}
+
 async function opcionesResponsables() {
   const todos = await repos.listarTodos('responsables_carga');
   return todos.filter((r) => r.activo).sort((a, b) => a.nombre.localeCompare(b.nombre));
@@ -67,8 +72,10 @@ async function entregasCargaHoy(fincaId, areaId) {
       primera: 0,
       segunda: 0,
       actualizadoEn: fila.updated_at,
+      ids: [],
     };
     grupo[fila.calidad] += Number(fila.cantidad_cajas) || 0;
+    grupo.ids.push(fila.id);
     if (fila.updated_at > grupo.actualizadoEn) grupo.actualizadoEn = fila.updated_at;
     grupos.set(fila.grupo_entrega, grupo);
   }
@@ -104,10 +111,11 @@ export const entregaCargaModulo = {
       return;
     }
 
-    const [fincas, areas, responsables] = await Promise.all([
+    const [fincas, areas, responsables, esAdmin] = await Promise.all([
       repos.listarTodos('fincas'),
       repos.listarPorFinca('areas', contexto.fincaId),
       opcionesResponsables(),
+      esAdministrador(),
     ]);
     const finca = fincas.find((f) => f.id === contexto.fincaId);
     const area = areas.find((a) => a.id === contexto.areaId);
@@ -241,6 +249,20 @@ export const entregaCargaModulo = {
           elemento('div', { class: 'fila-registro' }, [
             elemento('div', { class: 'fila-registro__titulo', texto: g.responsable }),
             elemento('div', { class: 'fila-registro__valor tono-verde', texto: `${g.primera} primera · ${g.segunda} segunda` }),
+            esAdmin
+              ? elemento('button', {
+                  type: 'button',
+                  class: 'boton-icono',
+                  title: 'Eliminar entrega',
+                  style: 'background:none;color:var(--rojo-500);flex:none',
+                  texto: '🗑️',
+                  onclick: async () => {
+                    if (!confirm(`¿Eliminar la entrega a ${g.responsable}? No se puede deshacer.`)) return;
+                    for (const id of g.ids) await repos.eliminar('entregas_platano', id);
+                    await pintarHoy();
+                  },
+                })
+              : null,
           ])
         );
       }
