@@ -239,6 +239,25 @@ function pintarListaFincas() {
     el.cuadriculaFincas.appendChild(todas);
   }
 
+  if (!termino && cacheUsuario?.rol === 'administrador') {
+    const agregar = document.createElement('button');
+    agregar.type = 'button';
+    agregar.className = 'boton boton--fantasma';
+    agregar.style.marginTop = '8px';
+    agregar.textContent = '+ Agregar finca';
+    agregar.addEventListener('click', async () => {
+      const nombre = prompt('Nombre de la nueva finca:');
+      if (!nombre || !nombre.trim()) return;
+      try {
+        await fincas.crear(nombre.trim());
+        await renderizarSelectorFinca();
+      } catch (error) {
+        alert(error.message);
+      }
+    });
+    el.cuadriculaFincas.appendChild(agregar);
+  }
+
   hidratarIconos(el.cuadriculaFincas);
   if (el.subtituloSelectorFinca) {
     el.subtituloSelectorFinca.textContent = enNavegacion

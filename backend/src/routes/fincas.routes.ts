@@ -20,6 +20,42 @@ fincasRouter.get('/', async (_req, res, next) => {
   }
 });
 
+// Agregar una finca nueva. Solo administrador. Las fincas nunca pasaron por
+// el motor de sync genérico (son pocas filas, se editan poco — ver la nota
+// en frontend/js/modules/fincas.js), así que esto requiere conexión, igual
+// que renombrar. Se crea también su bodega propia (tipo 'finca') en la
+// misma transacción — sin esto, Inventario > Bodegas no tendría dónde
+// guardar los movimientos de esta finca (ver migración 002, que agregó esto
+// mismo para las 4 fincas originales).
+fincasRouter.post('/', requiereRol('administrador'), async (req, res, next) => {
+  const client = await pool.connect();
+  try {
+    const { nombre } = req.body as { nombre?: string };
+    if (!nombre || !nombre.trim()) {
+      return res.status(400).json({ error: 'nombre es requerido' });
+    }
+    await client.query('BEGIN');
+    const { rows: ordenRows } = await client.query('SELECT COALESCE(MAX(orden), 0) + 1 AS siguiente FROM fincas');
+    const orden = ordenRows[0].siguiente;
+    const { rows } = await client.query(
+      `INSERT INTO fincas (nombre, orden, creado_por) VALUES ($1, $2, $3) RETURNING id, nombre, orden`,
+      [nombre.trim(), orden, req.usuario!.id]
+    );
+    const finca = rows[0];
+    await client.query(
+      `INSERT INTO bodegas (id, finca_id, tipo, nombre, creado_por) VALUES (gen_random_uuid(), $1, 'finca', $2, $3)`,
+      [finca.id, `Bodega ${finca.nombre}`, req.usuario!.id]
+    );
+    await client.query('COMMIT');
+    res.status(201).json(finca);
+  } catch (err) {
+    await client.query('ROLLBACK');
+    next(err);
+  } finally {
+    client.release();
+  }
+});
+
 // Renombrar una finca (nombre editable, según sección 1 del prompt).
 // Solo administrador.
 fincasRouter.patch('/:id', requiereRol('administrador'), async (req, res, next) => {

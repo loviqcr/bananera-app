@@ -32,6 +32,23 @@ export const fincas = {
   },
 
   /**
+   * Agrega una finca nueva (solo administrador; el backend lo valida igual).
+   * Requiere conexión, igual que renombrar() — ver esa nota.
+   */
+  async crear(nombre) {
+    const token = await auth.obtenerToken();
+    const respuesta = await fetch(`${API_BASE_URL}/fincas`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ nombre }),
+    });
+    const cuerpo = await respuesta.json().catch(() => ({}));
+    if (!respuesta.ok) throw new Error(cuerpo.error || 'No se pudo agregar la finca');
+    await localdb.put('fincas', cuerpo);
+    return cuerpo;
+  },
+
+  /**
    * Renombra una finca (solo administrador; el backend lo valida igual).
    * Requiere conexión — a diferencia de crearArea(), no se encola porque
    * fincas no pasa por el motor de sync genérico (son solo 4 filas fijas).
