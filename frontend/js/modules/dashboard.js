@@ -6,6 +6,7 @@ import { laboresConEstado } from './labores.js';
 import { planillaModulo } from './planilla.js';
 import { ventasModulo } from './ventas.js';
 import { estadisticasDia } from './embolseCorta.js';
+import { estadisticasHoy as estadisticasCargaHoy } from './entregaCarga.js';
 import { elemento, tarjetaEstadistica, tarjetaStat } from '../ui.js';
 
 function formatearMoneda(valor) {
@@ -14,7 +15,7 @@ function formatearMoneda(valor) {
 
 /** Usado por el dashboard y por la pantalla de detalle de finca. */
 export async function estadisticasDeFinca(fincaId) {
-  const [produccion, insumosBajos, abiertas, labores, personal, totalPersonal, ventasMes, dia] = await Promise.all([
+  const [produccion, insumosBajos, abiertas, labores, personal, totalPersonal, ventasMes, dia, cargaHoy] = await Promise.all([
     produccionModulo.estadisticasGlobales(fincaId),
     inventarioModulo.insumosBajos(fincaId),
     incidenciasAbiertas(fincaId),
@@ -23,6 +24,7 @@ export async function estadisticasDeFinca(fincaId) {
     planillaModulo.totalActivos(fincaId),
     ventasModulo.totalVendidoMes(fincaId),
     estadisticasDia(fincaId),
+    estadisticasCargaHoy(fincaId),
   ]);
   const atrasadas = labores.filter((l) => l.estado?.clase === 'insignia--rojo').length;
   const proximas = labores.filter((l) => l.estado?.clase === 'insignia--ambar').length;
@@ -37,6 +39,7 @@ export async function estadisticasDeFinca(fincaId) {
     embolsadoHoy: dia.embolsadoHoy,
     cortadoHoy: dia.cortadoHoy,
     proximosACorta: dia.proximosACorta,
+    cargaHoy,
   };
 }
 
@@ -57,7 +60,7 @@ export async function renderizarDashboard(contenedor, contexto, manejadores = {}
     elemento('div', { class: 'rejilla-estadisticas' }, [
       tarjetaStat('basket', stats.cortadoHoy.toLocaleString('es-CR'), 'Producción hoy · racimos'),
       tarjetaStat('users', `${stats.personal.presentes} / ${stats.personal.total}`, 'Personal presente', '', alTocarPersonal),
-      tarjetaStat('dollar', formatearMoneda(stats.ventasMes), 'Ventas este mes'),
+      tarjetaStat('basket', `${stats.cargaHoy.primera} / ${stats.cargaHoy.segunda}`, 'Cajas hoy · primera / segunda'),
       tarjetaStat('alert', stats.abiertas.length, 'Alertas — requieren atención', stats.abiertas.length > 0 ? 'tarjeta-stat--alerta' : '', alTocarIncidencias),
     ])
   );

@@ -98,6 +98,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     columnas: [
       'finca_id', 'area_id', 'fecha', 'cantidad_cajas', 'cantidad_dedos', 'calidad',
       'variedad_id', 'sistema_racimo', 'cantidad_racimos', 'responsable_id', 'observaciones',
+      'responsable_nombre', 'grupo_entrega',
     ],
     fincaScoped: true,
     permiteEliminar: true,
@@ -299,6 +300,19 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     rolesEscritura: ['administrador', 'encargado_finca'],
     rolesLectura: ['administrador', 'encargado_finca'],
     rolesEliminar: ['administrador'],
+  },
+
+  // "Entrega de Carga": nombres fijos de responsables (no son usuarios del
+  // sistema, por eso un catálogo aparte de texto en vez de la tabla
+  // usuarios) para el selector rápido de esa pantalla.
+  responsables_carga: {
+    tabla: 'responsables_carga',
+    columnas: ['nombre', 'activo'],
+    fincaScoped: false,
+    permiteEliminar: false,
+    conflictStrategy: 'lww',
+    rolesEscritura: ['administrador', 'encargado_finca', 'trabajador'],
+    conflictColumns: ['nombre'],
   },
 
   // ---- Fase 8: Embolse y corta ----

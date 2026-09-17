@@ -18,6 +18,7 @@ import { embolseCortaModulo } from './modules/embolseCorta.js';
 import { reportesModulo } from './modules/reportes.js';
 import { alertasModulo } from './modules/alertas.js';
 import { usuariosModulo } from './modules/usuarios.js';
+import { entregaCargaModulo } from './modules/entregaCarga.js';
 
 const ICONOS_FINCA = ['🌄', '🌴', '🌾', '⛰️'];
 
@@ -37,6 +38,7 @@ const MODULOS = {
   reportes: reportesModulo,
   notificaciones: alertasModulo,
   usuarios: usuariosModulo,
+  'entrega-carga': entregaCargaModulo,
 };
 
 const vistas = {
