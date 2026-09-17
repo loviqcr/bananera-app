@@ -811,15 +811,14 @@ async function continuarDespuesDeLogin() {
     if (permitidas && permitidas.length === 1) {
       fincas.guardarFincaActiva(permitidas[0]);
       fincaId = permitidas[0];
-    } else if (!permitidas) {
-      // Sin restricción (administrador) y sin nada elegido todavía: entra
-      // directo a "Todas las fincas" en vez de obligarlo a elegir una —
-      // ver el consolidado de todo es justo lo que se espera de su rol, y
-      // forzarlo a elegir una finca específica primero hacía que Inicio
-      // pareciera mostrar información incompleta.
-      fincas.guardarFincaActiva('todas');
-      fincaId = 'todas';
     } else {
+      // Se probó hacer que administrador entrara directo a "Todas las
+      // fincas" sin elegir, pero eso dejaba a Planilla/Producción/Labores
+      // (y cualquier módulo de trabajo, no solo Inicio) mostrando el
+      // consolidado de las 4 fincas por defecto sin que el usuario lo
+      // eligiera a propósito — se sentía como que todo se mezclaba. Ahora
+      // siempre elige explícitamente (una finca específica, o "Todas las
+      // fincas" a propósito con el botón de esa pantalla).
       mostrarVista('selectorFinca');
       await renderizarSelectorFinca();
       return;
