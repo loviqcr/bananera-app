@@ -9,7 +9,7 @@ async function opcionesResponsables() {
 }
 
 async function agregarResponsable() {
-  const nombre = prompt('Nombre del nuevo responsable:');
+  const nombre = prompt('¿A quién se le entrega? (nombre del transportista/comprador):');
   if (!nombre || !nombre.trim()) return null;
   return repos.crear('responsables_carga', { nombre: nombre.trim(), activo: true });
 }
@@ -63,7 +63,7 @@ async function entregasCargaHoy(fincaId, areaId) {
   for (const fila of todas) {
     const grupo = grupos.get(fila.grupo_entrega) ?? {
       grupo: fila.grupo_entrega,
-      responsable: fila.responsable_nombre || 'Sin nombre',
+      responsable: fila.responsable_nombre || 'Sin destinatario',
       primera: 0,
       segunda: 0,
       actualizadoEn: fila.updated_at,
@@ -115,7 +115,7 @@ export const entregaCargaModulo = {
 
     // ---- Responsable ----
     let responsableSeleccionado = responsables[0]?.nombre ?? null;
-    contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:0.85rem;letter-spacing:0.04em', texto: 'RESPONSABLE' }));
+    contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:0.85rem;letter-spacing:0.04em', texto: 'ENTREGAR A' }));
     const filaResponsables = elemento('div', { class: 'fila', style: 'flex-wrap:wrap;gap:8px;margin-bottom:var(--espacio)' });
     function pintarResponsables() {
       filaResponsables.innerHTML = '';
@@ -178,7 +178,7 @@ export const entregaCargaModulo = {
         return;
       }
       if (!responsableSeleccionado) {
-        mensaje.textContent = 'Agrega o elige un responsable.';
+        mensaje.textContent = 'Agrega o elige a quién se le entrega.';
         return;
       }
       botonGuardar.disabled = true;
