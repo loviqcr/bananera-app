@@ -81,8 +81,15 @@ export async function estadisticasHoy(fincaId) {
   const todas = (await repos.listarPorFinca('entregas_platano', fincaId)).filter((e) => e.fecha === hoy && e.grupo_entrega);
   const primera = todas.filter((e) => e.calidad === 'primera').reduce((s, e) => s + (Number(e.cantidad_cajas) || 0), 0);
   const segunda = todas.filter((e) => e.calidad === 'segunda').reduce((s, e) => s + (Number(e.cantidad_cajas) || 0), 0);
-  const destinatarios = [...new Set(todas.map((e) => e.responsable_nombre).filter(Boolean))];
-  return { primera, segunda, total: primera + segunda, destinatarios };
+  const porDestinatarioMapa = new Map();
+  for (const e of todas) {
+    if (!e.responsable_nombre) continue;
+    const actual = porDestinatarioMapa.get(e.responsable_nombre) ?? { nombre: e.responsable_nombre, primera: 0, segunda: 0 };
+    actual[e.calidad] += Number(e.cantidad_cajas) || 0;
+    porDestinatarioMapa.set(e.responsable_nombre, actual);
+  }
+  const porDestinatario = Array.from(porDestinatarioMapa.values()).sort((a, b) => b.primera + b.segunda - (a.primera + a.segunda));
+  return { primera, segunda, total: primera + segunda, porDestinatario };
 }
 
 export const entregaCargaModulo = {

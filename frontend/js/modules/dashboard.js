@@ -13,10 +13,19 @@ function formatearMoneda(valor) {
   return `₡${Number(valor || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
 
-/** Evita que la tarjeta de finca crezca sin control si un día hubo entregas a muchos destinatarios distintos. */
-function nombresConLimite(nombres, limite = 2) {
-  if (nombres.length <= limite) return nombres.join(', ');
-  return `${nombres.slice(0, limite).join(', ')} y ${nombres.length - limite} más`;
+/** Cuántas cajas (1ª/2ª) le tocaron a cada destinatario hoy, con un límite para no hacer crecer la tarjeta sin control. */
+function filaEntregadoA(porDestinatario, limite = 3) {
+  const visibles = porDestinatario.slice(0, limite);
+  const filas = [
+    elemento('div', { style: 'font-weight:700;color:var(--texto-suave);font-size:0.82rem' }, 'Entregado a'),
+    ...visibles.map((d) =>
+      elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [elemento('span', {}, d.nombre), elemento('strong', {}, `${d.primera}/${d.segunda}`)])
+    ),
+  ];
+  if (porDestinatario.length > limite) {
+    filas.push(elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [elemento('span', {}, `y ${porDestinatario.length - limite} más`)]));
+  }
+  return elemento('div', { style: 'margin-top:8px;padding-top:8px;border-top:1px solid var(--borde);display:flex;flex-direction:column;gap:4px' }, filas);
 }
 
 /** Usado por el dashboard y por la pantalla de detalle de finca. */
@@ -135,13 +144,8 @@ export async function renderizarDashboard(contenedor, contexto, manejadores = {}
             elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [elemento('span', {}, 'Personal'), elemento('strong', {}, `${s.personal.presentes}/${s.personal.total}`)]),
             elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [elemento('span', {}, 'Ventas mes'), elemento('strong', {}, formatearMoneda(s.ventasMes))]),
             elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [elemento('span', {}, 'Incidencias'), elemento('strong', {}, String(s.abiertas.length))]),
-            s.cargaHoy.destinatarios.length > 0
-              ? elemento('div', { class: 'tarjeta-finca-resumen__metrica', style: 'grid-column:1/-1' }, [
-                  elemento('span', {}, 'Entregado a'),
-                  elemento('strong', { style: 'text-align:right' }, nombresConLimite(s.cargaHoy.destinatarios)),
-                ])
-              : null,
           ]),
+          s.cargaHoy.porDestinatario.length > 0 ? filaEntregadoA(s.cargaHoy.porDestinatario) : null,
         ])
       );
     }
