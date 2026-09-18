@@ -1,7 +1,7 @@
 import { repos } from '../db/repos.js';
 import { localdb } from '../db/localdb.js';
 import { auth } from './auth.js';
-import { elemento, crearFormulario, mostrarDialogo, formatearFecha, hoyISO } from '../ui.js';
+import { elemento, crearFormulario, mostrarDialogo, formatearFecha, hoyISO, marcarSucio, limpiarSucio } from '../ui.js';
 
 const ROLES_VEN_SALARIO = ['administrador', 'planilla'];
 
@@ -362,6 +362,7 @@ async function renderizarAsistencia(contenedor, contexto) {
     const local = estadoLocal.get(empleado.id);
     const stepperHoras = crearStepperNumerico(local.horas, (nuevoValor) => {
       local.horas = nuevoValor;
+      marcarSucio(contenedor);
     });
 
     const filaOpciones = elemento('div', { class: 'opciones-asistencia' });
@@ -375,6 +376,7 @@ async function renderizarAsistencia(contenedor, contexto) {
             texto: op.label,
             onclick: () => {
               local.estado = op.value;
+              marcarSucio(contenedor);
               pintarOpciones();
               actualizarResumen();
             },
@@ -419,6 +421,7 @@ async function renderizarAsistencia(contenedor, contexto) {
       lista.appendChild(pintarFilaEmpleado(empleado));
     }
     actualizarResumen();
+    limpiarSucio(contenedor); // recién pintado = sin cambios todavía (el cambio de fecha también dispara la marca genérica al ser un <input>)
   }
 
   botonGuardar.addEventListener('click', async () => {
@@ -431,6 +434,7 @@ async function renderizarAsistencia(contenedor, contexto) {
         await marcarAsistencia(empleado.id, campoFecha.value, local.estado, local.horas);
       }
       confirmacion.textContent = 'Planilla guardada ✓';
+      limpiarSucio(contenedor);
     } catch (error) {
       mensaje.textContent = error.message || 'No se pudo guardar la planilla';
     } finally {

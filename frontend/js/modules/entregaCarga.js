@@ -1,7 +1,7 @@
 import { repos } from '../db/repos.js';
 import { localdb, generarUUID } from '../db/localdb.js';
 import { auth } from './auth.js';
-import { elemento, hoyISO } from '../ui.js';
+import { elemento, hoyISO, marcarSucio, limpiarSucio } from '../ui.js';
 
 async function esAdministrador() {
   const sesion = await auth.sesionActual();
@@ -25,8 +25,14 @@ function fechaCorta(fechaISO) {
   return texto.charAt(0).toUpperCase() + texto.slice(1).replace('.', '');
 }
 
-/** Control +/- reutilizado para Cajas de primera/segunda — el número también se puede escribir a mano. */
-function crearStepper(colorBoton) {
+/**
+ * Control +/- reutilizado para Cajas de primera/segunda — el número también
+ * se puede escribir a mano. `contenedorModulo` se usa para marcar "sucio" al
+ * tocar +/- (el campo de texto ya queda cubierto solo por la red de
+ * seguridad genérica en app.js, pero los clics en <button> no disparan
+ * 'input'/'change', así que hay que marcarlo a mano acá).
+ */
+function crearStepper(colorBoton, contenedorModulo) {
   let valor = 0;
   const campoValor = elemento('input', { type: 'number', inputmode: 'numeric', min: '0', class: 'stepper__valor', value: '0' });
   const fijarValor = (nuevo) => {
@@ -39,13 +45,19 @@ function crearStepper(colorBoton) {
     type: 'button',
     class: 'boton-stepper',
     texto: '−',
-    onclick: () => fijarValor(valor - 1),
+    onclick: () => {
+      fijarValor(valor - 1);
+      marcarSucio(contenedorModulo);
+    },
   });
   const botonMas = elemento('button', {
     type: 'button',
     class: `boton-stepper boton-stepper--${colorBoton}`,
     texto: '+',
-    onclick: () => fijarValor(valor + 1),
+    onclick: () => {
+      fijarValor(valor + 1);
+      marcarSucio(contenedorModulo);
+    },
   });
   const contenedor = elemento('div', { class: 'stepper' }, [botonMenos, campoValor, botonMas]);
   return {
@@ -139,6 +151,7 @@ export const entregaCargaModulo = {
           texto: r.nombre,
           onclick: () => {
             responsableSeleccionado = r.nombre;
+            marcarSucio(contenedor);
             pintarResponsables();
           },
         });
@@ -182,8 +195,8 @@ export const entregaCargaModulo = {
     contenedor.appendChild(filaResponsables);
 
     // ---- Cajas de primera / segunda ----
-    const stepperPrimera = crearStepper('verde');
-    const stepperSegunda = crearStepper('ambar');
+    const stepperPrimera = crearStepper('verde', contenedor);
+    const stepperSegunda = crearStepper('ambar', contenedor);
     contenedor.appendChild(
       elemento('div', { class: 'tarjeta', style: 'display:flex;flex-direction:column;gap:14px;margin-bottom:var(--espacio)' }, [
         elemento('div', { class: 'fila', style: 'justify-content:space-between;align-items:center' }, [
@@ -230,6 +243,7 @@ export const entregaCargaModulo = {
         if (cajasSegunda > 0) await repos.crear('entregas_platano', { ...base, cantidad_cajas: cajasSegunda, calidad: 'segunda' });
         stepperPrimera.reiniciar();
         stepperSegunda.reiniciar();
+        limpiarSucio(contenedor);
         await pintarHoy();
       } catch (error) {
         mensaje.textContent = error.message || 'No se pudo guardar la entrega';

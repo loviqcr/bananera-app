@@ -5,7 +5,7 @@ import { iniciarIndicadorConexion } from './modules/estadoConexion.js';
 import { iniciarSyncClient, sincronizarAhora } from './sync/syncClient.js';
 import { renderizarDashboard, estadisticasDeFinca } from './modules/dashboard.js';
 import { incidenciasUrgentesPendientes } from './modules/incidencias.js';
-import { hayFormularioSinGuardar, hidratarIconos, tarjetaStat, elemento, mostrarToast } from './ui.js';
+import { hayFormularioSinGuardar, marcarSucio, hidratarIconos, tarjetaStat, elemento, mostrarToast } from './ui.js';
 import { API_BASE_URL } from './config.js';
 import { produccionModulo } from './modules/produccion.js';
 import { laboresModulo } from './modules/labores.js';
@@ -627,11 +627,21 @@ el.cuadriculaModulos?.addEventListener('click', async (evento) => {
   await abrirModulo(boton.dataset.modulo);
 });
 
+// Red de seguridad automática: cualquier <input>/<select>/<textarea> normal
+// dentro de un módulo marca "sucio" el contenedor entero al tocarlo, sin que
+// cada módulo tenga que acordarse de hacerlo (ver marcarSucio en ui.js). Los
+// controles sin formulario real (steppers, botones de estado en Entrega de
+// Carga y Mano de Obra) siguen necesitando marcarlo a mano porque los clics
+// en <button> no disparan 'input'/'change'.
+el.contenedorModulo?.addEventListener('input', () => marcarSucio(el.contenedorModulo));
+el.contenedorModulo?.addEventListener('change', () => marcarSucio(el.contenedorModulo));
+
 async function abrirModulo(clave, tabClave) {
   const modulo = MODULOS[clave];
   if (!modulo) return;
   moduloActivoClave = clave;
   el.tituloModulo.textContent = modulo.etiqueta;
+  delete el.contenedorModulo.dataset.sucio; // entrar a un módulo nuevo empieza "limpio", sin arrastrar la marca de otro
   el.contenedorModulo.innerHTML = '';
   mostrarVista('modulo');
   try {

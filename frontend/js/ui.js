@@ -112,10 +112,29 @@ export function crearFormulario({ campos, textoBoton = 'Guardar', alGuardar, lim
  * automático de sync mientras el usuario está a medio llenar algo.
  */
 export function hayFormularioSinGuardar(contenedor) {
-  // No se restringe a <form> a propósito: algunos módulos (ej. usuarios.js)
-  // arman a mano un panel de edición que no es un <form> real y también
-  // necesita poder marcarse "sucio" con este mismo atributo.
-  return !!contenedor.querySelector('[data-sucio="1"]');
+  // Dos formas de quedar "sucio": un descendiente marcado (formularios de
+  // crearFormulario(), o un panel armado a mano como usuarios.js), o el
+  // propio contenedor (marcarSucio()/limpiarSucio() de abajo — para
+  // controles sin formulario real, como los steppers y botones de estado
+  // de Entrega de Carga y Mano de Obra).
+  return contenedor.dataset.sucio === '1' || !!contenedor.querySelector('[data-sucio="1"]');
+}
+
+/**
+ * Primitiva genérica para que CUALQUIER módulo marque "hay cambios sin
+ * guardar" sin necesidad de un <form> real — steppers, botones de estado,
+ * cualquier estado que se guarde en memoria hasta un botón "Guardar"
+ * explícito. Sin esto, el refresco automático de sync (cada ~30s o al
+ * volver del segundo plano) podía pisar esos cambios porque nunca quedaban
+ * marcados como "sucios" (ver la nota de la Fase de Entrega de Carga/Mano
+ * de Obra). Llamar a limpiarSucio() justo después de un guardado exitoso.
+ */
+export function marcarSucio(contenedor) {
+  contenedor.dataset.sucio = '1';
+}
+
+export function limpiarSucio(contenedor) {
+  delete contenedor.dataset.sucio;
 }
 
 /** Tarjeta chica de estadística (número + etiqueta), para dashboards. */
