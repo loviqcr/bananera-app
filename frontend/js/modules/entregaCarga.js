@@ -25,36 +25,33 @@ function fechaCorta(fechaISO) {
   return texto.charAt(0).toUpperCase() + texto.slice(1).replace('.', '');
 }
 
-/** Control +/- reutilizado para Cajas de primera/segunda. */
+/** Control +/- reutilizado para Cajas de primera/segunda — el número también se puede escribir a mano. */
 function crearStepper(colorBoton) {
   let valor = 0;
-  const etiquetaValor = elemento('strong', { class: 'stepper__valor', texto: '0' });
+  const campoValor = elemento('input', { type: 'number', inputmode: 'numeric', min: '0', class: 'stepper__valor', value: '0' });
+  const fijarValor = (nuevo) => {
+    valor = Math.max(0, Math.trunc(Number(nuevo) || 0));
+    campoValor.value = String(valor);
+  };
+  campoValor.addEventListener('input', () => fijarValor(campoValor.value));
+  campoValor.addEventListener('blur', () => fijarValor(campoValor.value)); // por si queda vacío o con "-" suelto al salir del campo
   const botonMenos = elemento('button', {
     type: 'button',
     class: 'boton-stepper',
     texto: '−',
-    onclick: () => {
-      valor = Math.max(0, valor - 1);
-      etiquetaValor.textContent = String(valor);
-    },
+    onclick: () => fijarValor(valor - 1),
   });
   const botonMas = elemento('button', {
     type: 'button',
     class: `boton-stepper boton-stepper--${colorBoton}`,
     texto: '+',
-    onclick: () => {
-      valor += 1;
-      etiquetaValor.textContent = String(valor);
-    },
+    onclick: () => fijarValor(valor + 1),
   });
-  const contenedor = elemento('div', { class: 'stepper' }, [botonMenos, etiquetaValor, botonMas]);
+  const contenedor = elemento('div', { class: 'stepper' }, [botonMenos, campoValor, botonMas]);
   return {
     contenedor,
     obtenerValor: () => valor,
-    reiniciar: () => {
-      valor = 0;
-      etiquetaValor.textContent = '0';
-    },
+    reiniciar: () => fijarValor(0),
   };
 }
 

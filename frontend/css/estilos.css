@@ -1460,6 +1460,25 @@ body.tiene-nav-inferior .pantalla {
   font-size: 1.3rem;
 }
 
+/* El valor del stepper es un <input type="number"> editable a mano, no
+   solo +/- — se le quita la apariencia de campo de formulario para que
+   siga viéndose como el número plano de antes. */
+input.stepper__valor {
+  width: 44px;
+  border: none;
+  background: transparent;
+  color: var(--texto);
+  font-weight: 700;
+  font-family: inherit;
+  -moz-appearance: textfield;
+}
+
+input.stepper__valor::-webkit-outer-spin-button,
+input.stepper__valor::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
 .boton-stepper {
   width: 36px;
   height: 36px;
