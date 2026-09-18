@@ -605,11 +605,27 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-async function renderizarInicio() {
+/**
+ * Arma el contenido nuevo en un <div> fuera de la pantalla y recién al final
+ * lo intercambia de una sola vez por el contenido real — así el refresco en
+ * segundo plano nunca deja la pantalla vacía mientras espera los datos
+ * (antes se sentía como que "se iba la pantalla" un instante, ver la nota
+ * del listener de abajo). replaceChildren() MUEVE los nodos reales del
+ * borrador (no los serializa a texto), así que cualquier listener o
+ * referencia que el módulo haya guardado sobre esos elementos sigue
+ * funcionando igual después del intercambio.
+ */
+async function renderizarSinParpadeo(contenedorReal, render) {
+  const borrador = document.createElement('div');
+  await render(borrador);
+  contenedorReal.replaceChildren(...borrador.childNodes);
+}
+
+async function renderizarInicio(contenedor = el.contenedorDashboard) {
   el.bienvenidaUsuario.textContent = cacheUsuario ? `Hola, ${cacheUsuario.nombre}` : '';
   el.contextoInicio.textContent = el.contexto.textContent;
   try {
-    await renderizarDashboard(el.contenedorDashboard, contextoActual(), {
+    await renderizarDashboard(contenedor, contextoActual(), {
       alTocarIncidencias: () => abrirModulo('incidencias'),
     });
   } catch (error) {
@@ -727,19 +743,15 @@ el.botonSyncAhora?.addEventListener('click', () => {
 // navegar manualmente.
 document.addEventListener('bananera:estado-sync', async (evento) => {
   if (evento.detail.estado !== 'sincronizado') return;
-  // Cada render() de módulo empieza con contenedor.innerHTML = '' y recién
-  // después espera los datos nuevos — mientras tanto la pantalla queda
-  // momentáneamente vacía, y el navegador "encoge" la página y sube el
-  // scroll hasta el nuevo máximo (0 si estaba vacía del todo). El contenido
-  // vuelve a crecer al terminar, pero el scroll no se restaura solo: se
-  // guarda antes y se repone después para que el refresco automático no se
-  // sienta como si hubiera reiniciado la pantalla (muy notorio en listas
-  // largas como Embolse/Corta).
+  // El scroll igual se guarda/repone aparte por seguridad: si el contenido
+  // nuevo termina siendo más corto que el viejo, el navegador ajusta el
+  // scroll solo al máximo permitido (ver renderizarSinParpadeo arriba, que
+  // ya evita el "parpadeo en blanco" en sí).
   const scrollGuardado = window.scrollY;
   const restaurarScroll = () => requestAnimationFrame(() => window.scrollTo(0, scrollGuardado));
 
   if (vistaActual === 'inicio') {
-    await renderizarInicio();
+    await renderizarSinParpadeo(el.contenedorDashboard, (borrador) => renderizarInicio(borrador));
     restaurarScroll();
   } else if (vistaActual === 'modulo' && moduloActivoClave) {
     // No pisar un formulario a medio llenar: si el usuario tarda más que un
@@ -747,7 +759,7 @@ document.addEventListener('bananera:estado-sync', async (evento) => {
     // le borraba lo que llevaba. Se reintenta en el próximo sync exitoso.
     if (hayFormularioSinGuardar(el.contenedorModulo)) return;
     try {
-      await MODULOS[moduloActivoClave].render(el.contenedorModulo, contextoActual());
+      await renderizarSinParpadeo(el.contenedorModulo, (borrador) => MODULOS[moduloActivoClave].render(borrador, contextoActual()));
       restaurarScroll();
     } catch {
       /* si el módulo activo falla al refrescar en segundo plano, se deja como estaba */

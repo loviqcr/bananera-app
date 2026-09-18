@@ -332,10 +332,11 @@ async function renderizarAsistencia(contenedor, contexto) {
   const campoFecha = elemento('input', { type: 'date', value: hoyISO(), class: 'campo' });
   const estadoLocal = new Map(); // empleado_id -> { estado, horas }
 
+  const etiquetaFecha = elemento('span', { class: 'banner-mano-obra__fecha', texto: fechaCorta(campoFecha.value) });
   contenedor.appendChild(
     elemento('div', { class: 'banner-mano-obra' }, [
       elemento('span', { class: 'chip chip--sobre-oscuro', texto: finca?.nombre ?? 'Finca' }),
-      elemento('span', { class: 'banner-mano-obra__fecha', id: 'mano-obra-fecha', texto: fechaCorta(campoFecha.value) }),
+      etiquetaFecha,
       elemento('h1', { class: 'banner-mano-obra__titulo', texto: 'Mano de Obra' }),
       elemento('p', { class: 'banner-mano-obra__subtitulo', texto: 'Planilla y asistencia' }),
     ])
@@ -402,7 +403,7 @@ async function renderizarAsistencia(contenedor, contexto) {
     lista.innerHTML = '';
     confirmacion.textContent = '';
     mensaje.textContent = '';
-    document.getElementById('mano-obra-fecha')?.replaceChildren(document.createTextNode(fechaCorta(campoFecha.value)));
+    etiquetaFecha.textContent = fechaCorta(campoFecha.value);
     estadoLocal.clear();
 
     if (empleados.length === 0) {
