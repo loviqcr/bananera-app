@@ -84,6 +84,7 @@ async function renderizarEmbolse(contenedor, contexto) {
         { nombre: 'area_id', etiqueta: 'Área', tipo: 'select', requerido: true, opciones: areas },
         { nombre: 'cantidad', etiqueta: 'Cantidad', tipo: 'number', requerido: true },
         { nombre: 'color_cinta_id', etiqueta: 'Color de cinta', tipo: 'select', opciones: colores },
+        { nombre: 'variedad', etiqueta: 'Variedad', tipo: 'select', opciones: [{ value: 'Plátano', label: 'Plátano' }, { value: 'Banano', label: 'Banano' }] },
         { nombre: 'observaciones', etiqueta: 'Observaciones', tipo: 'textarea' },
       ],
       alGuardar: async (valores) => {
@@ -95,7 +96,7 @@ async function renderizarEmbolse(contenedor, contexto) {
           cantidad: Number(valores.cantidad) || 0,
           color_cinta_id: valores.color_cinta_id || null,
           responsable_id: sesion?.usuario?.id ?? null,
-          observaciones: valores.observaciones || null,
+          observaciones: (valores.observaciones || '') + (valores.variedad ? ` [Variedad: ${valores.variedad}]` : ''),
         });
         await renderizarEmbolse(contenedor, contexto);
       },
@@ -156,6 +157,7 @@ async function renderizarCorta(contenedor, contexto) {
         { nombre: 'fecha', etiqueta: 'Fecha', tipo: 'date', requerido: true, valor: hoyISO() },
         { nombre: 'area_id', etiqueta: 'Área', tipo: 'select', requerido: true, opciones: areas },
         { nombre: 'racimos_cortados', etiqueta: 'Racimos cortados', tipo: 'number', requerido: true },
+        { nombre: 'variedad', etiqueta: 'Variedad', tipo: 'select', opciones: [{ value: 'Plátano', label: 'Plátano' }, { value: 'Banano', label: 'Banano' }] },
         { nombre: 'observaciones', etiqueta: 'Observaciones', tipo: 'textarea' },
       ],
       alGuardar: async (valores) => {
@@ -166,7 +168,7 @@ async function renderizarCorta(contenedor, contexto) {
           fecha: valores.fecha,
           racimos_cortados: Number(valores.racimos_cortados) || 0,
           responsable_id: sesion?.usuario?.id ?? null,
-          observaciones: valores.observaciones || null,
+          observaciones: (valores.observaciones || '') + (valores.variedad ? ` [Variedad: ${valores.variedad}]` : ''),
         });
         await renderizarCorta(contenedor, contexto);
       },
