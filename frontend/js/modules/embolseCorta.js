@@ -69,12 +69,18 @@ async function agregarColor() {
   return repos.crear('colores_cinta', { nombre: nombre.trim(), activo: true });
 }
 
+function etiquetaTipoVariedad(tipo) {
+  if (tipo === 'banano') return 'Banano';
+  if (tipo === 'fhia') return 'FHIA';
+  return 'Plátano';
+}
+
 /** Mismo catálogo real de variedades que usa Producción (Cavendish, Curraré...), no un texto fijo. */
 async function opcionesVariedades() {
   const todas = await repos.listarTodos('variedades');
   return todas
     .sort((a, b) => a.nombre.localeCompare(b.nombre))
-    .map((v) => ({ value: v.nombre, label: `${v.nombre} (${v.tipo === 'banano' ? 'Banano' : 'Plátano'})` }));
+    .map((v) => ({ value: v.nombre, label: `${v.nombre} (${etiquetaTipoVariedad(v.tipo)})` }));
 }
 
 async function agregarVariedad() {
@@ -91,6 +97,7 @@ async function agregarVariedad() {
         opciones: [
           { value: 'platano', label: 'Plátano' },
           { value: 'banano', label: 'Banano' },
+          { value: 'fhia', label: 'FHIA' },
         ],
       },
     ],
@@ -118,7 +125,7 @@ async function renderizarVariedades(contenedor, contexto) {
   contenedor.appendChild(
     listaRegistros(
       todas,
-      (v) => ({ titulo: v.nombre, valor: v.tipo === 'banano' ? 'Banano' : 'Plátano' }),
+      (v) => ({ titulo: v.nombre, valor: etiquetaTipoVariedad(v.tipo) }),
       {
         vacioTexto: 'No hay variedades registradas todavía.',
         onEliminar: esAdmin
