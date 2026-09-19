@@ -72,7 +72,7 @@ async function renderizarSiembra(contenedor, contexto) {
         { nombre: 'area_id', etiqueta: 'Área', tipo: 'select', requerido: true, opciones: areas },
         { nombre: 'nombre', etiqueta: 'Nombre / referencia', tipo: 'text' },
         { nombre: 'cantidad', etiqueta: 'Cantidad sembrada', tipo: 'number', paso: '0.01' },
-        { nombre: 'variedad', etiqueta: 'Variedad', tipo: 'select', opciones: [{ value: 'Plátano', label: 'Plátano' }, { value: 'Banano', label: 'Banano' }] },
+        { nombre: 'variedad', etiqueta: 'Variedad', tipo: 'select', opciones: [{ value: 'Plátano', label: 'Plátano' }, { value: 'Banano', label: 'Banano' }, { value: 'FHIA', label: 'FHIA' }] },
         { nombre: 'observaciones', etiqueta: 'Observaciones', tipo: 'textarea' },
       ],
       alGuardar: async (valores) => {
