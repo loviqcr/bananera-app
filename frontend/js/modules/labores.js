@@ -187,7 +187,13 @@ function renderizarLaborConFrecuencia(tabla, tipoLabor, etiquetaAccion, camposEx
   };
 }
 
-const renderizarDeshija = renderizarLaborConFrecuencia('labores_deshija', 'deshija', '🌱 Registrar deshija', [], () => ({}));
+const renderizarDeshija = renderizarLaborConFrecuencia(
+  'labores_deshija',
+  'deshija',
+  '🌱 Registrar deshija',
+  [{ nombre: 'variedad', etiqueta: 'Variedad', tipo: 'select', opciones: [{ value: 'Plátano', label: 'Plátano' }, { value: 'Banano', label: 'Banano' }, { value: 'FHIA', label: 'FHIA' }] }],
+  (valores) => ({ observaciones: (valores.observaciones || '') + (valores.variedad ? ` [Variedad: ${valores.variedad}]` : '') })
+);
 
 const renderizarDermaticida = renderizarLaborConFrecuencia(
   'labores_dermaticida',
