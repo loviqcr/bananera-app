@@ -4,9 +4,10 @@ import { incidenciasAbiertas } from './incidencias.js';
 import { laboresConEstado } from './labores.js';
 import { planillaModulo } from './planilla.js';
 import { ventasModulo } from './ventas.js';
-import { estadisticasDia } from './embolseCorta.js';
+import { estadisticasDia, resumenEmbolsePorSemana } from './embolseCorta.js';
 import { estadisticasHoy as estadisticasCargaHoy, ultimoDestinatario } from './entregaCarga.js';
-import { elemento, tarjetaStat, icono } from '../ui.js';
+import { auth } from './auth.js';
+import { elemento, tarjetaStat, icono, formatearFecha, listaRegistros, mostrarPanel } from '../ui.js';
 
 function formatearMoneda(valor) {
   return `₡${Number(valor || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -34,6 +35,25 @@ function filaEntregadoA(porDestinatario, limite = 3) {
     filas.push(elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [elemento('span', {}, `y ${porDestinatario.length - limite} más`)]));
   }
   return elemento('div', { style: 'margin-top:8px;padding-top:8px;border-top:1px solid var(--borde);display:flex;flex-direction:column;gap:4px' }, filas);
+}
+
+/**
+ * Desglose de embolse por semana y variedad, de TODAS las fincas juntas —
+ * para que el administrador lo vea tocando la tarjeta "Embolse hoy" en
+ * Inicio, sin tener que entrar a cada finca por separado.
+ */
+async function abrirResumenEmbolse() {
+  const filas = await resumenEmbolsePorSemana();
+  const lista = listaRegistros(filas, (f) => {
+    const desde = new Date(f.semana + 'T00:00:00');
+    const hasta = new Date(desde);
+    hasta.setDate(hasta.getDate() + 6);
+    return {
+      titulo: `Semana del ${formatearFecha(f.semana)} al ${formatearFecha(hasta.toISOString().slice(0, 10))}`,
+      subtitulo: `Plátano: ${f['Plátano'].toLocaleString('es-CR')} · Banano: ${f['Banano'].toLocaleString('es-CR')}${f.FHIA ? ' · FHIA: ' + f.FHIA.toLocaleString('es-CR') : ''}`,
+    };
+  }, { vacioTexto: 'Sin embolse registrado todavía.' });
+  mostrarPanel({ titulo: '🎗️ Embolse por semana (todas las fincas)', contenido: lista });
 }
 
 /** Usado por el dashboard y por la pantalla de detalle de finca. */
@@ -67,18 +87,22 @@ export async function estadisticasDeFinca(fincaId) {
 
 export async function renderizarDashboard(contenedor, contexto, manejadores = {}) {
   contenedor.innerHTML = '';
-  const stats = await estadisticasDeFinca(contexto.fincaId);
+  const [stats, sesion] = await Promise.all([estadisticasDeFinca(contexto.fincaId), auth.sesionActual()]);
+  const esAdmin = sesion?.usuario?.rol === 'administrador';
   const { alTocarIncidencias } = manejadores;
 
   // ---- Resumen general: a propósito solo estos 3, se pidió limpiar el
   // dashboard de las demás tarjetas (Producción/Personal/Cajas/Ventas/
   // Inventario/Otros indicadores) — "Detalle por finca" más abajo sigue
   // teniendo el resto para quien lo necesite viendo "Todas las fincas". ----
+  // "Embolse hoy" es tocable solo para administrador: abre el desglose por
+  // semana y variedad de TODAS las fincas, para no tener que entrar a cada
+  // una a revisar el embolse.
   contenedor.appendChild(
     elemento('div', { class: 'seccion-dashboard' }, [
       elemento('h2', { class: 'seccion-dashboard__titulo', texto: 'Resumen general' }),
       elemento('div', { class: 'rejilla-estadisticas' }, [
-        tarjetaStat('package', stats.embolsadoHoy.toLocaleString('es-CR'), 'Embolse hoy'),
+        tarjetaStat('package', stats.embolsadoHoy.toLocaleString('es-CR'), 'Embolse hoy', '', esAdmin ? abrirResumenEmbolse : null),
         tarjetaStat('crop', stats.cortadoHoy.toLocaleString('es-CR'), 'Corta hoy'),
         tarjetaStat('alert', stats.abiertas.length, 'Incidencias pendientes', stats.abiertas.length > 0 ? 'tarjeta-stat--alerta' : '', alTocarIncidencias),
       ]),

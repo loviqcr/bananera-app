@@ -27,6 +27,34 @@ export async function estadisticasDia(fincaId) {
   return { embolsadoHoy, cortadoHoy, proximosACorta: proximos.length };
 }
 
+function inicioSemanaDe(fechaISO) {
+  const fecha = new Date(fechaISO + 'T00:00:00');
+  const dia = fecha.getDay() === 0 ? 7 : fecha.getDay(); // lunes = 1 ... domingo = 7
+  fecha.setDate(fecha.getDate() - (dia - 1));
+  return fecha.toISOString().slice(0, 10);
+}
+
+/**
+ * Desglose de embolse por semana y variedad (Plátano/Banano/FHIA), sumando
+ * TODAS las fincas — para que el administrador lo vea de un vistazo desde
+ * Inicio sin tener que entrar finca por finca. `semanas` limita cuántas
+ * semanas recientes devolver (más recientes primero).
+ */
+export async function resumenEmbolsePorSemana(semanas = 8) {
+  const todas = await repos.listarPorFinca('embolse', 'todas');
+  const porSemana = new Map();
+  for (const f of todas) {
+    const semana = inicioSemanaDe(f.fecha);
+    const variedad = separarVariedad(f.observaciones).variedad || 'Sin variedad';
+    const actual = porSemana.get(semana) ?? { semana, Plátano: 0, Banano: 0, FHIA: 0, 'Sin variedad': 0 };
+    actual[variedad] = (actual[variedad] ?? 0) + (Number(f.cantidad) || 0);
+    porSemana.set(semana, actual);
+  }
+  return Array.from(porSemana.values())
+    .sort((a, b) => (a.semana < b.semana ? 1 : -1))
+    .slice(0, semanas);
+}
+
 /**
  * Áreas embolsadas que todavía no tienen una corta posterior registrada —
  * es decir, racimos que probablemente sigan en la mata. Se ordenan por

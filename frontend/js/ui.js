@@ -391,3 +391,20 @@ export function mostrarDialogo({ titulo, campos, textoConfirmar = 'Confirmar' })
     document.body.appendChild(fondo);
   });
 }
+
+/**
+ * Mismo overlay que mostrarDialogo() pero de solo lectura: para mostrar un
+ * resumen/desglose (ej. embolse por semana) sin salir de la pantalla actual
+ * ni tener que ir finca por finca. `contenido` es un nodo DOM ya armado.
+ */
+export function mostrarPanel({ titulo, contenido }) {
+  const fondo = elemento('div', { class: 'dialogo-fondo panel-info-fondo' });
+  const caja = elemento('div', { class: 'dialogo-caja panel-info tarjeta', style: 'max-height:80vh;overflow-y:auto' });
+  caja.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: titulo }));
+  caja.appendChild(contenido);
+  const botonCerrar = elemento('button', { type: 'button', class: 'boton boton--primario', style: 'margin-top:14px', texto: 'Cerrar' });
+  botonCerrar.addEventListener('click', () => fondo.remove());
+  caja.appendChild(botonCerrar);
+  fondo.appendChild(caja);
+  document.body.appendChild(fondo);
+}
