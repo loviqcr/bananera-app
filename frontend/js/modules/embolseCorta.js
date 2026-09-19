@@ -171,12 +171,6 @@ async function renderizarEmbolse(contenedor, contexto) {
       },
     });
     contenedor.appendChild(form);
-    const botonVariedad = elemento('button', { type: 'button', class: 'boton boton--fantasma', texto: '+ Nueva variedad' });
-    botonVariedad.addEventListener('click', async () => {
-      const nueva = await agregarVariedad();
-      if (nueva) await renderizarEmbolse(contenedor, contexto);
-    });
-    contenedor.appendChild(botonVariedad);
     const botonColor = elemento('button', { type: 'button', class: 'boton boton--fantasma', texto: '+ Nuevo color de cinta' });
     botonColor.addEventListener('click', async () => {
       const nuevo = await agregarColor();
@@ -254,12 +248,6 @@ async function renderizarCorta(contenedor, contexto) {
       },
     });
     contenedor.appendChild(form);
-    const botonVariedad = elemento('button', { type: 'button', class: 'boton boton--fantasma', texto: '+ Nueva variedad' });
-    botonVariedad.addEventListener('click', async () => {
-      const nueva = await agregarVariedad();
-      if (nueva) await renderizarCorta(contenedor, contexto);
-    });
-    contenedor.appendChild(botonVariedad);
   }
 
   contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: 'Cortas registradas' }));
