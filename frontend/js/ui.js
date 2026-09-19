@@ -271,8 +271,15 @@ export function formatearFecha(fechaISO) {
   return `${dia}/${mes}/${anio}`;
 }
 
+// OJO: nunca usar new Date().toISOString() acá — eso da la fecha en UTC, y
+// Costa Rica está UTC-6, así que entre las 6pm y medianoche locales ya
+// devolvía la fecha de MAÑANA. Se arma con los componentes locales.
 export function hoyISO() {
-  return new Date().toISOString().slice(0, 10);
+  const ahora = new Date();
+  const anio = ahora.getFullYear();
+  const mes = String(ahora.getMonth() + 1).padStart(2, '0');
+  const dia = String(ahora.getDate()).padStart(2, '0');
+  return `${anio}-${mes}-${dia}`;
 }
 
 let toastActual = null;

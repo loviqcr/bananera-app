@@ -130,11 +130,24 @@ export const entregaCargaModulo = {
     const area = areas.find((a) => a.id === contexto.areaId);
 
     // ---- Banner de contexto (finca · área + fecha) ----
+    const etiquetaFecha = elemento('span', { class: 'banner-entrega-carga__fecha', texto: fechaCorta(hoyISO()) });
     contenedor.appendChild(
       elemento('div', { class: 'banner-entrega-carga' }, [
         elemento('span', { class: 'chip chip--sobre-oscuro', texto: `${finca?.nombre ?? 'Finca'} · ${area?.nombre ?? 'Área'}` }),
-        elemento('span', { class: 'banner-entrega-carga__fecha', texto: fechaCorta(hoyISO()) }),
+        etiquetaFecha,
         elemento('h1', { class: 'banner-entrega-carga__titulo', texto: 'Entrega de Carga' }),
+      ])
+    );
+
+    // ---- Fecha (editable manualmente; por defecto hoy) ----
+    const campoFecha = elemento('input', { type: 'date', id: 'entrega-carga-fecha', value: hoyISO() });
+    campoFecha.addEventListener('change', () => {
+      if (campoFecha.value) etiquetaFecha.textContent = fechaCorta(campoFecha.value);
+    });
+    contenedor.appendChild(
+      elemento('div', { class: 'campo', style: 'margin-bottom:var(--espacio)' }, [
+        elemento('label', { for: 'entrega-carga-fecha', texto: 'Fecha' }),
+        campoFecha,
       ])
     );
 
@@ -226,6 +239,10 @@ export const entregaCargaModulo = {
         mensaje.textContent = 'Agrega o elige a quién se le entrega.';
         return;
       }
+      if (!campoFecha.value) {
+        mensaje.textContent = 'Elige la fecha de la entrega.';
+        return;
+      }
       botonGuardar.disabled = true;
       try {
         const sesion = await auth.sesionActual();
@@ -233,7 +250,7 @@ export const entregaCargaModulo = {
         const base = {
           finca_id: contexto.fincaId,
           area_id: contexto.areaId,
-          fecha: hoyISO(),
+          fecha: campoFecha.value,
           cantidad_dedos: 0,
           responsable_id: sesion?.usuario?.id ?? null,
           responsable_nombre: responsableSeleccionado,

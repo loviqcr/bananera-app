@@ -23,7 +23,12 @@ function inicioSemanaISO() {
   const hoy = new Date();
   const dia = hoy.getDay() === 0 ? 7 : hoy.getDay(); // lunes = 1 ... domingo = 7
   hoy.setDate(hoy.getDate() - (dia - 1));
-  return hoy.toISOString().slice(0, 10);
+  // Con componentes locales, no toISOString() (eso es UTC y adelanta la
+  // fecha un día en horas de la noche en Costa Rica, UTC-6).
+  const anio = hoy.getFullYear();
+  const mes = String(hoy.getMonth() + 1).padStart(2, '0');
+  const diaMes = String(hoy.getDate()).padStart(2, '0');
+  return `${anio}-${mes}-${diaMes}`;
 }
 
 function inicioMesISO() {
