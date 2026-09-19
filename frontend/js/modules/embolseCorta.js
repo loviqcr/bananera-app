@@ -1,6 +1,6 @@
 import { repos } from '../db/repos.js';
 import { auth } from './auth.js';
-import { elemento, crearFormulario, listaRegistros, tarjetaEstadistica, formatearFecha, hoyISO } from '../ui.js';
+import { elemento, crearFormulario, listaRegistros, mostrarDialogo, tarjetaEstadistica, formatearFecha, hoyISO } from '../ui.js';
 
 // Días típicos entre el embolse de un racimo y su corta (maduración) — se
 // usa solo para estimar la fecha de la pestaña "Seguimiento"; no depende de
@@ -69,9 +69,45 @@ async function agregarColor() {
   return repos.crear('colores_cinta', { nombre: nombre.trim(), activo: true });
 }
 
+/** Mismo catálogo real de variedades que usa Producción (Cavendish, Curraré...), no un texto fijo. */
+async function opcionesVariedades() {
+  const todas = await repos.listarTodos('variedades');
+  return todas
+    .sort((a, b) => a.nombre.localeCompare(b.nombre))
+    .map((v) => ({ value: v.nombre, label: `${v.nombre} (${v.tipo === 'banano' ? 'Banano' : 'Plátano'})` }));
+}
+
+async function agregarVariedad() {
+  const resultado = await mostrarDialogo({
+    titulo: 'Nueva variedad',
+    textoConfirmar: 'Agregar',
+    campos: [
+      { nombre: 'nombre', etiqueta: 'Nombre', tipo: 'text', requerido: true },
+      {
+        nombre: 'tipo',
+        etiqueta: 'Tipo',
+        tipo: 'select',
+        requerido: true,
+        opciones: [
+          { value: 'platano', label: 'Plátano' },
+          { value: 'banano', label: 'Banano' },
+        ],
+      },
+    ],
+  });
+  if (!resultado || !resultado.nombre?.trim()) return null;
+  return repos.crear('variedades', { nombre: resultado.nombre.trim(), tipo: resultado.tipo });
+}
+
 async function renderizarEmbolse(contenedor, contexto) {
   contenedor.innerHTML = '';
-  const [areas, colores, filas, esAdmin] = await Promise.all([opcionesAreas(contexto.fincaId), opcionesColores(), repos.listarPorFinca('embolse', contexto.fincaId), esAdministrador()]);
+  const [areas, colores, variedades, filas, esAdmin] = await Promise.all([
+    opcionesAreas(contexto.fincaId),
+    opcionesColores(),
+    opcionesVariedades(),
+    repos.listarPorFinca('embolse', contexto.fincaId),
+    esAdministrador(),
+  ]);
   const ordenadas = filas.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
   const nombreColor = Object.fromEntries((await repos.listarTodos('colores_cinta')).map((c) => [c.id, c.nombre]));
   const nombreArea = Object.fromEntries((await repos.listarTodos('areas')).map((a) => [a.id, a.nombre]));
@@ -84,7 +120,7 @@ async function renderizarEmbolse(contenedor, contexto) {
         { nombre: 'area_id', etiqueta: 'Área', tipo: 'select', requerido: true, opciones: areas },
         { nombre: 'cantidad', etiqueta: 'Cantidad', tipo: 'number', requerido: true },
         { nombre: 'color_cinta_id', etiqueta: 'Color de cinta', tipo: 'select', opciones: colores },
-        { nombre: 'variedad', etiqueta: 'Variedad', tipo: 'select', opciones: [{ value: 'Plátano', label: 'Plátano' }, { value: 'Banano', label: 'Banano' }] },
+        { nombre: 'variedad', etiqueta: 'Variedad', tipo: 'select', opciones: variedades },
         { nombre: 'observaciones', etiqueta: 'Observaciones', tipo: 'textarea' },
       ],
       alGuardar: async (valores) => {
@@ -102,6 +138,12 @@ async function renderizarEmbolse(contenedor, contexto) {
       },
     });
     contenedor.appendChild(form);
+    const botonVariedad = elemento('button', { type: 'button', class: 'boton boton--fantasma', texto: '+ Nueva variedad' });
+    botonVariedad.addEventListener('click', async () => {
+      const nueva = await agregarVariedad();
+      if (nueva) await renderizarEmbolse(contenedor, contexto);
+    });
+    contenedor.appendChild(botonVariedad);
     const botonColor = elemento('button', { type: 'button', class: 'boton boton--fantasma', texto: '+ Nuevo color de cinta' });
     botonColor.addEventListener('click', async () => {
       const nuevo = await agregarColor();
@@ -134,7 +176,12 @@ async function renderizarEmbolse(contenedor, contexto) {
 
 async function renderizarCorta(contenedor, contexto) {
   contenedor.innerHTML = '';
-  const [areas, filas, esAdmin] = await Promise.all([opcionesAreas(contexto.fincaId), repos.listarPorFinca('corta', contexto.fincaId), esAdministrador()]);
+  const [areas, variedades, filas, esAdmin] = await Promise.all([
+    opcionesAreas(contexto.fincaId),
+    opcionesVariedades(),
+    repos.listarPorFinca('corta', contexto.fincaId),
+    esAdministrador(),
+  ]);
   const ordenadas = filas.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
   const nombreArea = Object.fromEntries((await repos.listarTodos('areas')).map((a) => [a.id, a.nombre]));
 
@@ -157,7 +204,7 @@ async function renderizarCorta(contenedor, contexto) {
         { nombre: 'fecha', etiqueta: 'Fecha', tipo: 'date', requerido: true, valor: hoyISO() },
         { nombre: 'area_id', etiqueta: 'Área', tipo: 'select', requerido: true, opciones: areas },
         { nombre: 'racimos_cortados', etiqueta: 'Racimos cortados', tipo: 'number', requerido: true },
-        { nombre: 'variedad', etiqueta: 'Variedad', tipo: 'select', opciones: [{ value: 'Plátano', label: 'Plátano' }, { value: 'Banano', label: 'Banano' }] },
+        { nombre: 'variedad', etiqueta: 'Variedad', tipo: 'select', opciones: variedades },
         { nombre: 'observaciones', etiqueta: 'Observaciones', tipo: 'textarea' },
       ],
       alGuardar: async (valores) => {
@@ -174,6 +221,12 @@ async function renderizarCorta(contenedor, contexto) {
       },
     });
     contenedor.appendChild(form);
+    const botonVariedad = elemento('button', { type: 'button', class: 'boton boton--fantasma', texto: '+ Nueva variedad' });
+    botonVariedad.addEventListener('click', async () => {
+      const nueva = await agregarVariedad();
+      if (nueva) await renderizarCorta(contenedor, contexto);
+    });
+    contenedor.appendChild(botonVariedad);
   }
 
   contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: 'Cortas registradas' }));
