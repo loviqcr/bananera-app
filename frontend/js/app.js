@@ -780,16 +780,29 @@ const NOMBRE_TABLA_LEGIBLE = {
   ventas_banano: 'venta de banano',
   embolse: 'embolse',
   corta: 'corta',
+  labores_siembra: 'siembra',
+  labores_deshija: 'deshija',
+  labores_dermaticida: 'nematicida',
+  labores_fertilizacion: 'fertilización',
+  responsables_carga: 'destinatario de carga',
+  bodega_items: 'producto de bodega',
+  salarios: 'salario',
+  variedades: 'variedad',
 };
+
+const VERBO_POR_OPERACION = { eliminar: 'eliminar', editar: 'editar', crear: 'guardar' };
 
 // El servidor rechazó un registro (dato inválido/duplicado, nunca un
 // problema de red) — se avisa YA, en vez de que quede solo en la consola
-// (ver la nota en syncClient.js sobre por qué esto importa).
+// (ver la nota en syncClient.js sobre por qué esto importa). El título
+// distingue eliminar/editar/guardar para que el aviso de un borrado
+// rechazado no se lea como si algo se hubiera "guardado" mal.
 document.addEventListener('bananera:operacion-rechazada', (evento) => {
-  const { tabla, motivo } = evento.detail;
+  const { tabla, operacion, motivo } = evento.detail;
   const nombre = NOMBRE_TABLA_LEGIBLE[tabla] || tabla;
+  const verbo = VERBO_POR_OPERACION[operacion] || 'guardar';
   mostrarToast({
-    titulo: `No se pudo guardar (${nombre})`,
+    titulo: `No se pudo ${verbo} (${nombre})`,
     mensaje: motivo,
     alHacerClick: () => abrirModulo('reportes', 'sync'),
   });
