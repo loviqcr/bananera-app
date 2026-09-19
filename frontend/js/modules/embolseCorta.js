@@ -1,6 +1,6 @@
 import { repos } from '../db/repos.js';
 import { auth } from './auth.js';
-import { elemento, crearFormulario, listaRegistros, tarjetaEstadistica, formatearFecha, hoyISO } from '../ui.js';
+import { elemento, crearFormulario, listaRegistros, mostrarDialogo, tarjetaEstadistica, formatearFecha, hoyISO } from '../ui.js';
 
 // Días típicos entre el embolse de un racimo y su corta (maduración) — se
 // usa solo para estimar la fecha de la pestaña "Seguimiento"; no depende de
@@ -77,6 +77,20 @@ const OPCIONES_VARIEDAD = [
   { value: 'FHIA', label: 'FHIA' },
 ];
 
+// La variedad se guarda como una etiqueta [Variedad: X] dentro del mismo
+// campo de observaciones (no tiene columna propia) — estas dos funciones
+// la separan del resto del texto para poder editarlas por separado, y
+// la vuelven a unir al guardar.
+function separarVariedad(observaciones) {
+  const match = /\[Variedad: ([^\]]+)\]/.exec(observaciones || '');
+  const limpio = (observaciones || '').replace(/\s*\[Variedad: [^\]]+\]/, '').trim();
+  return { variedad: match ? match[1] : '', limpio };
+}
+
+function unirVariedad(limpio, variedad) {
+  return (limpio || '') + (variedad ? ` [Variedad: ${variedad}]` : '');
+}
+
 async function renderizarEmbolse(contenedor, contexto) {
   contenedor.innerHTML = '';
   const [areas, colores, filas, esAdmin] = await Promise.all([
@@ -134,6 +148,32 @@ async function renderizarEmbolse(contenedor, contexto) {
         valor: f.cantidad,
       }),
       {
+        onEditar: esAdmin
+          ? async (f) => {
+              const { variedad, limpio } = separarVariedad(f.observaciones);
+              const resultado = await mostrarDialogo({
+                titulo: 'Editar embolse',
+                textoConfirmar: 'Guardar',
+                campos: [
+                  { nombre: 'fecha', etiqueta: 'Fecha', tipo: 'date', valor: f.fecha },
+                  { nombre: 'area_id', etiqueta: 'Área', tipo: 'select', opciones: areas, valor: f.area_id || '' },
+                  { nombre: 'cantidad', etiqueta: 'Cantidad', tipo: 'number', valor: f.cantidad },
+                  { nombre: 'color_cinta_id', etiqueta: 'Color de cinta', tipo: 'select', opciones: colores, valor: f.color_cinta_id || '' },
+                  { nombre: 'variedad', etiqueta: 'Variedad', tipo: 'select', opciones: OPCIONES_VARIEDAD, valor: variedad },
+                  { nombre: 'observaciones', etiqueta: 'Observaciones', tipo: 'textarea', valor: limpio },
+                ],
+              });
+              if (!resultado) return;
+              await repos.editar('embolse', f.id, {
+                fecha: resultado.fecha,
+                area_id: resultado.area_id || null,
+                cantidad: Number(resultado.cantidad) || 0,
+                color_cinta_id: resultado.color_cinta_id || null,
+                observaciones: unirVariedad(resultado.observaciones, resultado.variedad),
+              });
+              await renderizarEmbolse(contenedor, contexto);
+            }
+          : undefined,
         onEliminar: esAdmin
           ? async (f) => {
               await repos.eliminar('embolse', f.id);
@@ -202,6 +242,30 @@ async function renderizarCorta(contenedor, contexto) {
         valor: `${f.racimos_cortados} rac.`,
       }),
       {
+        onEditar: esAdmin
+          ? async (f) => {
+              const { variedad, limpio } = separarVariedad(f.observaciones);
+              const resultado = await mostrarDialogo({
+                titulo: 'Editar corta',
+                textoConfirmar: 'Guardar',
+                campos: [
+                  { nombre: 'fecha', etiqueta: 'Fecha', tipo: 'date', valor: f.fecha },
+                  { nombre: 'area_id', etiqueta: 'Área', tipo: 'select', opciones: areas, valor: f.area_id || '' },
+                  { nombre: 'racimos_cortados', etiqueta: 'Racimos cortados', tipo: 'number', valor: f.racimos_cortados },
+                  { nombre: 'variedad', etiqueta: 'Variedad', tipo: 'select', opciones: OPCIONES_VARIEDAD, valor: variedad },
+                  { nombre: 'observaciones', etiqueta: 'Observaciones', tipo: 'textarea', valor: limpio },
+                ],
+              });
+              if (!resultado) return;
+              await repos.editar('corta', f.id, {
+                fecha: resultado.fecha,
+                area_id: resultado.area_id || null,
+                racimos_cortados: Number(resultado.racimos_cortados) || 0,
+                observaciones: unirVariedad(resultado.observaciones, resultado.variedad),
+              });
+              await renderizarCorta(contenedor, contexto);
+            }
+          : undefined,
         onEliminar: esAdmin
           ? async (f) => {
               await repos.eliminar('corta', f.id);

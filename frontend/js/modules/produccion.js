@@ -1,7 +1,7 @@
 import { repos } from '../db/repos.js';
 import { localdb } from '../db/localdb.js';
 import { auth } from './auth.js';
-import { elemento, crearFormulario, tarjetaEstadistica, listaRegistros, formatearFecha, hoyISO } from '../ui.js';
+import { elemento, crearFormulario, mostrarDialogo, tarjetaEstadistica, listaRegistros, formatearFecha, hoyISO } from '../ui.js';
 
 const ETIQUETA_CALIDAD = { primera: 'Primera', segunda: 'Segunda' };
 
@@ -142,6 +142,38 @@ async function renderizarPlatano(contenedor, contexto) {
         valor: f.cantidad_racimos ? `${f.cantidad_racimos} rac.` : null,
       }),
       {
+        onEditar: esAdmin
+          ? async (f) => {
+              const resultado = await mostrarDialogo({
+                titulo: 'Editar entrega de plátano',
+                textoConfirmar: 'Guardar',
+                campos: [
+                  { nombre: 'fecha', etiqueta: 'Fecha', tipo: 'date', valor: f.fecha },
+                  { nombre: 'area_id', etiqueta: 'Área', tipo: 'select', opciones: areas, valor: f.area_id || '' },
+                  { nombre: 'variedad_id', etiqueta: 'Variedad', tipo: 'select', opciones: variedades, valor: f.variedad_id || '' },
+                  { nombre: 'calidad', etiqueta: 'Calidad', tipo: 'select', opciones: [{ value: 'primera', label: 'Primera' }, { value: 'segunda', label: 'Segunda' }], valor: f.calidad || '' },
+                  { nombre: 'cantidad_cajas', etiqueta: 'Cantidad de cajas', tipo: 'number', valor: f.cantidad_cajas },
+                  { nombre: 'cantidad_dedos', etiqueta: 'Cantidad de dedos', tipo: 'number', valor: f.cantidad_dedos },
+                  { nombre: 'sistema_racimo', etiqueta: 'Sistema de racimo', tipo: 'text', valor: f.sistema_racimo || '' },
+                  { nombre: 'cantidad_racimos', etiqueta: 'Cantidad de racimos', tipo: 'number', valor: f.cantidad_racimos },
+                  { nombre: 'observaciones', etiqueta: 'Observaciones', tipo: 'textarea', valor: f.observaciones || '' },
+                ],
+              });
+              if (!resultado) return;
+              await repos.editar('entregas_platano', f.id, {
+                fecha: resultado.fecha,
+                area_id: resultado.area_id || null,
+                variedad_id: resultado.variedad_id || null,
+                calidad: resultado.calidad || null,
+                cantidad_cajas: resultado.cantidad_cajas ? Number(resultado.cantidad_cajas) : 0,
+                cantidad_dedos: Number(resultado.cantidad_dedos) || 0,
+                sistema_racimo: resultado.sistema_racimo || null,
+                cantidad_racimos: resultado.cantidad_racimos ? Number(resultado.cantidad_racimos) : null,
+                observaciones: resultado.observaciones || null,
+              });
+              await renderizarPlatano(contenedor, contexto);
+            }
+          : undefined,
         onEliminar: esAdmin
           ? async (f) => {
               await repos.eliminar('entregas_platano', f.id);
@@ -225,6 +257,34 @@ async function renderizarBanano(contenedor, contexto) {
         subtitulo: `${ETIQUETA_CALIDAD[f.calidad] ?? f.calidad ?? ''}${f.cantidad_cajas ? ` · ${f.cantidad_cajas} cajas` : ''}`,
       }),
       {
+        onEditar: esAdmin
+          ? async (f) => {
+              const resultado = await mostrarDialogo({
+                titulo: 'Editar entrega de banano',
+                textoConfirmar: 'Guardar',
+                campos: [
+                  { nombre: 'fecha', etiqueta: 'Fecha', tipo: 'date', valor: f.fecha },
+                  { nombre: 'area_id', etiqueta: 'Área', tipo: 'select', opciones: areas, valor: f.area_id || '' },
+                  { nombre: 'variedad_id', etiqueta: 'Variedad', tipo: 'select', opciones: variedades, valor: f.variedad_id || '' },
+                  { nombre: 'calidad', etiqueta: 'Calidad', tipo: 'select', opciones: [{ value: 'primera', label: 'Primera' }, { value: 'segunda', label: 'Segunda' }], valor: f.calidad || '' },
+                  { nombre: 'cantidad_cajas', etiqueta: 'Cantidad de cajas', tipo: 'number', valor: f.cantidad_cajas },
+                  { nombre: 'cantidad_manos', etiqueta: 'Cantidad de manos', tipo: 'number', valor: f.cantidad_manos },
+                  { nombre: 'observaciones', etiqueta: 'Observaciones', tipo: 'textarea', valor: f.observaciones || '' },
+                ],
+              });
+              if (!resultado) return;
+              await repos.editar('entregas_banano', f.id, {
+                fecha: resultado.fecha,
+                area_id: resultado.area_id || null,
+                variedad_id: resultado.variedad_id || null,
+                calidad: resultado.calidad || null,
+                cantidad_cajas: resultado.cantidad_cajas ? Number(resultado.cantidad_cajas) : 0,
+                cantidad_manos: Number(resultado.cantidad_manos) || 0,
+                observaciones: resultado.observaciones || null,
+              });
+              await renderizarBanano(contenedor, contexto);
+            }
+          : undefined,
         onEliminar: esAdmin
           ? async (f) => {
               await repos.eliminar('entregas_banano', f.id);

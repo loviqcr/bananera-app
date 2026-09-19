@@ -1,8 +1,18 @@
 import { repos } from '../db/repos.js';
 import { auth } from './auth.js';
-import { elemento, crearFormulario, tarjetaEstadistica, listaRegistros, formatearFecha, hoyISO } from '../ui.js';
+import { elemento, crearFormulario, mostrarDialogo, tarjetaEstadistica, listaRegistros, formatearFecha, hoyISO } from '../ui.js';
 
 const FRECUENCIA_DEFECTO = { deshija: 45, dermaticida: 120, fertilizacion: 22 };
+const NOMBRE_LABOR = { deshija: 'deshija', dermaticida: 'nematicida', fertilizacion: 'fertilización' };
+
+// La variedad se guarda como una etiqueta [Variedad: X] dentro del mismo
+// campo de observaciones (no tiene columna propia) — separa/une para poder
+// editarla como un campo aparte del resto del texto.
+function separarVariedad(observaciones) {
+  const match = /\[Variedad: ([^\]]+)\]/.exec(observaciones || '');
+  const limpio = (observaciones || '').replace(/\s*\[Variedad: [^\]]+\]/, '').trim();
+  return { variedad: match ? match[1] : '', limpio };
+}
 
 async function esAdministrador() {
   const sesion = await auth.sesionActual();
@@ -102,6 +112,32 @@ async function renderizarSiembra(contenedor, contexto) {
         subtitulo: f.cantidad ? `Cantidad: ${f.cantidad}` : '',
       }),
       {
+        onEditar: esAdmin
+          ? async (f) => {
+              const { variedad, limpio } = separarVariedad(f.observaciones);
+              const resultado = await mostrarDialogo({
+                titulo: 'Editar siembra',
+                textoConfirmar: 'Guardar',
+                campos: [
+                  { nombre: 'fecha', etiqueta: 'Fecha', tipo: 'date', valor: f.fecha },
+                  { nombre: 'area_id', etiqueta: 'Área', tipo: 'select', opciones: areas, valor: f.area_id || '' },
+                  { nombre: 'nombre', etiqueta: 'Nombre / referencia', tipo: 'text', valor: f.nombre || '' },
+                  { nombre: 'cantidad', etiqueta: 'Cantidad sembrada', tipo: 'number', valor: f.cantidad },
+                  { nombre: 'variedad', etiqueta: 'Variedad', tipo: 'select', opciones: [{ value: 'Plátano', label: 'Plátano' }, { value: 'Banano', label: 'Banano' }, { value: 'FHIA', label: 'FHIA' }], valor: variedad },
+                  { nombre: 'observaciones', etiqueta: 'Observaciones', tipo: 'textarea', valor: limpio },
+                ],
+              });
+              if (!resultado) return;
+              await repos.editar('labores_siembra', f.id, {
+                fecha: resultado.fecha,
+                area_id: resultado.area_id || null,
+                nombre: resultado.nombre || null,
+                cantidad: resultado.cantidad ? Number(resultado.cantidad) : null,
+                observaciones: (resultado.observaciones || '') + (resultado.variedad ? ` [Variedad: ${resultado.variedad}]` : ''),
+              });
+              await renderizarSiembra(contenedor, contexto);
+            }
+          : undefined,
         onEliminar: esAdmin
           ? async (f) => {
               await repos.eliminar('labores_siembra', f.id);
@@ -113,7 +149,7 @@ async function renderizarSiembra(contenedor, contexto) {
   );
 }
 
-function renderizarLaborConFrecuencia(tabla, tipoLabor, etiquetaAccion, camposExtra, mapearDatos, formatearResumen) {
+function renderizarLaborConFrecuencia(tabla, tipoLabor, etiquetaAccion, camposExtra, mapearDatos, formatearResumen, valoresParaEditar) {
   return async function render(contenedor, contexto) {
     contenedor.innerHTML = '';
     const [areas, filas, dias, esAdmin, todasLasAreas] = await Promise.all([
@@ -175,6 +211,32 @@ function renderizarLaborConFrecuencia(tabla, tipoLabor, etiquetaAccion, camposEx
         },
         {
           vacioTexto: 'Sin registros todavía.',
+          onEditar: esAdmin
+            ? async (f) => {
+                const iniciales = valoresParaEditar ? valoresParaEditar(f) : {};
+                const camposEdit = camposExtra.map((c) => ({ ...c, valor: iniciales[c.nombre] }));
+                const resultado = await mostrarDialogo({
+                  titulo: `Editar ${NOMBRE_LABOR[tipoLabor] || 'registro'}`,
+                  textoConfirmar: 'Guardar',
+                  campos: [
+                    { nombre: 'fecha', etiqueta: 'Fecha', tipo: 'date', valor: f.fecha },
+                    { nombre: 'area_id', etiqueta: 'Área', tipo: 'select', opciones: areas, valor: f.area_id || '' },
+                    ...camposEdit,
+                    { nombre: 'observaciones', etiqueta: 'Observaciones', tipo: 'textarea', valor: iniciales.observaciones ?? f.observaciones ?? '' },
+                  ],
+                });
+                if (!resultado) return;
+                const proximaFecha = sumarDias(resultado.fecha, dias);
+                await repos.editar(tabla, f.id, {
+                  fecha: resultado.fecha,
+                  area_id: resultado.area_id || null,
+                  proxima_fecha: proximaFecha,
+                  observaciones: resultado.observaciones || null,
+                  ...mapearDatos(resultado),
+                });
+                await render(contenedor, contexto);
+              }
+            : undefined,
           onEliminar: esAdmin
             ? async (f) => {
                 await repos.eliminar(tabla, f.id);
@@ -192,7 +254,12 @@ const renderizarDeshija = renderizarLaborConFrecuencia(
   'deshija',
   '🌱 Registrar deshija',
   [{ nombre: 'variedad', etiqueta: 'Variedad', tipo: 'select', opciones: [{ value: 'Plátano', label: 'Plátano' }, { value: 'Banano', label: 'Banano' }, { value: 'FHIA', label: 'FHIA' }] }],
-  (valores) => ({ observaciones: (valores.observaciones || '') + (valores.variedad ? ` [Variedad: ${valores.variedad}]` : '') })
+  (valores) => ({ observaciones: (valores.observaciones || '') + (valores.variedad ? ` [Variedad: ${valores.variedad}]` : '') }),
+  undefined,
+  (f) => {
+    const { variedad, limpio } = separarVariedad(f.observaciones);
+    return { variedad, observaciones: limpio };
+  }
 );
 
 const renderizarDermaticida = renderizarLaborConFrecuencia(
@@ -208,7 +275,8 @@ const renderizarDermaticida = renderizarLaborConFrecuencia(
   (f, nombreArea) => ({
     titulo: `${formatearFecha(f.fecha)} · ${f.producto || 'Nematicida'}`,
     subtitulo: `${nombreArea[f.area_id] ?? 'Área'} · Cantidad: ${f.cantidad ?? '—'}${f.unidad ? ' ' + f.unidad : ''}`,
-  })
+  }),
+  (f) => ({ producto: f.producto, cantidad: f.cantidad, unidad: f.unidad })
 );
 
 const renderizarFertilizacion = renderizarLaborConFrecuencia(
@@ -223,7 +291,8 @@ const renderizarFertilizacion = renderizarLaborConFrecuencia(
   (f, nombreArea) => ({
     titulo: `${formatearFecha(f.fecha)} · ${f.formula || 'Fertilización'}`,
     subtitulo: `${nombreArea[f.area_id] ?? 'Área'} · Cantidad: ${f.cantidad ?? '—'}`,
-  })
+  }),
+  (f) => ({ formula: f.formula, cantidad: f.cantidad })
 );
 
 // Se recuerda fuera de render() porque cada ~30s, al terminar de

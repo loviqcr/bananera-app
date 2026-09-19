@@ -231,7 +231,7 @@ export function tarjetaStat(nombreIcono, valor, etiqueta, tono = '', alTocar = n
  * siempre los mismos en todos los módulos.
  */
 export function listaRegistros(filas, formatearFila, opciones = {}) {
-  const { vacioTexto = 'Sin registros todavía.', onEliminar } = opciones;
+  const { vacioTexto = 'Sin registros todavía.', onEliminar, onEditar } = opciones;
   const contenedor = elemento('div', { class: 'lista-registros' });
   if (filas.length === 0) {
     contenedor.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: vacioTexto }));
@@ -246,6 +246,16 @@ export function listaRegistros(filas, formatearFila, opciones = {}) {
           subtitulo ? elemento('div', { class: 'fila-registro__subtitulo', texto: subtitulo }) : null,
         ]),
         valor != null ? elemento('div', { class: `fila-registro__valor ${tono ?? ''}`, texto: String(valor) }) : null,
+        onEditar
+          ? elemento('button', {
+              type: 'button',
+              class: 'boton-icono',
+              title: 'Editar',
+              style: 'background:none;color:var(--texto-suave);flex:none',
+              texto: '✏️',
+              onclick: () => onEditar(fila),
+            })
+          : null,
         onEliminar
           ? elemento('button', {
               type: 'button',
@@ -345,6 +355,10 @@ export function mostrarDialogo({ titulo, campos, textoConfirmar = 'Confirmar' })
       if (campo.tipo === 'select') {
         entrada = elemento('select', {});
         for (const opcion of campo.opciones ?? []) entrada.appendChild(elemento('option', { value: opcion.value }, opcion.label));
+        if (campo.valor != null) entrada.value = campo.valor;
+      } else if (campo.tipo === 'textarea') {
+        entrada = elemento('textarea', { rows: String(campo.filas ?? 3) });
+        if (campo.valor != null) entrada.value = campo.valor;
       } else {
         entrada = elemento('input', { type: campo.tipo ?? 'text' });
         if (campo.paso != null) entrada.setAttribute('step', campo.paso);
