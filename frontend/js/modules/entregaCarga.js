@@ -109,6 +109,14 @@ export async function estadisticasHoy(fincaId) {
   return { primera, segunda, total: primera + segunda, porDestinatario };
 }
 
+/** A quién fue la última entrega de carga de una finca, sin importar el día — usado en el dashboard "Detalle por finca". */
+export async function ultimoDestinatario(fincaId) {
+  const todas = (await repos.listarPorFinca('entregas_platano', fincaId)).filter((e) => e.grupo_entrega && e.responsable_nombre);
+  if (!todas.length) return null;
+  const masReciente = todas.reduce((a, b) => (a.updated_at > b.updated_at ? a : b));
+  return { nombre: masReciente.responsable_nombre, fecha: masReciente.fecha };
+}
+
 export const entregaCargaModulo = {
   etiqueta: 'Entrega de Carga',
   async render(contenedor, contexto) {

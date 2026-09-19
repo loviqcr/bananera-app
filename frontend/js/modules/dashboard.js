@@ -5,7 +5,7 @@ import { laboresConEstado } from './labores.js';
 import { planillaModulo } from './planilla.js';
 import { ventasModulo } from './ventas.js';
 import { estadisticasDia } from './embolseCorta.js';
-import { estadisticasHoy as estadisticasCargaHoy } from './entregaCarga.js';
+import { estadisticasHoy as estadisticasCargaHoy, ultimoDestinatario } from './entregaCarga.js';
 import { elemento, tarjetaStat, icono } from '../ui.js';
 
 function formatearMoneda(valor) {
@@ -38,7 +38,7 @@ function filaEntregadoA(porDestinatario, limite = 3) {
 
 /** Usado por el dashboard y por la pantalla de detalle de finca. */
 export async function estadisticasDeFinca(fincaId) {
-  const [insumosBajos, abiertas, labores, personal, totalPersonal, ventasMes, dia, cargaHoy] = await Promise.all([
+  const [insumosBajos, abiertas, labores, personal, totalPersonal, ventasMes, dia, cargaHoy, ultimaEntrega] = await Promise.all([
     inventarioModulo.insumosBajos(fincaId),
     incidenciasAbiertas(fincaId),
     laboresConEstado(fincaId),
@@ -47,6 +47,7 @@ export async function estadisticasDeFinca(fincaId) {
     ventasModulo.totalVendidoMes(fincaId),
     estadisticasDia(fincaId),
     estadisticasCargaHoy(fincaId),
+    ultimoDestinatario(fincaId),
   ]);
   // Solo se usa en la pantalla de detalle de finca (Fincas > tocar una).
   const atrasadas = labores.filter((l) => l.estado?.clase === 'insignia--rojo').length;
@@ -60,6 +61,7 @@ export async function estadisticasDeFinca(fincaId) {
     cortadoHoy: dia.cortadoHoy,
     proximosACorta: dia.proximosACorta,
     cargaHoy,
+    ultimaEntrega,
   };
 }
 
@@ -114,7 +116,7 @@ export async function renderizarDashboard(contenedor, contexto, manejadores = {}
             filaMetrica('crop', 'Racimos hoy', s.cortadoHoy.toLocaleString('es-CR')),
             filaMetrica('basket', 'Cajas hoy (1ª/2ª)', `${s.cargaHoy.primera}/${s.cargaHoy.segunda}`),
             filaMetrica('users', 'Personal', `${s.personal.presentes}/${s.personal.total}`),
-            filaMetrica('dollar', 'Ventas mes', formatearMoneda(s.ventasMes)),
+            filaMetrica('user', 'Último destinatario', s.ultimaEntrega?.nombre ?? '—'),
             filaMetrica('alert', 'Incidencias', String(s.abiertas.length), s.abiertas.length > 0),
           ]),
           s.cargaHoy.porDestinatario.length > 0 ? filaEntregadoA(s.cargaHoy.porDestinatario) : null,
