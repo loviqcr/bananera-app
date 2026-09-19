@@ -988,7 +988,7 @@ button {
 }
 
 .tarjeta-finca-resumen {
-  padding: 14px;
+  padding: 16px;
 }
 
 .tarjeta-finca-resumen__cabecera {
@@ -996,27 +996,73 @@ button {
   align-items: center;
   justify-content: space-between;
   font-weight: 800;
-  margin-bottom: 8px;
+  font-size: 1.05rem;
+  margin-bottom: 10px;
+}
+
+.tarjeta-finca-resumen__estado {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 3px 10px;
+  border-radius: 999px;
+  background: var(--verde-100);
+  color: var(--primario-fuerte);
+}
+:root[data-tema-efectivo="oscuro"] .tarjeta-finca-resumen__estado { background: rgba(62, 168, 102, 0.18); color: var(--verde-500); }
+/* Repetido con el mismo prefijo :root[...] que la regla oscura de arriba
+   a propósito: sin eso, esa regla (3 selectores) le gana en especificidad
+   a ".tarjeta-finca-resumen__estado--alerta" (solo 1) y el aviso se queda
+   verde en modo oscuro aunque la finca sí necesite atención. */
+.tarjeta-finca-resumen__estado--alerta,
+:root[data-tema-efectivo="oscuro"] .tarjeta-finca-resumen__estado--alerta {
+  background: rgba(240, 172, 27, 0.18);
+  color: var(--ambar-600);
 }
 
 .tarjeta-finca-resumen__metricas {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 6px;
-  font-size: 0.82rem;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
 }
 
 .tarjeta-finca-resumen__metrica {
   display: flex;
-  justify-content: space-between;
-  gap: 6px;
+  align-items: center;
+  gap: 10px;
+}
+
+.tarjeta-finca-resumen__metrica-icono {
+  flex: none;
+  width: 30px;
+  height: 30px;
+  border-radius: 9px;
+  background: var(--verde-100);
+  color: var(--primario-fuerte);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+:root[data-tema-efectivo="oscuro"] .tarjeta-finca-resumen__metrica-icono { background: rgba(62, 168, 102, 0.18); color: var(--verde-500); }
+
+.tarjeta-finca-resumen__metrica-etiqueta {
+  flex: 1;
+  font-size: 0.84rem;
   color: var(--texto-suave);
 }
 
-.tarjeta-finca-resumen__metrica strong {
+.tarjeta-finca-resumen__metrica-valor {
+  font-weight: 800;
+  font-size: 1.05rem;
   color: var(--texto);
   font-variant-numeric: tabular-nums;
 }
+
+.tarjeta-finca-resumen__metrica--alerta .tarjeta-finca-resumen__metrica-icono,
+:root[data-tema-efectivo="oscuro"] .tarjeta-finca-resumen__metrica--alerta .tarjeta-finca-resumen__metrica-icono {
+  background: rgba(201, 80, 46, 0.16);
+  color: var(--rojo-500);
+}
+.tarjeta-finca-resumen__metrica--alerta .tarjeta-finca-resumen__metrica-valor { color: var(--rojo-500); }
 
 /* ---------- Vista previa de foto (incidencias) ---------- */
 

@@ -6,10 +6,19 @@ import { planillaModulo } from './planilla.js';
 import { ventasModulo } from './ventas.js';
 import { estadisticasDia } from './embolseCorta.js';
 import { estadisticasHoy as estadisticasCargaHoy } from './entregaCarga.js';
-import { elemento, tarjetaStat } from '../ui.js';
+import { elemento, tarjetaStat, icono } from '../ui.js';
 
 function formatearMoneda(valor) {
   return `₡${Number(valor || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
+}
+
+/** Fila de "Detalle por finca" con ícono, para que cada métrica se distinga de un vistazo. */
+function filaMetrica(nombreIcono, etiqueta, valor, alerta = false) {
+  return elemento('div', { class: `tarjeta-finca-resumen__metrica${alerta ? ' tarjeta-finca-resumen__metrica--alerta' : ''}` }, [
+    elemento('div', { class: 'tarjeta-finca-resumen__metrica-icono', html: icono(nombreIcono, 16) }),
+    elemento('span', { class: 'tarjeta-finca-resumen__metrica-etiqueta', texto: etiqueta }),
+    elemento('strong', { class: 'tarjeta-finca-resumen__metrica-valor', texto: String(valor) }),
+  ]);
 }
 
 /** Cuántas cajas (1ª/2ª) le tocaron a cada destinatario hoy, con un límite para no hacer crecer la tarjeta sin control. */
@@ -91,18 +100,22 @@ export async function renderizarDashboard(contenedor, contexto, manejadores = {}
           elemento('div', { class: 'tarjeta-finca-mini__valor', texto: s.cortadoHoy.toLocaleString('es-CR') }),
         ])
       );
+      const necesitaAtencion = s.insumosBajos.length > 0 || s.abiertas.length > 0;
       comparativa.appendChild(
         elemento('div', { class: 'tarjeta tarjeta-finca-resumen' }, [
           elemento('div', { class: 'tarjeta-finca-resumen__cabecera' }, [
             elemento('span', { texto: finca.nombre }),
-            elemento('span', { texto: s.insumosBajos.length > 0 || s.abiertas.length > 0 ? '⚠️' : '✅' }),
+            elemento('span', {
+              class: `tarjeta-finca-resumen__estado${necesitaAtencion ? ' tarjeta-finca-resumen__estado--alerta' : ''}`,
+              texto: necesitaAtencion ? 'Atención' : 'Al día',
+            }),
           ]),
           elemento('div', { class: 'tarjeta-finca-resumen__metricas' }, [
-            elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [elemento('span', {}, 'Racimos hoy'), elemento('strong', {}, s.cortadoHoy.toLocaleString('es-CR'))]),
-            elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [elemento('span', {}, 'Cajas hoy (1ª/2ª)'), elemento('strong', {}, `${s.cargaHoy.primera}/${s.cargaHoy.segunda}`)]),
-            elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [elemento('span', {}, 'Personal'), elemento('strong', {}, `${s.personal.presentes}/${s.personal.total}`)]),
-            elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [elemento('span', {}, 'Ventas mes'), elemento('strong', {}, formatearMoneda(s.ventasMes))]),
-            elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [elemento('span', {}, 'Incidencias'), elemento('strong', {}, String(s.abiertas.length))]),
+            filaMetrica('crop', 'Racimos hoy', s.cortadoHoy.toLocaleString('es-CR')),
+            filaMetrica('basket', 'Cajas hoy (1ª/2ª)', `${s.cargaHoy.primera}/${s.cargaHoy.segunda}`),
+            filaMetrica('users', 'Personal', `${s.personal.presentes}/${s.personal.total}`),
+            filaMetrica('dollar', 'Ventas mes', formatearMoneda(s.ventasMes)),
+            filaMetrica('alert', 'Incidencias', String(s.abiertas.length), s.abiertas.length > 0),
           ]),
           s.cargaHoy.porDestinatario.length > 0 ? filaEntregadoA(s.cargaHoy.porDestinatario) : null,
         ])
