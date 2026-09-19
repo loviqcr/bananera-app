@@ -99,6 +99,34 @@ async function agregarVariedad() {
   return repos.crear('variedades', { nombre: resultado.nombre.trim(), tipo: resultado.tipo });
 }
 
+/** Chips con 🗑️ para que un administrador borre variedades que no quiere en la lista. */
+async function filaAdminVariedades(esAdmin, rerender) {
+  if (!esAdmin) return null;
+  const todas = (await repos.listarTodos('variedades')).sort((a, b) => a.nombre.localeCompare(b.nombre));
+  if (!todas.length) return null;
+  const fila = elemento('div', { class: 'fila', style: 'flex-wrap:wrap;gap:6px;margin:4px 0 var(--espacio)' });
+  for (const v of todas) {
+    fila.appendChild(
+      elemento('span', { class: 'chip', style: 'display:inline-flex;align-items:center;gap:4px' }, [
+        `${v.nombre} (${v.tipo === 'banano' ? 'Banano' : 'Plátano'})`,
+        elemento('button', {
+          type: 'button',
+          class: 'boton-icono',
+          title: 'Eliminar variedad',
+          style: 'background:none;color:var(--rojo-500);flex:none;min-width:0;padding:0 2px',
+          texto: '🗑️',
+          onclick: async () => {
+            if (!confirm(`¿Eliminar la variedad "${v.nombre}"? No se puede deshacer.`)) return;
+            await repos.eliminar('variedades', v.id);
+            await rerender();
+          },
+        }),
+      ])
+    );
+  }
+  return fila;
+}
+
 async function renderizarEmbolse(contenedor, contexto) {
   contenedor.innerHTML = '';
   const [areas, colores, variedades, filas, esAdmin] = await Promise.all([
@@ -144,6 +172,8 @@ async function renderizarEmbolse(contenedor, contexto) {
       if (nueva) await renderizarEmbolse(contenedor, contexto);
     });
     contenedor.appendChild(botonVariedad);
+    const filaVariedadesEmbolse = await filaAdminVariedades(esAdmin, () => renderizarEmbolse(contenedor, contexto));
+    if (filaVariedadesEmbolse) contenedor.appendChild(filaVariedadesEmbolse);
     const botonColor = elemento('button', { type: 'button', class: 'boton boton--fantasma', texto: '+ Nuevo color de cinta' });
     botonColor.addEventListener('click', async () => {
       const nuevo = await agregarColor();
@@ -227,6 +257,8 @@ async function renderizarCorta(contenedor, contexto) {
       if (nueva) await renderizarCorta(contenedor, contexto);
     });
     contenedor.appendChild(botonVariedad);
+    const filaVariedadesCorta = await filaAdminVariedades(esAdmin, () => renderizarCorta(contenedor, contexto));
+    if (filaVariedadesCorta) contenedor.appendChild(filaVariedadesCorta);
   }
 
   contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: 'Cortas registradas' }));
