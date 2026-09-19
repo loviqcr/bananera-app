@@ -80,6 +80,7 @@ async function entregasCargaHoy(fincaId, areaId) {
       responsable: fila.responsable_nombre || 'Sin destinatario',
       primera: 0,
       segunda: 0,
+      observaciones: fila.observaciones || '',
       actualizadoEn: fila.updated_at,
       ids: [],
     };
@@ -223,6 +224,25 @@ export const entregaCargaModulo = {
       ])
     );
 
+    // ---- Variedad + observaciones (ej. cuántos dedos/manos trae cada caja) ----
+    const campoVariedad = elemento('select', { id: 'entrega-carga-variedad' }, [
+      elemento('option', { value: '', texto: '—' }),
+      elemento('option', { value: 'Plátano', texto: 'Plátano' }),
+      elemento('option', { value: 'Banano', texto: 'Banano' }),
+      elemento('option', { value: 'FHIA', texto: 'FHIA' }),
+    ]);
+    const campoObservaciones = elemento('textarea', {
+      id: 'entrega-carga-observaciones',
+      rows: '2',
+      placeholder: 'Ej: cajas de 18 dedos, manos de 6ta...',
+    });
+    contenedor.appendChild(
+      elemento('div', { class: 'tarjeta', style: 'display:flex;flex-direction:column;gap:14px;margin-bottom:var(--espacio)' }, [
+        elemento('div', { class: 'campo', style: 'margin-bottom:0' }, [elemento('label', { for: 'entrega-carga-variedad', texto: 'Variedad' }), campoVariedad]),
+        elemento('div', { class: 'campo', style: 'margin-bottom:0' }, [elemento('label', { for: 'entrega-carga-observaciones', texto: 'Observaciones' }), campoObservaciones]),
+      ])
+    );
+
     const mensaje = elemento('div', { class: 'mensaje-error mensaje-error--error' });
     contenedor.appendChild(mensaje);
 
@@ -247,6 +267,7 @@ export const entregaCargaModulo = {
       try {
         const sesion = await auth.sesionActual();
         const grupoEntrega = generarUUID();
+        const observaciones = (campoObservaciones.value || '') + (campoVariedad.value ? ` [Variedad: ${campoVariedad.value}]` : '');
         const base = {
           finca_id: contexto.fincaId,
           area_id: contexto.areaId,
@@ -255,11 +276,14 @@ export const entregaCargaModulo = {
           responsable_id: sesion?.usuario?.id ?? null,
           responsable_nombre: responsableSeleccionado,
           grupo_entrega: grupoEntrega,
+          observaciones,
         };
         if (cajasPrimera > 0) await repos.crear('entregas_platano', { ...base, cantidad_cajas: cajasPrimera, calidad: 'primera' });
         if (cajasSegunda > 0) await repos.crear('entregas_platano', { ...base, cantidad_cajas: cajasSegunda, calidad: 'segunda' });
         stepperPrimera.reiniciar();
         stepperSegunda.reiniciar();
+        campoVariedad.value = '';
+        campoObservaciones.value = '';
         limpiarSucio(contenedor);
         await pintarHoy();
       } catch (error) {
@@ -294,7 +318,10 @@ export const entregaCargaModulo = {
       for (const g of grupos) {
         listaHoy.appendChild(
           elemento('div', { class: 'fila-registro' }, [
-            elemento('div', { class: 'fila-registro__titulo', texto: g.responsable }),
+            elemento('div', {}, [
+              elemento('div', { class: 'fila-registro__titulo', texto: g.responsable }),
+              g.observaciones ? elemento('div', { class: 'fila-registro__subtitulo', texto: g.observaciones.trim() }) : null,
+            ]),
             elemento('div', { class: 'fila-registro__valor tono-verde', texto: `${g.primera} primera · ${g.segunda} segunda` }),
             esAdmin
               ? elemento('button', {
