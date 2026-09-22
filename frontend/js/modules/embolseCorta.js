@@ -35,13 +35,14 @@ function inicioSemanaDe(fechaISO) {
 }
 
 /**
- * Desglose de embolse por semana y variedad (Plátano/Banano/FHIA), sumando
- * TODAS las fincas — para que el administrador lo vea de un vistazo desde
- * Inicio sin tener que entrar finca por finca. `semanas` limita cuántas
- * semanas recientes devolver (más recientes primero).
+ * Desglose de embolse por semana y variedad (Plátano/Banano/FHIA) — para
+ * que el administrador lo vea de un vistazo desde Inicio tocando la
+ * tarjeta "Embolse hoy". `fincaId` es el mismo contexto de Inicio: 'todas'
+ * suma todas las fincas, una finca específica solo la de ella. `semanas`
+ * limita cuántas semanas recientes devolver (más recientes primero).
  */
-export async function resumenEmbolsePorSemana(semanas = 8) {
-  const todas = await repos.listarPorFinca('embolse', 'todas');
+export async function resumenEmbolsePorSemana(fincaId, semanas = 8) {
+  const todas = await repos.listarPorFinca('embolse', fincaId);
   const porSemana = new Map();
   for (const f of todas) {
     const semana = inicioSemanaDe(f.fecha);

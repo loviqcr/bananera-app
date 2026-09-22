@@ -37,13 +37,22 @@ function filaEntregadoA(porDestinatario, limite = 3) {
   return elemento('div', { style: 'margin-top:8px;padding-top:8px;border-top:1px solid var(--borde);display:flex;flex-direction:column;gap:4px' }, filas);
 }
 
+/** Nombre a mostrar en el título del panel: "todas las fincas" o el nombre de la finca actual. */
+async function etiquetaFincaParaPanel(fincaId) {
+  if (!fincaId || fincaId === 'todas') return 'todas las fincas';
+  const fincas = await repos.listarTodos('fincas');
+  return fincas.find((f) => f.id === fincaId)?.nombre ?? 'esta finca';
+}
+
 /**
- * Desglose de embolse por semana y variedad, de TODAS las fincas juntas —
- * para que el administrador lo vea tocando la tarjeta "Embolse hoy" en
- * Inicio, sin tener que entrar a cada finca por separado.
+ * Desglose de embolse por semana y variedad — para que el administrador lo
+ * vea tocando la tarjeta "Embolse hoy" en Inicio, sin tener que entrar a
+ * cada finca por separado. Respeta el contexto actual: si se está viendo
+ * "Todas las fincas" suma todas, si se está viendo una finca específica
+ * muestra solo la de ella.
  */
-async function abrirResumenEmbolse() {
-  const filas = await resumenEmbolsePorSemana();
+async function abrirResumenEmbolse(fincaId) {
+  const [filas, etiquetaFinca] = await Promise.all([resumenEmbolsePorSemana(fincaId), etiquetaFincaParaPanel(fincaId)]);
   const lista = listaRegistros(filas, (f) => {
     const desde = new Date(f.semana + 'T00:00:00');
     const hasta = new Date(desde);
@@ -53,16 +62,16 @@ async function abrirResumenEmbolse() {
       subtitulo: `Plátano: ${f['Plátano'].toLocaleString('es-CR')} · Banano: ${f['Banano'].toLocaleString('es-CR')}${f.FHIA ? ' · FHIA: ' + f.FHIA.toLocaleString('es-CR') : ''}`,
     };
   }, { vacioTexto: 'Sin embolse registrado todavía.' });
-  mostrarPanel({ titulo: '🎗️ Embolse por semana (todas las fincas)', contenido: lista });
+  mostrarPanel({ titulo: `🎗️ Embolse por semana (${etiquetaFinca})`, contenido: lista });
 }
 
 /**
  * Desglose de Entrega de Carga por semana (cajas de primera/segunda, y a
- * quién se le entregó cada una), de TODAS las fincas juntas — igual que el
- * de embolse, tocando la tarjeta "Entrega de carga" en Inicio.
+ * quién se le entregó cada una) — igual que el de embolse, tocando la
+ * tarjeta "Entrega de carga" en Inicio, respetando el contexto actual.
  */
-async function abrirResumenEntregaCarga() {
-  const semanas = await resumenEntregaPorSemana();
+async function abrirResumenEntregaCarga(fincaId) {
+  const [semanas, etiquetaFinca] = await Promise.all([resumenEntregaPorSemana(fincaId), etiquetaFincaParaPanel(fincaId)]);
   const contenido = elemento('div', { class: 'lista-registros' });
   if (semanas.length === 0) {
     contenido.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: 'Sin entregas de carga registradas todavía.' }));
@@ -92,7 +101,7 @@ async function abrirResumenEntregaCarga() {
       ])
     );
   }
-  mostrarPanel({ titulo: '🧺 Entrega de carga por semana (todas las fincas)', contenido });
+  mostrarPanel({ titulo: `🧺 Entrega de carga por semana (${etiquetaFinca})`, contenido });
 }
 
 /** Usado por el dashboard y por la pantalla de detalle de finca. */
@@ -141,9 +150,9 @@ export async function renderizarDashboard(contenedor, contexto, manejadores = {}
     elemento('div', { class: 'seccion-dashboard' }, [
       elemento('h2', { class: 'seccion-dashboard__titulo', texto: 'Resumen general' }),
       elemento('div', { class: 'rejilla-estadisticas' }, [
-        tarjetaStat('package', stats.embolsadoHoy.toLocaleString('es-CR'), 'Embolse hoy', '', esAdmin ? abrirResumenEmbolse : null),
+        tarjetaStat('package', stats.embolsadoHoy.toLocaleString('es-CR'), 'Embolse hoy', '', esAdmin ? () => abrirResumenEmbolse(contexto.fincaId) : null),
         tarjetaStat('crop', stats.cortadoHoy.toLocaleString('es-CR'), 'Corta hoy'),
-        tarjetaStat('basket', stats.cargaHoy.total.toLocaleString('es-CR'), 'Entrega de carga', '', esAdmin ? abrirResumenEntregaCarga : null),
+        tarjetaStat('basket', stats.cargaHoy.total.toLocaleString('es-CR'), 'Entrega de carga', '', esAdmin ? () => abrirResumenEntregaCarga(contexto.fincaId) : null),
         tarjetaStat('alert', stats.abiertas.length, 'Incidencias pendientes', stats.abiertas.length > 0 ? 'tarjeta-stat--alerta' : '', alTocarIncidencias),
       ]),
     ])

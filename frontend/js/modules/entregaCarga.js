@@ -144,12 +144,13 @@ function inicioSemanaDe(fechaISO) {
 
 /**
  * Desglose de Entrega de Carga por semana (cajas de primera/segunda, y a
- * quién se le entregó cada una), sumando TODAS las fincas — para que el
- * administrador lo vea de un vistazo desde Inicio sin tener que entrar
- * finca por finca.
+ * quién se le entregó cada una) — para que el administrador lo vea de un
+ * vistazo desde Inicio tocando la tarjeta "Entrega de carga". `fincaId` es
+ * el mismo contexto de Inicio: 'todas' suma todas las fincas, una finca
+ * específica solo la de ella.
  */
-export async function resumenEntregaPorSemana(semanas = 8) {
-  const todas = (await repos.listarPorFinca('entregas_platano', 'todas')).filter((e) => e.grupo_entrega);
+export async function resumenEntregaPorSemana(fincaId, semanas = 8) {
+  const todas = (await repos.listarPorFinca('entregas_platano', fincaId)).filter((e) => e.grupo_entrega);
   const porSemana = new Map();
   for (const e of todas) {
     const semana = inicioSemanaDe(e.fecha);
