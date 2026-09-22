@@ -5,7 +5,7 @@ import { laboresConEstado } from './labores.js';
 import { planillaModulo } from './planilla.js';
 import { ventasModulo } from './ventas.js';
 import { estadisticasDia, resumenEmbolsePorSemana } from './embolseCorta.js';
-import { estadisticasHoy as estadisticasCargaHoy, ultimoDestinatario } from './entregaCarga.js';
+import { estadisticasHoy as estadisticasCargaHoy, ultimoDestinatario, resumenEntregaPorSemana } from './entregaCarga.js';
 import { auth } from './auth.js';
 import { elemento, tarjetaStat, icono, formatearFecha, listaRegistros, mostrarPanel } from '../ui.js';
 
@@ -56,6 +56,26 @@ async function abrirResumenEmbolse() {
   mostrarPanel({ titulo: '🎗️ Embolse por semana (todas las fincas)', contenido: lista });
 }
 
+/**
+ * Desglose de Entrega de Carga por semana (cajas de primera/segunda), de
+ * TODAS las fincas juntas — igual que el de embolse, tocando la tarjeta
+ * "Entrega de carga" en Inicio.
+ */
+async function abrirResumenEntregaCarga() {
+  const filas = await resumenEntregaPorSemana();
+  const lista = listaRegistros(filas, (f) => {
+    const desde = new Date(f.semana + 'T00:00:00');
+    const hasta = new Date(desde);
+    hasta.setDate(hasta.getDate() + 6);
+    return {
+      titulo: `Semana del ${formatearFecha(f.semana)} al ${formatearFecha(hasta.toISOString().slice(0, 10))}`,
+      subtitulo: `Primera: ${f.primera.toLocaleString('es-CR')} · Segunda: ${f.segunda.toLocaleString('es-CR')}`,
+      valor: (f.primera + f.segunda).toLocaleString('es-CR'),
+    };
+  }, { vacioTexto: 'Sin entregas de carga registradas todavía.' });
+  mostrarPanel({ titulo: '🧺 Entrega de carga por semana (todas las fincas)', contenido: lista });
+}
+
 /** Usado por el dashboard y por la pantalla de detalle de finca. */
 export async function estadisticasDeFinca(fincaId) {
   const [insumosBajos, abiertas, labores, personal, totalPersonal, ventasMes, dia, cargaHoy, ultimaEntrega] = await Promise.all([
@@ -91,19 +111,20 @@ export async function renderizarDashboard(contenedor, contexto, manejadores = {}
   const esAdmin = sesion?.usuario?.rol === 'administrador';
   const { alTocarIncidencias } = manejadores;
 
-  // ---- Resumen general: a propósito solo estos 3, se pidió limpiar el
-  // dashboard de las demás tarjetas (Producción/Personal/Cajas/Ventas/
-  // Inventario/Otros indicadores) — "Detalle por finca" más abajo sigue
-  // teniendo el resto para quien lo necesite viendo "Todas las fincas". ----
-  // "Embolse hoy" es tocable solo para administrador: abre el desglose por
-  // semana y variedad de TODAS las fincas, para no tener que entrar a cada
-  // una a revisar el embolse.
+  // ---- Resumen general: a propósito solo estos 4, se pidió limpiar el
+  // dashboard de las demás tarjetas (Producción/Personal/Ventas/Inventario/
+  // Otros indicadores) — "Detalle por finca" más abajo sigue teniendo el
+  // resto para quien lo necesite viendo "Todas las fincas". ----
+  // "Embolse hoy" y "Entrega de carga" son tocables solo para
+  // administrador: abren el desglose por semana de TODAS las fincas, para
+  // no tener que entrar a cada una a revisarlo.
   contenedor.appendChild(
     elemento('div', { class: 'seccion-dashboard' }, [
       elemento('h2', { class: 'seccion-dashboard__titulo', texto: 'Resumen general' }),
       elemento('div', { class: 'rejilla-estadisticas' }, [
         tarjetaStat('package', stats.embolsadoHoy.toLocaleString('es-CR'), 'Embolse hoy', '', esAdmin ? abrirResumenEmbolse : null),
         tarjetaStat('crop', stats.cortadoHoy.toLocaleString('es-CR'), 'Corta hoy'),
+        tarjetaStat('basket', stats.cargaHoy.total.toLocaleString('es-CR'), 'Entrega de carga', '', esAdmin ? abrirResumenEntregaCarga : null),
         tarjetaStat('alert', stats.abiertas.length, 'Incidencias pendientes', stats.abiertas.length > 0 ? 'tarjeta-stat--alerta' : '', alTocarIncidencias),
       ]),
     ])

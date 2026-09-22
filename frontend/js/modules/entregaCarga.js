@@ -117,6 +117,32 @@ export async function ultimoDestinatario(fincaId) {
   return { nombre: masReciente.responsable_nombre, fecha: masReciente.fecha };
 }
 
+function inicioSemanaDe(fechaISO) {
+  const fecha = new Date(fechaISO + 'T00:00:00');
+  const dia = fecha.getDay() === 0 ? 7 : fecha.getDay(); // lunes = 1 ... domingo = 7
+  fecha.setDate(fecha.getDate() - (dia - 1));
+  return fecha.toISOString().slice(0, 10);
+}
+
+/**
+ * Desglose de Entrega de Carga por semana (cajas de primera/segunda),
+ * sumando TODAS las fincas — para que el administrador lo vea de un
+ * vistazo desde Inicio sin tener que entrar finca por finca.
+ */
+export async function resumenEntregaPorSemana(semanas = 8) {
+  const todas = (await repos.listarPorFinca('entregas_platano', 'todas')).filter((e) => e.grupo_entrega);
+  const porSemana = new Map();
+  for (const e of todas) {
+    const semana = inicioSemanaDe(e.fecha);
+    const actual = porSemana.get(semana) ?? { semana, primera: 0, segunda: 0 };
+    if (e.calidad === 'primera' || e.calidad === 'segunda') actual[e.calidad] += Number(e.cantidad_cajas) || 0;
+    porSemana.set(semana, actual);
+  }
+  return Array.from(porSemana.values())
+    .sort((a, b) => (a.semana < b.semana ? 1 : -1))
+    .slice(0, semanas);
+}
+
 export const entregaCargaModulo = {
   etiqueta: 'Entrega de Carga',
   async render(contenedor, contexto) {
