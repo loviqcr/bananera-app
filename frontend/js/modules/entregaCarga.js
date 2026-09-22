@@ -19,6 +19,24 @@ async function agregarResponsable() {
   return repos.crear('responsables_carga', { nombre: nombre.trim(), activo: true });
 }
 
+/**
+ * Corrige el nombre de un destinatario (ej. un error de digitación) y lo
+ * arrastra también a las entregas YA guardadas con el nombre anterior —
+ * responsable_nombre es texto suelto, no una referencia, así que sin esto
+ * el historial y los resúmenes por semana se quedarían con el nombre viejo.
+ */
+async function editarResponsable(r) {
+  const nuevoNombre = prompt('Corregir nombre de destinatario:', r.nombre);
+  if (!nuevoNombre || !nuevoNombre.trim() || nuevoNombre.trim() === r.nombre) return null;
+  const nombreLimpio = nuevoNombre.trim();
+  await repos.editar('responsables_carga', r.id, { nombre: nombreLimpio });
+  const entregasPrevias = (await repos.listarTodos('entregas_platano')).filter((e) => e.responsable_nombre === r.nombre);
+  for (const e of entregasPrevias) {
+    await repos.editar('entregas_platano', e.id, { responsable_nombre: nombreLimpio });
+  }
+  return { ...r, nombre: nombreLimpio };
+}
+
 function fechaCorta(fechaISO) {
   const fecha = new Date(fechaISO + 'T00:00:00');
   const texto = fecha.toLocaleDateString('es-CR', { weekday: 'short', day: 'numeric', month: 'short' });
@@ -218,6 +236,23 @@ export const entregaCargaModulo = {
         });
         const grupo = elemento('div', { class: 'fila', style: 'gap:2px' }, [
           boton,
+          esAdmin
+            ? elemento('button', {
+                type: 'button',
+                class: 'boton-icono',
+                title: 'Corregir nombre',
+                style: 'background:none;color:var(--texto-suave);flex:none;min-width:0;padding:0 4px',
+                texto: '✏️',
+                onclick: async () => {
+                  const nombreAnterior = r.nombre;
+                  const editado = await editarResponsable(r);
+                  if (!editado) return;
+                  r.nombre = editado.nombre;
+                  if (responsableSeleccionado === nombreAnterior) responsableSeleccionado = editado.nombre;
+                  pintarResponsables();
+                },
+              })
+            : null,
           esAdmin
             ? elemento('button', {
                 type: 'button',
