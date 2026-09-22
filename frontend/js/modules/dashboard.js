@@ -57,23 +57,42 @@ async function abrirResumenEmbolse() {
 }
 
 /**
- * Desglose de Entrega de Carga por semana (cajas de primera/segunda), de
- * TODAS las fincas juntas — igual que el de embolse, tocando la tarjeta
- * "Entrega de carga" en Inicio.
+ * Desglose de Entrega de Carga por semana (cajas de primera/segunda, y a
+ * quién se le entregó cada una), de TODAS las fincas juntas — igual que el
+ * de embolse, tocando la tarjeta "Entrega de carga" en Inicio.
  */
 async function abrirResumenEntregaCarga() {
-  const filas = await resumenEntregaPorSemana();
-  const lista = listaRegistros(filas, (f) => {
+  const semanas = await resumenEntregaPorSemana();
+  const contenido = elemento('div', { class: 'lista-registros' });
+  if (semanas.length === 0) {
+    contenido.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: 'Sin entregas de carga registradas todavía.' }));
+  }
+  for (const f of semanas) {
     const desde = new Date(f.semana + 'T00:00:00');
     const hasta = new Date(desde);
     hasta.setDate(hasta.getDate() + 6);
-    return {
-      titulo: `Semana del ${formatearFecha(f.semana)} al ${formatearFecha(hasta.toISOString().slice(0, 10))}`,
-      subtitulo: `Primera: ${f.primera.toLocaleString('es-CR')} · Segunda: ${f.segunda.toLocaleString('es-CR')}`,
-      valor: (f.primera + f.segunda).toLocaleString('es-CR'),
-    };
-  }, { vacioTexto: 'Sin entregas de carga registradas todavía.' });
-  mostrarPanel({ titulo: '🧺 Entrega de carga por semana (todas las fincas)', contenido: lista });
+    contenido.appendChild(
+      elemento('div', { class: 'fila-registro', style: 'align-items:flex-start' }, [
+        elemento('div', { style: 'flex:1' }, [
+          elemento('div', { class: 'fila-registro__titulo', texto: `Semana del ${formatearFecha(f.semana)} al ${formatearFecha(hasta.toISOString().slice(0, 10))}` }),
+          elemento('div', { class: 'fila-registro__subtitulo', texto: `Primera: ${f.primera.toLocaleString('es-CR')} · Segunda: ${f.segunda.toLocaleString('es-CR')}` }),
+          f.porDestinatario.length > 0
+            ? elemento(
+                'div',
+                { style: 'margin-top:6px;display:flex;flex-direction:column;gap:2px' },
+                f.porDestinatario.map((d) =>
+                  elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [
+                    elemento('span', {}, `Entregado a ${d.nombre}`),
+                    elemento('strong', {}, `${d.primera}/${d.segunda}`),
+                  ])
+                )
+              )
+            : null,
+        ]),
+      ])
+    );
+  }
+  mostrarPanel({ titulo: '🧺 Entrega de carga por semana (todas las fincas)', contenido });
 }
 
 /** Usado por el dashboard y por la pantalla de detalle de finca. */

@@ -125,20 +125,33 @@ function inicioSemanaDe(fechaISO) {
 }
 
 /**
- * Desglose de Entrega de Carga por semana (cajas de primera/segunda),
- * sumando TODAS las fincas — para que el administrador lo vea de un
- * vistazo desde Inicio sin tener que entrar finca por finca.
+ * Desglose de Entrega de Carga por semana (cajas de primera/segunda, y a
+ * quién se le entregó cada una), sumando TODAS las fincas — para que el
+ * administrador lo vea de un vistazo desde Inicio sin tener que entrar
+ * finca por finca.
  */
 export async function resumenEntregaPorSemana(semanas = 8) {
   const todas = (await repos.listarPorFinca('entregas_platano', 'todas')).filter((e) => e.grupo_entrega);
   const porSemana = new Map();
   for (const e of todas) {
     const semana = inicioSemanaDe(e.fecha);
-    const actual = porSemana.get(semana) ?? { semana, primera: 0, segunda: 0 };
+    const actual = porSemana.get(semana) ?? { semana, primera: 0, segunda: 0, porDestinatarioMapa: new Map() };
     if (e.calidad === 'primera' || e.calidad === 'segunda') actual[e.calidad] += Number(e.cantidad_cajas) || 0;
+    if (e.responsable_nombre) {
+      const nombre = e.responsable_nombre;
+      const destinatario = actual.porDestinatarioMapa.get(nombre) ?? { nombre, primera: 0, segunda: 0 };
+      if (e.calidad === 'primera' || e.calidad === 'segunda') destinatario[e.calidad] += Number(e.cantidad_cajas) || 0;
+      actual.porDestinatarioMapa.set(nombre, destinatario);
+    }
     porSemana.set(semana, actual);
   }
   return Array.from(porSemana.values())
+    .map((f) => ({
+      semana: f.semana,
+      primera: f.primera,
+      segunda: f.segunda,
+      porDestinatario: Array.from(f.porDestinatarioMapa.values()).sort((a, b) => b.primera + b.segunda - (a.primera + a.segunda)),
+    }))
     .sort((a, b) => (a.semana < b.semana ? 1 : -1))
     .slice(0, semanas);
 }
