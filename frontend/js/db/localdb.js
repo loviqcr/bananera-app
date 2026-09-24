@@ -12,7 +12,7 @@
  */
 
 const NOMBRE_DB = 'bananera-app';
-const VERSION_DB = 5;
+const VERSION_DB = 6;
 
 // Cada almacén sincronizable, con su índice por finca_id cuando aplica (para
 // poder filtrar por finca activa sin conexión). Un almacén nuevo aquí queda
@@ -77,6 +77,10 @@ const ALMACENES = {
   // usuarios del sistema). Las entregas en sí se guardan en
   // entregas_platano (ver migración 007_entrega_carga.sql).
   responsables_carga: { keyPath: 'id', indices: [] },
+
+  // Pedidos a bodega: texto libre de lo que necesita una finca (migración
+  // 009_pedidos_bodega.sql).
+  pedidos_bodega: { keyPath: 'id', indices: [{ nombre: 'finca_id', ruta: 'finca_id' }] },
 };
 
 let promesaDB = null;

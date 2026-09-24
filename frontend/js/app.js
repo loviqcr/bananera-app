@@ -19,6 +19,7 @@ import { reportesModulo } from './modules/reportes.js';
 import { alertasModulo } from './modules/alertas.js';
 import { usuariosModulo } from './modules/usuarios.js';
 import { entregaCargaModulo } from './modules/entregaCarga.js';
+import { pedidosBodegaModulo } from './modules/pedidosBodega.js';
 
 const ICONOS_FINCA = ['🌄', '🌴', '🌾', '⛰️'];
 
@@ -39,6 +40,7 @@ const MODULOS = {
   notificaciones: alertasModulo,
   usuarios: usuariosModulo,
   'entrega-carga': entregaCargaModulo,
+  'pedidos-bodega': pedidosBodegaModulo,
 };
 
 const vistas = {
@@ -600,7 +602,7 @@ if ('serviceWorker' in navigator) {
     mostrarToast({
       titulo: payload.titulo || 'Nueva notificación',
       mensaje: payload.mensaje,
-      alHacerClick: () => abrirModulo('incidencias'),
+      alHacerClick: () => abrirModulo(MODULOS[payload.modulo] ? payload.modulo : 'incidencias'),
     });
   });
 }
