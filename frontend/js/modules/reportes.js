@@ -328,6 +328,50 @@ async function renderizarColaSync(contenedor) {
   }
 }
 
+/**
+ * Baja de una sola vez TODOS los datos desde el servidor (no solo lo que
+ * hay en este celular) a un archivo .json — una copia propia por si el
+ * servidor o su base de datos se pierde. No incluye contraseñas.
+ */
+async function renderizarRespaldo(contenedor) {
+  contenedor.innerHTML = '';
+  contenedor.appendChild(
+    elemento('p', {
+      class: 'subtitulo-pantalla',
+      texto:
+        'Descarga una copia de TODOS los datos del servidor (fincas, embolse, entregas, planilla, pedidos, etc., incluyendo lo borrado) en un archivo. No incluye contraseñas. Guárdalo en un lugar seguro (Drive, correo a ti mismo) y repítelo cada semana.',
+    })
+  );
+  const estado = elemento('div', { class: 'mensaje-error' });
+  const boton = elemento('button', { type: 'button', class: 'boton boton--primario', texto: '💾 Descargar respaldo completo' });
+  boton.addEventListener('click', async () => {
+    estado.className = 'mensaje-error';
+    estado.textContent = '';
+    boton.disabled = true;
+    boton.style.marginBottom = '12px';
+    boton.textContent = 'Descargando… puede tardar un momento';
+    try {
+      const token = await auth.obtenerToken();
+      const respuesta = await fetch(`${API_BASE_URL}/respaldo`, { headers: { Authorization: `Bearer ${token}` } });
+      if (!respuesta.ok) throw new Error(respuesta.status === 401 || respuesta.status === 403 ? 'Solo el administrador puede descargar el respaldo.' : `El servidor respondió ${respuesta.status}`);
+      const texto = await respuesta.text();
+      const resumen = JSON.parse(texto).resumen ?? {};
+      const totalFilas = Object.values(resumen).reduce((s, n) => s + n, 0);
+      descargarArchivo(`respaldo-cosechas-${hoyISO()}.json`, texto, 'application/json');
+      estado.className = 'subtitulo-pantalla';
+      estado.textContent = `✓ Respaldo descargado: ${totalFilas.toLocaleString('es-CR')} registros de ${Object.keys(resumen).length} tablas.`;
+    } catch (error) {
+      estado.className = 'mensaje-error mensaje-error--error';
+      estado.textContent = error.message || 'No se pudo descargar el respaldo (¿hay conexión?).';
+    } finally {
+      boton.disabled = false;
+      boton.textContent = '💾 Descargar respaldo completo';
+    }
+  });
+  contenedor.appendChild(boton);
+  contenedor.appendChild(estado);
+}
+
 // Se recuerda fuera de render() porque cada ~30s, al terminar de
 // sincronizar en segundo plano, app.js vuelve a llamar render() para
 // refrescar los datos — sin esto, ese refresco automático regresaba
@@ -355,6 +399,7 @@ export const reportesModulo = {
       { clave: 'reportes', etiqueta: '📊 Reportes', render: renderizarReportesEstandar },
       { clave: 'auditoria', etiqueta: '🕵️ Auditoría', render: (c) => renderizarAuditoria(c) },
       { clave: 'sync', etiqueta: '🔄 Sincronización', render: (c) => renderizarColaSync(c) },
+      { clave: 'respaldo', etiqueta: '💾 Respaldo', render: (c) => renderizarRespaldo(c) },
     ];
     async function activar(clave) {
       pestanaGuardada = clave;
