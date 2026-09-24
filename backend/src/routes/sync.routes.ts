@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { pool } from '../db/pool';
 import { requiereAutenticacion } from '../middleware/auth';
 import { aplicarOperacion, obtenerCambiosPendientes, type OperacionSync } from '../services/syncService';
-import { notificarIncidenciaUrgente } from '../services/pushService';
+import { notificarIncidenciaUrgente, notificarPedidoBodega } from '../services/pushService';
 
 export const syncRouter = Router();
 syncRouter.use(requiereAutenticacion);
@@ -54,6 +54,15 @@ syncRouter.post('/push', async (req, res, next) => {
           if (fincaId) {
             notificarIncidenciaUrgente(fincaId, descripcion ?? '').catch((err) => {
               console.error('[sync] Error enviando notificación push:', err);
+            });
+          }
+        }
+        if (resultado.estado === 'ok' && op.tabla === 'pedidos_bodega' && op.operacion === 'crear') {
+          const fincaId = op.datos?.finca_id as string | undefined;
+          const texto = (op.datos?.texto as string | undefined) ?? '';
+          if (fincaId) {
+            notificarPedidoBodega(fincaId, texto, usuario.id).catch((err) => {
+              console.error('[sync] Error enviando notificación push de pedido:', err);
             });
           }
         }

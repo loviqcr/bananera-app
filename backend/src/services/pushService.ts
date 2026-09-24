@@ -74,12 +74,18 @@ interface PayloadNotificacion {
   titulo: string;
   mensaje: string;
   url?: string;
+  /** Módulo de la app que abre el aviso dentro de la app (ver app.js). */
+  modulo?: string;
 }
 
 /** Envía a administradores + encargados de esa finca. Nunca lanza: un error de envío no debe tumbar el push de sync. */
 async function notificarFinca(fincaId: string, payload: PayloadNotificacion) {
   if (!habilitado) return;
-  const destinatarios = await destinatariosParaFinca(fincaId);
+  await enviarAVarios(await destinatariosParaFinca(fincaId), payload);
+}
+
+async function enviarAVarios(destinatarios: { id: string; endpoint: string; p256dh: string; auth: string }[], payload: PayloadNotificacion) {
+  if (!habilitado) return;
   const cuerpo = JSON.stringify(payload);
 
   await Promise.all(
@@ -98,6 +104,37 @@ async function notificarFinca(fincaId: string, payload: PayloadNotificacion) {
       }
     })
   );
+}
+
+/**
+ * Aviso de un pedido nuevo a bodega: le llega a los administradores y al rol
+ * bodega (que son quienes lo atienden), sin importar de qué finca sea, y
+ * nunca a quien lo escribió (no tiene sentido avisarle de su propio pedido).
+ */
+export async function notificarPedidoBodega(fincaId: string, texto: string, solicitanteId: string | null) {
+  if (!habilitado) return;
+  try {
+    const { rows: fincaRows } = await pool.query('SELECT nombre FROM fincas WHERE id = $1', [fincaId]);
+    const nombreFinca = fincaRows[0]?.nombre ?? 'una finca';
+    const { rows } = await pool.query(
+      `SELECT ps.id, ps.endpoint, ps.p256dh, ps.auth
+       FROM push_subscriptions ps
+       JOIN usuarios u ON u.id = ps.usuario_id
+       JOIN roles r ON r.id = u.rol_id
+       WHERE u.eliminado_at IS NULL AND u.activo = true
+         AND r.nombre IN ('administrador', 'bodega')
+         AND ($1::uuid IS NULL OR u.id <> $1::uuid)`,
+      [solicitanteId]
+    );
+    await enviarAVarios(rows, {
+      titulo: `📦 Pedido a bodega — ${nombreFinca}`,
+      mensaje: texto.trim().slice(0, 300) || 'Nuevo pedido a bodega.',
+      url: './',
+      modulo: 'pedidos-bodega',
+    });
+  } catch (err) {
+    console.error('[push] Error preparando notificación de pedido a bodega:', err instanceof Error ? err.message : err);
+  }
 }
 
 export async function notificarIncidenciaUrgente(fincaId: string, descripcion: string) {

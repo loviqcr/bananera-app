@@ -317,6 +317,19 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     conflictColumns: ['nombre'],
   },
 
+  // "Pedidos a bodega": texto libre de lo que necesita una finca. Los
+  // encargados/trabajadores lo crean (y ven solo los de sus fincas, por
+  // fincaScoped); administrador y bodega lo marcan entregado.
+  pedidos_bodega: {
+    tabla: 'pedidos_bodega',
+    columnas: ['finca_id', 'fecha', 'texto', 'solicitante_id', 'solicitante_nombre', 'estado'],
+    fincaScoped: true,
+    permiteEliminar: true,
+    conflictStrategy: 'lww',
+    rolesEscritura: ['administrador', 'encargado_finca', 'trabajador', 'bodega'],
+    rolesEliminar: ['administrador'],
+  },
+
   // ---- Fase 8: Embolse y corta ----
   colores_cinta: {
     tabla: 'colores_cinta',
