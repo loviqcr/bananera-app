@@ -8,6 +8,7 @@ import { syncRouter } from './routes/sync.routes';
 import { usuariosRouter } from './routes/usuarios.routes';
 import { auditoriaRouter } from './routes/auditoria.routes';
 import { notificacionesRouter } from './routes/notificaciones.routes';
+import { respaldoRouter } from './routes/respaldo.routes';
 import { manejadorErrores, rutaNoEncontrada } from './middleware/errorHandler';
 import { pool } from './db/pool';
 
@@ -41,6 +42,7 @@ app.use('/sync', syncRouter);
 app.use('/usuarios', usuariosRouter);
 app.use('/auditoria', auditoriaRouter);
 app.use('/notificaciones', notificacionesRouter);
+app.use('/respaldo', respaldoRouter);
 
 app.use(rutaNoEncontrada);
 app.use(manejadorErrores);
