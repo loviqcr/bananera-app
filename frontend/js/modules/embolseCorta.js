@@ -40,18 +40,41 @@ function inicioSemanaDe(fechaISO) {
  * tarjeta "Embolse hoy". `fincaId` es el mismo contexto de Inicio: 'todas'
  * suma todas las fincas, una finca específica solo la de ella. `semanas`
  * limita cuántas semanas recientes devolver (más recientes primero).
+ *
+ * Cada semana trae además `detalle`: el mismo desglose por variedad pero por
+ * finca (viendo "todas") o por área (viendo una finca específica), con el
+ * nombre ya resuelto, para poder desplegarlo al tocar la semana.
  */
 export async function resumenEmbolsePorSemana(fincaId, semanas = 8) {
-  const todas = await repos.listarPorFinca('embolse', fincaId);
+  const [todas, fincas, areas] = await Promise.all([
+    repos.listarPorFinca('embolse', fincaId),
+    repos.listarTodos('fincas'),
+    repos.listarTodos('areas'),
+  ]);
+  const porFincaSeleccionada = fincaId && fincaId !== 'todas';
+  const nombres = Object.fromEntries((porFincaSeleccionada ? areas : fincas).map((x) => [x.id, x.nombre]));
+  const vacio = () => ({ Plátano: 0, Banano: 0, FHIA: 0, 'Sin variedad': 0 });
+
   const porSemana = new Map();
   for (const f of todas) {
     const semana = inicioSemanaDe(f.fecha);
     const variedad = separarVariedad(f.observaciones).variedad || 'Sin variedad';
-    const actual = porSemana.get(semana) ?? { semana, Plátano: 0, Banano: 0, FHIA: 0, 'Sin variedad': 0 };
-    actual[variedad] = (actual[variedad] ?? 0) + (Number(f.cantidad) || 0);
+    const cantidad = Number(f.cantidad) || 0;
+    const actual = porSemana.get(semana) ?? { semana, ...vacio(), detalleMapa: new Map() };
+    actual[variedad] = (actual[variedad] ?? 0) + cantidad;
+
+    const clave = porFincaSeleccionada ? f.area_id : f.finca_id;
+    const parte = actual.detalleMapa.get(clave) ?? { nombre: nombres[clave] ?? (porFincaSeleccionada ? 'Sin área' : 'Finca'), ...vacio() };
+    parte[variedad] = (parte[variedad] ?? 0) + cantidad;
+    actual.detalleMapa.set(clave, parte);
+
     porSemana.set(semana, actual);
   }
   return Array.from(porSemana.values())
+    .map(({ detalleMapa, ...semana }) => ({
+      ...semana,
+      detalle: Array.from(detalleMapa.values()).sort((a, b) => a.nombre.localeCompare(b.nombre)),
+    }))
     .sort((a, b) => (a.semana < b.semana ? 1 : -1))
     .slice(0, semanas);
 }

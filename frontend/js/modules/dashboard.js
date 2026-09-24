@@ -7,7 +7,7 @@ import { ventasModulo } from './ventas.js';
 import { estadisticasDia, resumenEmbolsePorSemana } from './embolseCorta.js';
 import { estadisticasHoy as estadisticasCargaHoy, ultimoDestinatario, resumenEntregaPorSemana } from './entregaCarga.js';
 import { auth } from './auth.js';
-import { elemento, tarjetaStat, icono, formatearFecha, listaRegistros, mostrarPanel } from '../ui.js';
+import { elemento, tarjetaStat, icono, formatearFecha, mostrarPanel } from '../ui.js';
 
 function formatearMoneda(valor) {
   return `₡${Number(valor || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -49,20 +49,48 @@ async function etiquetaFincaParaPanel(fincaId) {
  * vea tocando la tarjeta "Embolse hoy" en Inicio, sin tener que entrar a
  * cada finca por separado. Respeta el contexto actual: si se está viendo
  * "Todas las fincas" suma todas, si se está viendo una finca específica
- * muestra solo la de ella.
+ * muestra solo la de ella. Tocar una semana la despliega con el detalle
+ * por finca (o por área, viendo una sola finca) y su cantidad.
  */
 async function abrirResumenEmbolse(fincaId) {
-  const [filas, etiquetaFinca] = await Promise.all([resumenEmbolsePorSemana(fincaId), etiquetaFincaParaPanel(fincaId)]);
-  const lista = listaRegistros(filas, (f) => {
+  const [semanas, etiquetaFinca] = await Promise.all([resumenEmbolsePorSemana(fincaId), etiquetaFincaParaPanel(fincaId)]);
+  const porFinca = !fincaId || fincaId === 'todas';
+  const cantidades = (x) =>
+    `Plátano: ${x['Plátano'].toLocaleString('es-CR')} · Banano: ${x['Banano'].toLocaleString('es-CR')}${x.FHIA ? ' · FHIA: ' + x.FHIA.toLocaleString('es-CR') : ''}`;
+
+  const contenido = elemento('div', { class: 'lista-registros' });
+  if (semanas.length === 0) {
+    contenido.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: 'Sin embolse registrado todavía.' }));
+  }
+  for (const f of semanas) {
     const desde = new Date(f.semana + 'T00:00:00');
     const hasta = new Date(desde);
     hasta.setDate(hasta.getDate() + 6);
-    return {
-      titulo: `Semana del ${formatearFecha(f.semana)} al ${formatearFecha(hasta.toISOString().slice(0, 10))}`,
-      subtitulo: `Plátano: ${f['Plátano'].toLocaleString('es-CR')} · Banano: ${f['Banano'].toLocaleString('es-CR')}${f.FHIA ? ' · FHIA: ' + f.FHIA.toLocaleString('es-CR') : ''}`,
-    };
-  }, { vacioTexto: 'Sin embolse registrado todavía.' });
-  mostrarPanel({ titulo: `🎗️ Embolse por semana (${etiquetaFinca})`, contenido: lista });
+    contenido.appendChild(
+      elemento('div', { class: 'fila-registro', style: 'display:block' }, [
+        elemento('details', {}, [
+          elemento('summary', { style: 'cursor:pointer;list-style-position:inside' }, [
+            elemento('span', { class: 'fila-registro__titulo', texto: `Semana del ${formatearFecha(f.semana)} al ${formatearFecha(hasta.toISOString().slice(0, 10))}` }),
+            elemento('div', { class: 'fila-registro__subtitulo', texto: cantidades(f) }),
+          ]),
+          elemento(
+            'div',
+            { style: 'margin-top:8px;padding-top:8px;border-top:1px solid var(--borde);display:flex;flex-direction:column;gap:8px' },
+            f.detalle.map((d) =>
+              elemento('div', {}, [
+                elemento('div', { style: 'font-weight:700', texto: d.nombre }),
+                elemento('div', { class: 'fila-registro__subtitulo', texto: cantidades(d) }),
+              ])
+            )
+          ),
+        ]),
+      ])
+    );
+  }
+  if (semanas.length > 0) {
+    contenido.prepend(elemento('p', { class: 'subtitulo-pantalla', texto: `Toca una semana para ver ${porFinca ? 'cada finca' : 'cada área'}.` }));
+  }
+  mostrarPanel({ titulo: `🎗️ Embolse por semana (${etiquetaFinca})`, contenido });
 }
 
 /**
