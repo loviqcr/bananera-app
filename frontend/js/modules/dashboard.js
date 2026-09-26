@@ -7,7 +7,7 @@ import { ventasModulo } from './ventas.js';
 import { estadisticasDia, resumenEmbolsePorSemana } from './embolseCorta.js';
 import { estadisticasHoy as estadisticasCargaHoy, ultimoDestinatario, resumenEntregaPorSemana } from './entregaCarga.js';
 import { auth } from './auth.js';
-import { elemento, tarjetaStat, icono, formatearFecha, mostrarPanel } from '../ui.js';
+import { elemento, tarjetaStat, icono, formatearFecha, hoyISO, mostrarPanel } from '../ui.js';
 
 function formatearMoneda(valor) {
   return `₡${Number(valor || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
@@ -45,18 +45,16 @@ async function etiquetaFincaParaPanel(fincaId) {
 }
 
 /**
- * Desglose de embolse por semana y variedad — para que el administrador lo
- * vea tocando la tarjeta "Embolse hoy" en Inicio, sin tener que entrar a
- * cada finca por separado. Respeta el contexto actual: si se está viendo
- * "Todas las fincas" suma todas, si se está viendo una finca específica
- * muestra solo la de ella. Tocar una semana la despliega con el detalle
- * por finca (o por área, viendo una sola finca) y su cantidad.
+ * Desglose de embolse por semana y variedad. Respeta el contexto actual: si
+ * se está viendo "Todas las fincas" suma todas, si se está viendo una finca
+ * específica muestra solo la de ella. Tocar una semana la despliega con el
+ * detalle por finca (o por área, viendo una sola finca) y su cantidad.
  */
-async function abrirResumenEmbolse(fincaId) {
-  const [semanas, etiquetaFinca] = await Promise.all([resumenEmbolsePorSemana(fincaId), etiquetaFincaParaPanel(fincaId)]);
+async function construirSemanasEmbolse(fincaId) {
+  const semanas = await resumenEmbolsePorSemana(fincaId);
   const porFinca = !fincaId || fincaId === 'todas';
   const cantidades = (x) =>
-    `Plátano: ${x['Plátano'].toLocaleString('es-CR')} · Banano: ${x['Banano'].toLocaleString('es-CR')}${x.FHIA ? ' · FHIA: ' + x.FHIA.toLocaleString('es-CR') : ''}`;
+    `Plátano: ${x['Plátano'].toLocaleString('es-CR')} · Banano: ${x['Banano'].toLocaleString('es-CR')}${x.FHIA ? ' · FHIA: ' + x.FHIA.toLocaleString('es-CR') : ''}${x['Sin variedad'] ? ' · Sin variedad: ' + x['Sin variedad'].toLocaleString('es-CR') : ''}`;
 
   const contenido = elemento('div', { class: 'lista-registros' });
   if (semanas.length === 0) {
@@ -90,16 +88,15 @@ async function abrirResumenEmbolse(fincaId) {
   if (semanas.length > 0) {
     contenido.prepend(elemento('p', { class: 'subtitulo-pantalla', texto: `Toca una semana para ver ${porFinca ? 'cada finca' : 'cada área'}.` }));
   }
-  mostrarPanel({ titulo: `🎗️ Embolse por semana (${etiquetaFinca})`, contenido });
+  return contenido;
 }
 
 /**
  * Desglose de Entrega de Carga por semana (cajas de primera/segunda, y a
- * quién se le entregó cada una) — igual que el de embolse, tocando la
- * tarjeta "Entrega de carga" en Inicio, respetando el contexto actual.
+ * quién se le entregó cada una), respetando el contexto actual.
  */
-async function abrirResumenEntregaCarga(fincaId) {
-  const [semanas, etiquetaFinca] = await Promise.all([resumenEntregaPorSemana(fincaId), etiquetaFincaParaPanel(fincaId)]);
+async function construirSemanasEntrega(fincaId) {
+  const semanas = await resumenEntregaPorSemana(fincaId);
   const contenido = elemento('div', { class: 'lista-registros' });
   if (semanas.length === 0) {
     contenido.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: 'Sin entregas de carga registradas todavía.' }));
@@ -129,7 +126,126 @@ async function abrirResumenEntregaCarga(fincaId) {
       ])
     );
   }
-  mostrarPanel({ titulo: `🧺 Entrega de carga por semana (${etiquetaFinca})`, contenido });
+  return contenido;
+}
+
+const TITULOS_HOY = {
+  embolse: '🎗️ Embolse de hoy',
+  corta: '✂️ Corta de hoy',
+  entrega: '🧺 Entrega de carga de hoy',
+};
+
+/**
+ * Lo registrado HOY, finca por finca, en una sola pantalla — para no tener
+ * que entrar a cada finca a revisarlo. Viendo "Todas las fincas" salen todas
+ * (las que aún no registran nada, con "Sin registros hoy", para notar de un
+ * vistazo cuál falta); viendo una finca específica, solo ella.
+ */
+async function construirDetalleHoy(tipo, contexto) {
+  const { fincaId } = contexto;
+  const porFinca = !fincaId || fincaId === 'todas';
+  const hoy = hoyISO();
+  const tabla = { embolse: 'embolse', corta: 'corta', entrega: 'entregas_platano' }[tipo];
+  const [filas, fincas, areas] = await Promise.all([repos.listarPorFinca(tabla, fincaId), repos.listarTodos('fincas'), repos.listarTodos('areas')]);
+  const nombreArea = Object.fromEntries(areas.map((a) => [a.id, a.nombre]));
+
+  let visibles = fincas.sort((a, b) => a.orden - b.orden);
+  if (!porFinca) visibles = visibles.filter((f) => f.id === fincaId);
+  else if (contexto.fincaIdsPermitidas) visibles = visibles.filter((f) => contexto.fincaIdsPermitidas.includes(f.id));
+
+  const deHoy = filas.filter((f) => f.fecha === hoy && (tipo !== 'entrega' || f.grupo_entrega));
+  const n = (v) => Number(v || 0).toLocaleString('es-CR');
+
+  const bloques = visibles.map((finca) => {
+    const propias = deHoy.filter((f) => f.finca_id === finca.id);
+    let total = '';
+    let lineas = [];
+    if (tipo === 'embolse') {
+      total = `${n(propias.reduce((s, f) => s + Number(f.cantidad || 0), 0))} racimos`;
+      lineas = propias.map((f) => `${nombreArea[f.area_id] ?? 'Área'} · ${/\[Variedad: ([^\]]+)\]/.exec(f.observaciones || '')?.[1] ?? 'Sin variedad'} · ${n(f.cantidad)}`);
+    } else if (tipo === 'corta') {
+      total = `${n(propias.reduce((s, f) => s + Number(f.racimos_cortados || 0), 0))} racimos`;
+      lineas = propias.map((f) => `${nombreArea[f.area_id] ?? 'Área'} · ${n(f.racimos_cortados)} racimos`);
+    } else {
+      const grupos = new Map();
+      for (const f of propias) {
+        const g = grupos.get(f.grupo_entrega) ?? { area: nombreArea[f.area_id] ?? 'Área', destino: f.responsable_nombre || 'Sin destinatario', primera: 0, segunda: 0 };
+        if (f.calidad === 'primera') g.primera += Number(f.cantidad_cajas || 0);
+        if (f.calidad === 'segunda') g.segunda += Number(f.cantidad_cajas || 0);
+        grupos.set(f.grupo_entrega, g);
+      }
+      const lista = [...grupos.values()];
+      total = `${n(lista.reduce((s, g) => s + g.primera, 0))} primera · ${n(lista.reduce((s, g) => s + g.segunda, 0))} segunda`;
+      lineas = lista.map((g) => `${g.area} · ${g.destino}: ${n(g.primera)} primera · ${n(g.segunda)} segunda`);
+    }
+    const vacia = propias.length === 0;
+    return elemento('div', { class: 'fila-registro', style: `display:block${vacia ? ';opacity:0.6' : ''}` }, [
+      elemento('div', { style: 'display:flex;justify-content:space-between;gap:8px' }, [
+        elemento('strong', { texto: finca.nombre }),
+        elemento('strong', { texto: vacia ? 'Sin registros hoy' : total }),
+      ]),
+      ...lineas.map((l) => elemento('div', { class: 'fila-registro__subtitulo', texto: l })),
+    ]);
+  });
+
+  const contenido = elemento('div', {}, [
+    elemento('h3', { style: 'margin:0 0 6px;font-size:0.95rem', texto: `Hoy · ${formatearFecha(hoy)}` }),
+    elemento('div', { class: 'lista-registros' }, bloques.length > 0 ? bloques : [elemento('p', { class: 'subtitulo-pantalla', texto: 'Sin fincas para mostrar.' })]),
+  ]);
+
+  if (tipo !== 'corta') {
+    contenido.appendChild(elemento('h3', { style: 'margin:16px 0 6px;font-size:0.95rem', texto: 'Por semana' }));
+    contenido.appendChild(tipo === 'embolse' ? await construirSemanasEmbolse(fincaId) : await construirSemanasEntrega(fincaId));
+  }
+  return contenido;
+}
+
+/** Incidencias sin resolver de todas las fincas (o de la finca actual), las urgentes primero. */
+async function construirIncidenciasPendientes(contexto, alIrAIncidencias) {
+  const { fincaId } = contexto;
+  const [abiertas, fincas, areas] = await Promise.all([incidenciasAbiertas(fincaId), repos.listarTodos('fincas'), repos.listarTodos('areas')]);
+  const nombreFinca = Object.fromEntries(fincas.map((f) => [f.id, f.nombre]));
+  const nombreArea = Object.fromEntries(areas.map((a) => [a.id, a.nombre]));
+  const peso = (i) => (i.prioridad === 'urgente' ? 0 : i.prioridad === 'alta' ? 1 : 2);
+  const ordenadas = [...abiertas].sort((a, b) => peso(a) - peso(b) || (a.fecha < b.fecha ? 1 : -1));
+
+  const contenido = elemento('div', {});
+  if (ordenadas.length === 0) {
+    contenido.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: '✅ No hay incidencias pendientes.' }));
+  } else {
+    contenido.appendChild(
+      elemento(
+        'div',
+        { class: 'lista-registros' },
+        ordenadas.map((i) =>
+          elemento('div', { class: 'fila-registro', style: 'display:block' }, [
+            elemento('div', { style: 'display:flex;justify-content:space-between;gap:8px' }, [
+              elemento('strong', { texto: `${nombreFinca[i.finca_id] ?? 'Finca'} · ${i.tipo ?? ''}` }),
+              elemento('span', { class: `fila-registro__valor ${i.prioridad === 'urgente' ? 'tono-alerta' : ''}`, texto: i.prioridad ?? '' }),
+            ]),
+            elemento('div', { class: 'fila-registro__subtitulo', texto: `${nombreArea[i.area_id] ?? 'Sin área'} · ${formatearFecha(i.fecha)}` }),
+            i.descripcion ? elemento('div', { style: 'margin-top:4px;white-space:pre-wrap;overflow-wrap:anywhere', texto: i.descripcion }) : null,
+          ])
+        )
+      )
+    );
+  }
+  const boton = elemento('button', { type: 'button', class: 'boton boton--fantasma', style: 'margin-top:10px', texto: 'Abrir Incidencias' });
+  boton.addEventListener('click', () => {
+    document.querySelector('.panel-info-fondo')?.remove();
+    alIrAIncidencias?.();
+  });
+  contenido.appendChild(boton);
+  return contenido;
+}
+
+async function abrirDetalle(tipo, contexto, alIrAIncidencias) {
+  const etiquetaFinca = await etiquetaFincaParaPanel(contexto.fincaId);
+  if (tipo === 'incidencias') {
+    mostrarPanel({ titulo: `⚠️ Incidencias pendientes (${etiquetaFinca})`, contenido: await construirIncidenciasPendientes(contexto, alIrAIncidencias) });
+    return;
+  }
+  mostrarPanel({ titulo: `${TITULOS_HOY[tipo]} (${etiquetaFinca})`, contenido: await construirDetalleHoy(tipo, contexto) });
 }
 
 /** Usado por el dashboard y por la pantalla de detalle de finca. */
@@ -171,17 +287,18 @@ export async function renderizarDashboard(contenedor, contexto, manejadores = {}
   // dashboard de las demás tarjetas (Producción/Personal/Ventas/Inventario/
   // Otros indicadores) — "Detalle por finca" más abajo sigue teniendo el
   // resto para quien lo necesite viendo "Todas las fincas". ----
-  // "Embolse hoy" y "Entrega de carga" son tocables solo para
-  // administrador: abren el desglose por semana de TODAS las fincas, para
-  // no tener que entrar a cada una a revisarlo.
+  // Las 4 tarjetas son tocables para el administrador: abren lo de HOY
+  // finca por finca (y el desglose semanal en embolse/entrega), para no
+  // tener que entrar a cada finca a revisarlo. Para los demás roles solo
+  // Incidencias abre su módulo, como antes.
   contenedor.appendChild(
     elemento('div', { class: 'seccion-dashboard' }, [
       elemento('h2', { class: 'seccion-dashboard__titulo', texto: 'Resumen general' }),
       elemento('div', { class: 'rejilla-estadisticas' }, [
-        tarjetaStat('package', stats.embolsadoHoy.toLocaleString('es-CR'), 'Embolse hoy', '', esAdmin ? () => abrirResumenEmbolse(contexto.fincaId) : null),
-        tarjetaStat('crop', stats.cortadoHoy.toLocaleString('es-CR'), 'Corta hoy'),
-        tarjetaStat('basket', stats.cargaHoy.total.toLocaleString('es-CR'), 'Entrega de carga', '', esAdmin ? () => abrirResumenEntregaCarga(contexto.fincaId) : null),
-        tarjetaStat('alert', stats.abiertas.length, 'Incidencias pendientes', stats.abiertas.length > 0 ? 'tarjeta-stat--alerta' : '', alTocarIncidencias),
+        tarjetaStat('package', stats.embolsadoHoy.toLocaleString('es-CR'), 'Embolse hoy', '', esAdmin ? () => abrirDetalle('embolse', contexto) : null),
+        tarjetaStat('crop', stats.cortadoHoy.toLocaleString('es-CR'), 'Corta hoy', '', esAdmin ? () => abrirDetalle('corta', contexto) : null),
+        tarjetaStat('basket', stats.cargaHoy.total.toLocaleString('es-CR'), 'Entrega de carga', '', esAdmin ? () => abrirDetalle('entrega', contexto) : null),
+        tarjetaStat('alert', stats.abiertas.length, 'Incidencias pendientes', stats.abiertas.length > 0 ? 'tarjeta-stat--alerta' : '', esAdmin ? () => abrirDetalle('incidencias', contexto, alTocarIncidencias) : alTocarIncidencias),
       ]),
     ])
   );
