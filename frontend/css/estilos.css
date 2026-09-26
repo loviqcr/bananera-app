@@ -1718,3 +1718,124 @@ input.stepper__valor::-webkit-inner-spin-button {
     padding: 0;
   }
 }
+
+/* ---------- Panel "Entrega de carga de hoy" (Inicio) ---------- */
+
+.entrega-encabezado {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding-bottom: 14px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+/* Hojas decorativas de fondo, arriba a la derecha */
+.entrega-encabezado::before,
+.entrega-encabezado::after {
+  content: '';
+  position: absolute;
+  background: color-mix(in srgb, var(--primario) 12%, transparent);
+  border-radius: 100% 0 100% 0;
+  pointer-events: none;
+}
+.entrega-encabezado::before { right: -10px; top: -26px; width: 64px; height: 84px; transform: rotate(18deg); }
+.entrega-encabezado::after { right: 34px; top: -34px; width: 44px; height: 64px; transform: rotate(-8deg); opacity: 0.7; }
+
+.entrega-encabezado__icono { color: var(--primario); flex: none; display: flex; }
+.entrega-encabezado__sep { width: 1px; align-self: stretch; background: var(--borde); flex: none; }
+.entrega-encabezado__titulo { margin: 0; font-size: 1.3rem; font-weight: 800; line-height: 1.15; }
+.entrega-encabezado__fecha { display: flex; align-items: center; gap: 6px; margin-top: 6px; color: var(--texto-suave); font-weight: 600; }
+
+.entrega-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--primario) 14%, transparent);
+  color: var(--primario);
+  font-size: 0.85rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.entrega-icono-suave {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--primario) 14%, transparent);
+  color: var(--primario);
+  flex: none;
+}
+
+.entrega-tarjeta { border-radius: 18px; padding: 14px; }
+
+.entrega-tarjeta__cabecera { display: flex; flex-wrap: wrap; align-items: flex-start; gap: 10px; }
+.entrega-tarjeta__cabecera > div { flex: 1 1 150px; }
+.entrega-tarjeta__cabecera > .entrega-chip { margin-left: 48px; }
+.entrega-tarjeta__titulo { font-size: 1.25rem; font-weight: 800; line-height: 1.15; }
+.entrega-tarjeta__sub { color: var(--texto-suave); font-weight: 600; margin-top: 2px; }
+
+.entrega-pin,
+.entrega-hoja {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: var(--primario);
+  color: #fff;
+  flex: none;
+}
+.entrega-pin { width: 38px; height: 38px; }
+.entrega-hoja { width: 34px; height: 34px; }
+
+.entrega-lineas {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  margin-top: 12px;
+  padding-top: 10px;
+  border-top: 1px solid var(--borde);
+}
+.entrega-linea { display: flex; align-items: center; gap: 8px; color: var(--texto-suave); }
+.entrega-linea__icono { display: inline-flex; flex: none; }
+.entrega-linea__texto { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+
+.entrega-cajas { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 14px; }
+.entrega-caja {
+  border: 1px solid var(--borde);
+  border-radius: 14px;
+  padding: 10px 12px;
+  background: color-mix(in srgb, var(--primario) 7%, var(--superficie));
+}
+.entrega-caja__valor { display: flex; align-items: center; gap: 10px; margin-top: 10px; }
+.entrega-caja__numero { font-size: 2rem; font-weight: 800; line-height: 1; font-variant-numeric: tabular-nums; }
+.entrega-caja__pie { margin-top: 6px; color: var(--texto-suave); font-size: 0.8rem; }
+
+.entrega-barra { height: 8px; border-radius: 999px; background: var(--borde); overflow: hidden; margin-top: 10px; }
+.entrega-barra > span { display: block; height: 100%; border-radius: 999px; background: var(--primario); }
+
+.entrega-seccion {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin: 18px 0 10px;
+  font-size: 1.3rem;
+  font-weight: 800;
+}
+
+.entrega-semana { border-radius: 18px; padding: 12px 14px; }
+.entrega-semana__cabecera { display: flex; align-items: center; gap: 10px; }
+.entrega-semana__titulo { font-weight: 800; }
+.entrega-semana__totales { color: var(--texto-suave); margin-top: 2px; }
+
+.entrega-destinatarios { display: grid; grid-template-columns: repeat(auto-fit, minmax(96px, 1fr)); gap: 10px 0; margin-top: 12px; }
+.entrega-destinatario { padding: 0 12px; border-left: 1px solid var(--borde); min-width: 0; }
+.entrega-destinatario:first-child { padding-left: 0; border-left: none; }
+.entrega-destinatario__valor { margin-top: 8px; font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+.entrega-destinatario__pie { margin-top: 4px; color: var(--texto-suave); font-size: 0.72rem; }

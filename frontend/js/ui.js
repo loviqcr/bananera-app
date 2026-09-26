@@ -178,6 +178,9 @@ const ICONOS_SVG = {
   sun: '<circle cx="12" cy="12" r="4.2"/><path d="M12 2.5v2.6"/><path d="M12 18.9v2.6"/><path d="M4.6 4.6l1.8 1.8"/><path d="M17.6 17.6l1.8 1.8"/><path d="M2.5 12h2.6"/><path d="M18.9 12h2.6"/><path d="M4.6 19.4l1.8-1.8"/><path d="M17.6 6.4l1.8-1.8"/>',
   moon: '<path d="M20 14.5A8.5 8.5 0 1 1 9.5 4a6.8 6.8 0 0 0 10.5 10.5Z"/>',
   monitor: '<rect x="3" y="4.5" width="18" height="12" rx="2"/><path d="M8 20h8"/><path d="M12 16.5V20"/>',
+  truck: '<path d="M2 6.5h11.5V16H2z"/><path d="M13.5 9.5h4l3.5 3.5V16h-7.5z"/><circle cx="6.5" cy="17.5" r="1.9"/><circle cx="17" cy="17.5" r="1.9"/>',
+  pin: '<path d="M12 21s7-6.2 7-11.5A7 7 0 0 0 5 9.5C5 14.8 12 21 12 21Z"/><circle cx="12" cy="9.5" r="2.5"/>',
+  xcircle: '<circle cx="12" cy="12" r="9.5"/><path d="M9 9l6 6"/><path d="M15 9l-6 6"/>',
 };
 
 /** Devuelve el HTML de un <svg> de línea listo para usar en innerHTML. */
@@ -397,12 +400,19 @@ export function mostrarDialogo({ titulo, campos, textoConfirmar = 'Confirmar' })
  * resumen/desglose (ej. embolse por semana) sin salir de la pantalla actual
  * ni tener que ir finca por finca. `contenido` es un nodo DOM ya armado.
  */
-export function mostrarPanel({ titulo, contenido }) {
+export function mostrarPanel({ titulo, contenido, encabezado }) {
   const fondo = elemento('div', { class: 'dialogo-fondo panel-info-fondo' });
   const caja = elemento('div', { class: 'dialogo-caja panel-info tarjeta', style: 'max-height:80vh;overflow-y:auto' });
-  caja.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: titulo }));
+  // `encabezado` (un nodo ya armado) reemplaza al título de texto cuando el
+  // panel quiere una cabecera propia, con ícono y fecha.
+  caja.appendChild(encabezado ?? elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: titulo }));
   caja.appendChild(contenido);
-  const botonCerrar = elemento('button', { type: 'button', class: 'boton boton--primario', style: 'margin-top:14px', texto: 'Cerrar' });
+  const botonCerrar = elemento('button', {
+    type: 'button',
+    class: 'boton boton--primario',
+    style: 'margin-top:14px;display:flex;align-items:center;justify-content:center;gap:8px',
+    html: `${icono('xcircle', 20)}<span>Cerrar</span>`,
+  });
   botonCerrar.addEventListener('click', () => fondo.remove());
   caja.appendChild(botonCerrar);
   fondo.appendChild(caja);

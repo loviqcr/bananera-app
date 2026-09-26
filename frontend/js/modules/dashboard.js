@@ -97,7 +97,7 @@ async function construirSemanasEmbolse(fincaId) {
  */
 async function construirSemanasEntrega(fincaId) {
   const semanas = await resumenEntregaPorSemana(fincaId);
-  const contenido = elemento('div', { class: 'lista-registros' });
+  const contenido = elemento('div', {});
   if (semanas.length === 0) {
     contenido.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: 'Sin entregas de carga registradas todavía.' }));
   }
@@ -105,34 +105,156 @@ async function construirSemanasEntrega(fincaId) {
     const desde = new Date(f.semana + 'T00:00:00');
     const hasta = new Date(desde);
     hasta.setDate(hasta.getDate() + 6);
+    const totalSemana = f.primera + f.segunda;
     contenido.appendChild(
-      elemento('div', { class: 'fila-registro', style: 'align-items:flex-start' }, [
-        elemento('div', { style: 'flex:1' }, [
-          elemento('div', { class: 'fila-registro__titulo', texto: `Semana del ${formatearFecha(f.semana)} al ${formatearFecha(hasta.toISOString().slice(0, 10))}` }),
-          elemento('div', { class: 'fila-registro__subtitulo', texto: `Primera: ${f.primera.toLocaleString('es-CR')} · Segunda: ${f.segunda.toLocaleString('es-CR')}` }),
-          f.porDestinatario.length > 0
-            ? elemento(
-                'div',
-                { style: 'margin-top:6px;display:flex;flex-direction:column;gap:2px' },
-                f.porDestinatario.map((d) =>
-                  elemento('div', { class: 'tarjeta-finca-resumen__metrica' }, [
-                    elemento('span', {}, `Entregado a ${d.nombre}`),
-                    elemento('strong', {}, `${d.primera}/${d.segunda}`),
-                  ])
-                )
-              )
-            : null,
+      elemento('div', { class: 'tarjeta entrega-semana' }, [
+        elemento('div', { class: 'entrega-semana__cabecera' }, [
+          elemento('span', { class: 'entrega-icono-suave', html: icono('calendar', 20) }),
+          elemento('div', {}, [
+            elemento('div', { class: 'entrega-semana__titulo', texto: `Semana del ${formatearFecha(f.semana)} al ${formatearFecha(hasta.toISOString().slice(0, 10))}` }),
+            elemento('div', { class: 'entrega-semana__totales', texto: `Primera: ${f.primera.toLocaleString('es-CR')} · Segunda: ${f.segunda.toLocaleString('es-CR')}` }),
+          ]),
         ]),
+        f.porDestinatario.length > 0
+          ? elemento(
+              'div',
+              { class: 'entrega-destinatarios' },
+              f.porDestinatario.map((d) =>
+                elemento('div', { class: 'entrega-destinatario' }, [
+                  elemento('span', { class: 'entrega-chip' }, [elemento('span', { html: icono('user', 14) }), d.nombre]),
+                  elemento('div', { class: 'entrega-destinatario__valor', texto: `${d.primera}/${d.segunda}` }),
+                  barraProporcion(d.primera + d.segunda, totalSemana),
+                  elemento('div', { class: 'entrega-destinatario__pie', texto: 'primera / segunda' }),
+                ])
+              )
+            )
+          : null,
       ])
     );
   }
   return contenido;
 }
 
+/** Barra fina que muestra qué parte del total es `parte`; con algo entregado siempre se ve un mínimo. */
+function barraProporcion(parte, total) {
+  const porcentaje = total > 0 && parte > 0 ? Math.max(6, Math.round((parte / total) * 100)) : 0;
+  return elemento('div', { class: 'entrega-barra' }, [elemento('span', { style: `width:${porcentaje}%` })]);
+}
+
+/**
+ * Panel "Entrega de carga de hoy": una tarjeta por finca con sus entregas
+ * (cada una con su 📲 para mandarla al cliente por WhatsApp), las cajas de
+ * primera y segunda con su proporción, y debajo el resumen semanal.
+ */
+async function construirEntregaHoy(contexto) {
+  const { fincaId } = contexto;
+  const porFinca = !fincaId || fincaId === 'todas';
+  const hoy = hoyISO();
+  const [filas, fincas, areas] = await Promise.all([repos.listarPorFinca('entregas_platano', fincaId), repos.listarTodos('fincas'), repos.listarTodos('areas')]);
+  const nombreArea = Object.fromEntries(areas.map((a) => [a.id, a.nombre]));
+
+  let visibles = fincas.sort((a, b) => a.orden - b.orden);
+  if (!porFinca) visibles = visibles.filter((f) => f.id === fincaId);
+  else if (contexto.fincaIdsPermitidas) visibles = visibles.filter((f) => contexto.fincaIdsPermitidas.includes(f.id));
+  const deHoy = filas.filter((f) => f.fecha === hoy && f.grupo_entrega);
+  const n = (v) => Number(v || 0).toLocaleString('es-CR');
+
+  const contenido = elemento('div', {});
+  for (const finca of visibles) {
+    const grupos = new Map();
+    for (const f of deHoy.filter((x) => x.finca_id === finca.id)) {
+      const g = grupos.get(f.grupo_entrega) ?? { area: nombreArea[f.area_id] ?? 'Área', destino: f.responsable_nombre || 'Sin destinatario', observaciones: f.observaciones || '', primera: 0, segunda: 0 };
+      if (f.calidad === 'primera') g.primera += Number(f.cantidad_cajas || 0);
+      if (f.calidad === 'segunda') g.segunda += Number(f.cantidad_cajas || 0);
+      grupos.set(f.grupo_entrega, g);
+    }
+    const lista = [...grupos.values()];
+    const primera = lista.reduce((s, g) => s + g.primera, 0);
+    const segunda = lista.reduce((s, g) => s + g.segunda, 0);
+    const vacia = lista.length === 0;
+
+    const caja = (etiqueta, valor) =>
+      elemento('div', { class: 'entrega-caja' }, [
+        elemento('span', { class: 'entrega-chip', texto: etiqueta }),
+        elemento('div', { class: 'entrega-caja__valor' }, [
+          elemento('span', { class: 'entrega-hoja', html: icono('sprout', 18) }),
+          elemento('span', { class: 'entrega-caja__numero', texto: n(valor) }),
+        ]),
+        barraProporcion(valor, primera + segunda),
+        elemento('div', { class: 'entrega-caja__pie', texto: `${valor === 1 ? 'caja' : 'cajas'} de ${etiqueta.toLowerCase()}` }),
+      ]);
+
+    contenido.appendChild(
+      elemento('div', { class: 'tarjeta entrega-tarjeta', style: vacia ? 'opacity:0.65' : '' }, [
+        elemento('div', { class: 'entrega-tarjeta__cabecera' }, [
+          elemento('span', { class: 'entrega-pin', html: icono('pin', 20) }),
+          elemento('div', { style: 'min-width:0' }, [
+            elemento('div', { class: 'entrega-tarjeta__titulo', texto: 'Entrega de hoy' }),
+            elemento('div', { class: 'entrega-tarjeta__sub', texto: finca.nombre }),
+          ]),
+          elemento('span', { class: 'entrega-chip', texto: vacia ? 'Sin registros hoy' : `${n(primera)} primera · ${n(segunda)} segunda` }),
+        ]),
+        ...(vacia
+          ? []
+          : [
+              elemento(
+                'div',
+                { class: 'entrega-lineas' },
+                lista.map((g) =>
+                  elemento('div', { class: 'entrega-linea' }, [
+                    elemento('span', { class: 'entrega-linea__icono', html: icono('user', 16) }),
+                    elemento('span', { class: 'entrega-linea__texto', texto: `${g.area} · ${g.destino}: ${n(g.primera)} primera · ${n(g.segunda)} segunda` }),
+                    elemento('button', {
+                      type: 'button',
+                      class: 'boton-icono',
+                      title: 'Enviar por WhatsApp',
+                      style: 'background:none;flex:none',
+                      texto: '📲',
+                      onclick: () =>
+                        abrirWhatsApp(
+                          mensajeEntregaWhatsApp({
+                            finca: finca.nombre,
+                            area: g.area,
+                            fecha: hoy,
+                            entregas: [{ responsable: g.destino, primera: g.primera, segunda: g.segunda, observaciones: g.observaciones }],
+                          })
+                        ),
+                    }),
+                  ])
+                )
+              ),
+              elemento('div', { class: 'entrega-cajas' }, [caja('Primera', primera), caja('Segunda', segunda)]),
+            ]),
+      ])
+    );
+  }
+  if (visibles.length === 0) contenido.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: 'Sin fincas para mostrar.' }));
+
+  contenido.appendChild(
+    elemento('div', { class: 'entrega-seccion' }, [elemento('span', { class: 'entrega-icono-suave', html: icono('calendar', 20) }), elemento('span', { texto: 'Resumen semanal' })])
+  );
+  contenido.appendChild(await construirSemanasEntrega(fincaId));
+  return contenido;
+}
+
+/** Cabecera del panel de entrega: camión, título, finca y fecha. */
+function encabezadoEntrega(etiquetaFinca) {
+  return elemento('div', { class: 'entrega-encabezado' }, [
+    elemento('span', { class: 'entrega-encabezado__icono', html: icono('truck', 46) }),
+    elemento('span', { class: 'entrega-encabezado__sep' }),
+    elemento('div', {}, [
+      elemento('h2', { class: 'entrega-encabezado__titulo', texto: `Entrega de carga de hoy (${etiquetaFinca})` }),
+      elemento('div', { class: 'entrega-encabezado__fecha' }, [
+        elemento('span', { html: icono('calendar', 16) }),
+        elemento('span', { texto: `Hoy · ${formatearFecha(hoyISO())}` }),
+      ]),
+    ]),
+  ]);
+}
+
 const TITULOS_HOY = {
   embolse: '🎗️ Embolse de hoy',
   corta: '✂️ Corta de hoy',
-  entrega: '🧺 Entrega de carga de hoy',
 };
 
 /**
@@ -145,7 +267,7 @@ async function construirDetalleHoy(tipo, contexto) {
   const { fincaId } = contexto;
   const porFinca = !fincaId || fincaId === 'todas';
   const hoy = hoyISO();
-  const tabla = { embolse: 'embolse', corta: 'corta', entrega: 'entregas_platano' }[tipo];
+  const tabla = tipo === 'corta' ? 'corta' : 'embolse';
   const [filas, fincas, areas] = await Promise.all([repos.listarPorFinca(tabla, fincaId), repos.listarTodos('fincas'), repos.listarTodos('areas')]);
   const nombreArea = Object.fromEntries(areas.map((a) => [a.id, a.nombre]));
 
@@ -153,7 +275,7 @@ async function construirDetalleHoy(tipo, contexto) {
   if (!porFinca) visibles = visibles.filter((f) => f.id === fincaId);
   else if (contexto.fincaIdsPermitidas) visibles = visibles.filter((f) => contexto.fincaIdsPermitidas.includes(f.id));
 
-  const deHoy = filas.filter((f) => f.fecha === hoy && (tipo !== 'entrega' || f.grupo_entrega));
+  const deHoy = filas.filter((f) => f.fecha === hoy);
   const n = (v) => Number(v || 0).toLocaleString('es-CR');
 
   const bloques = visibles.map((finca) => {
@@ -166,26 +288,6 @@ async function construirDetalleHoy(tipo, contexto) {
     } else if (tipo === 'corta') {
       total = `${n(propias.reduce((s, f) => s + Number(f.racimos_cortados || 0), 0))} racimos`;
       lineas = propias.map((f) => ({ texto: `${nombreArea[f.area_id] ?? 'Área'} · ${n(f.racimos_cortados)} racimos` }));
-    } else {
-      const grupos = new Map();
-      for (const f of propias) {
-        const g = grupos.get(f.grupo_entrega) ?? { area: nombreArea[f.area_id] ?? 'Área', destino: f.responsable_nombre || 'Sin destinatario', observaciones: f.observaciones || '', primera: 0, segunda: 0 };
-        if (f.calidad === 'primera') g.primera += Number(f.cantidad_cajas || 0);
-        if (f.calidad === 'segunda') g.segunda += Number(f.cantidad_cajas || 0);
-        grupos.set(f.grupo_entrega, g);
-      }
-      const lista = [...grupos.values()];
-      total = `${n(lista.reduce((s, g) => s + g.primera, 0))} primera · ${n(lista.reduce((s, g) => s + g.segunda, 0))} segunda`;
-      // Cada entrega lleva su 📲 para mandársela al cliente por WhatsApp.
-      lineas = lista.map((g) => ({
-        texto: `${g.area} · ${g.destino}: ${n(g.primera)} primera · ${n(g.segunda)} segunda`,
-        mensaje: mensajeEntregaWhatsApp({
-          finca: finca.nombre,
-          area: g.area,
-          fecha: hoy,
-          entregas: [{ responsable: g.destino, primera: g.primera, segunda: g.segunda, observaciones: g.observaciones }],
-        }),
-      }));
     }
     const vacia = propias.length === 0;
     return elemento('div', { class: 'fila-registro', style: `display:block${vacia ? ';opacity:0.6' : ''}` }, [
@@ -193,21 +295,7 @@ async function construirDetalleHoy(tipo, contexto) {
         elemento('strong', { texto: finca.nombre }),
         elemento('strong', { texto: vacia ? 'Sin registros hoy' : total }),
       ]),
-      ...lineas.map((l) =>
-        l.mensaje
-          ? elemento('div', { style: 'display:flex;align-items:center;justify-content:space-between;gap:8px' }, [
-              elemento('div', { class: 'fila-registro__subtitulo', texto: l.texto }),
-              elemento('button', {
-                type: 'button',
-                class: 'boton-icono',
-                title: 'Enviar por WhatsApp',
-                style: 'background:none;flex:none',
-                texto: '📲',
-                onclick: () => abrirWhatsApp(l.mensaje),
-              }),
-            ])
-          : elemento('div', { class: 'fila-registro__subtitulo', texto: l.texto })
-      ),
+      ...lineas.map((l) => elemento('div', { class: 'fila-registro__subtitulo', texto: l.texto })),
     ]);
   });
 
@@ -216,9 +304,9 @@ async function construirDetalleHoy(tipo, contexto) {
     elemento('div', { class: 'lista-registros' }, bloques.length > 0 ? bloques : [elemento('p', { class: 'subtitulo-pantalla', texto: 'Sin fincas para mostrar.' })]),
   ]);
 
-  if (tipo !== 'corta') {
+  if (tipo === 'embolse') {
     contenido.appendChild(elemento('h3', { style: 'margin:16px 0 6px;font-size:0.95rem', texto: 'Por semana' }));
-    contenido.appendChild(tipo === 'embolse' ? await construirSemanasEmbolse(fincaId) : await construirSemanasEntrega(fincaId));
+    contenido.appendChild(await construirSemanasEmbolse(fincaId));
   }
   return contenido;
 }
@@ -266,6 +354,10 @@ async function abrirDetalle(tipo, contexto, alIrAIncidencias) {
   const etiquetaFinca = await etiquetaFincaParaPanel(contexto.fincaId);
   if (tipo === 'incidencias') {
     mostrarPanel({ titulo: `⚠️ Incidencias pendientes (${etiquetaFinca})`, contenido: await construirIncidenciasPendientes(contexto, alIrAIncidencias) });
+    return;
+  }
+  if (tipo === 'entrega') {
+    mostrarPanel({ titulo: `Entrega de carga de hoy (${etiquetaFinca})`, encabezado: encabezadoEntrega(etiquetaFinca), contenido: await construirEntregaHoy(contexto) });
     return;
   }
   mostrarPanel({ titulo: `${TITULOS_HOY[tipo]} (${etiquetaFinca})`, contenido: await construirDetalleHoy(tipo, contexto) });
