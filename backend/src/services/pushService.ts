@@ -76,6 +76,8 @@ interface PayloadNotificacion {
   url?: string;
   /** Módulo de la app que abre el aviso dentro de la app (ver app.js). */
   modulo?: string;
+  /** Pestaña dentro de ese módulo (ej. "corta" en embolse-corta). */
+  tab?: string;
 }
 
 /** Envía a administradores + encargados de esa finca. Nunca lanza: un error de envío no debe tumbar el push de sync. */
@@ -191,13 +193,13 @@ export async function notificarActividad(operaciones: OperacionCreada[], actorId
     const { rows: fincaRows } = await pool.query('SELECT id, nombre FROM fincas WHERE id = ANY($1::uuid[])', [fincaIds]);
     const nombreFinca = (id: string) => fincaRows.find((f) => f.id === id)?.nombre ?? 'una finca';
 
-    const avisos: { titulo: string; mensaje: string; modulo: string }[] = [];
+    const avisos: { titulo: string; mensaje: string; modulo: string; tab?: string }[] = [];
     for (const [fincaId, e] of embolse) {
       const porVariedad = [...e.variedades].map(([v, n]) => `${v} ${formato(n)}`).join(' · ');
-      avisos.push({ titulo: `🎗️ Embolse — ${nombreFinca(fincaId)}`, mensaje: `${formato(e.total)} racimos embolsados${porVariedad ? ` (${porVariedad})` : ''}`, modulo: 'embolse-corta' });
+      avisos.push({ titulo: `🎗️ Embolse — ${nombreFinca(fincaId)}`, mensaje: `${formato(e.total)} racimos embolsados${porVariedad ? ` (${porVariedad})` : ''}`, modulo: 'embolse-corta', tab: 'embolse' });
     }
     for (const [fincaId, c] of corta) {
-      avisos.push({ titulo: `✂️ Corta — ${nombreFinca(fincaId)}`, mensaje: `${formato(c.total)} racimos cortados`, modulo: 'embolse-corta' });
+      avisos.push({ titulo: `✂️ Corta — ${nombreFinca(fincaId)}`, mensaje: `${formato(c.total)} racimos cortados`, modulo: 'embolse-corta', tab: 'corta' });
     }
     for (const [fincaId, e] of entrega) {
       const destino = e.destinatarios.size > 0 ? ` → ${[...e.destinatarios].join(', ')}` : '';
@@ -215,7 +217,7 @@ export async function notificarActividad(operaciones: OperacionCreada[], actorId
       [actorId]
     );
     for (const aviso of avisos) {
-      await enviarAVarios(rows, { titulo: aviso.titulo, mensaje: aviso.mensaje, url: './', modulo: aviso.modulo });
+      await enviarAVarios(rows, { titulo: aviso.titulo, mensaje: aviso.mensaje, url: './', modulo: aviso.modulo, tab: aviso.tab });
     }
   } catch (err) {
     console.error('[push] Error preparando aviso de actividad:', err instanceof Error ? err.message : err);
@@ -231,6 +233,7 @@ export async function notificarIncidenciaUrgente(fincaId: string, descripcion: s
       titulo: `🚨 Incidencia urgente — ${nombreFinca}`,
       mensaje: descripcion?.trim() || 'Se reportó una incidencia urgente.',
       url: './',
+      modulo: 'incidencias',
     });
   } catch (err) {
     console.error('[push] Error preparando notificación de incidencia:', err instanceof Error ? err.message : err);
