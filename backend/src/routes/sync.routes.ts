@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { pool } from '../db/pool';
 import { requiereAutenticacion } from '../middleware/auth';
 import { aplicarOperacion, obtenerCambiosPendientes, type OperacionSync } from '../services/syncService';
-import { notificarIncidenciaUrgente, notificarPedidoBodega } from '../services/pushService';
+import { notificarIncidenciaUrgente, notificarPedidoBodega, notificarActividad, type OperacionCreada } from '../services/pushService';
 
 export const syncRouter = Router();
 syncRouter.use(requiereAutenticacion);
@@ -37,6 +37,7 @@ syncRouter.post('/push', async (req, res, next) => {
     }
     const usuario = req.usuario!;
     const resultados = [];
+    const creadasParaAviso: OperacionCreada[] = [];
 
     for (const op of parsed.data.operaciones as OperacionSync[]) {
       const client = await pool.connect();
@@ -56,6 +57,9 @@ syncRouter.post('/push', async (req, res, next) => {
               console.error('[sync] Error enviando notificación push:', err);
             });
           }
+        }
+        if (resultado.estado === 'ok' && op.operacion === 'crear' && op.datos && ['embolse', 'corta', 'entregas_platano'].includes(op.tabla)) {
+          creadasParaAviso.push({ tabla: op.tabla, datos: op.datos });
         }
         if (resultado.estado === 'ok' && op.tabla === 'pedidos_bodega' && op.operacion === 'crear') {
           const fincaId = op.datos?.finca_id as string | undefined;
@@ -78,6 +82,10 @@ syncRouter.post('/push', async (req, res, next) => {
         client.release();
       }
     }
+
+    notificarActividad(creadasParaAviso, usuario.id).catch((err) => {
+      console.error('[sync] Error enviando avisos de actividad:', err);
+    });
 
     res.json({ resultados });
   } catch (err) {

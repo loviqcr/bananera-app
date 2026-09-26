@@ -137,6 +137,91 @@ export async function notificarPedidoBodega(fincaId: string, texto: string, soli
   }
 }
 
+export interface OperacionCreada {
+  tabla: string;
+  datos: Record<string, unknown>;
+}
+
+const numero = (v: unknown) => Number(v) || 0;
+const formato = (n: number) => n.toLocaleString('es-CR');
+
+/**
+ * Aviso a los administradores cuando alguien registra embolse, corta o una
+ * Entrega de Carga. Se agrupa por lote de sync y por finca: si un celular
+ * sube de golpe 30 registros al recuperar señal, llega UN aviso por finca y
+ * tipo con los totales, no 30. Nunca se avisa a quien hizo el registro (si
+ * el administrador registra algo, no necesita que se lo digan).
+ * "Entrega de Carga" = entregas_platano con grupo_entrega; las entregas de
+ * Producción (sin grupo) no avisan.
+ */
+export async function notificarActividad(operaciones: OperacionCreada[], actorId: string) {
+  if (!habilitado || operaciones.length === 0) return;
+  try {
+    const embolse = new Map<string, { registros: number; total: number; variedades: Map<string, number> }>();
+    const corta = new Map<string, { registros: number; total: number }>();
+    const entrega = new Map<string, { primera: number; segunda: number; destinatarios: Set<string> }>();
+
+    for (const { tabla, datos } of operaciones) {
+      const fincaId = datos.finca_id as string | undefined;
+      if (!fincaId) continue;
+      if (tabla === 'embolse') {
+        const actual = embolse.get(fincaId) ?? { registros: 0, total: 0, variedades: new Map() };
+        const cantidad = numero(datos.cantidad);
+        actual.registros += 1;
+        actual.total += cantidad;
+        const variedad = /\[Variedad: ([^\]]+)\]/.exec(String(datos.observaciones ?? ''))?.[1];
+        if (variedad) actual.variedades.set(variedad, (actual.variedades.get(variedad) ?? 0) + cantidad);
+        embolse.set(fincaId, actual);
+      } else if (tabla === 'corta') {
+        const actual = corta.get(fincaId) ?? { registros: 0, total: 0 };
+        actual.registros += 1;
+        actual.total += numero(datos.racimos_cortados);
+        corta.set(fincaId, actual);
+      } else if (tabla === 'entregas_platano' && datos.grupo_entrega) {
+        const actual = entrega.get(fincaId) ?? { primera: 0, segunda: 0, destinatarios: new Set() };
+        if (datos.calidad === 'primera') actual.primera += numero(datos.cantidad_cajas);
+        if (datos.calidad === 'segunda') actual.segunda += numero(datos.cantidad_cajas);
+        if (datos.responsable_nombre) actual.destinatarios.add(String(datos.responsable_nombre));
+        entrega.set(fincaId, actual);
+      }
+    }
+
+    const fincaIds = [...new Set([...embolse.keys(), ...corta.keys(), ...entrega.keys()])];
+    if (fincaIds.length === 0) return;
+    const { rows: fincaRows } = await pool.query('SELECT id, nombre FROM fincas WHERE id = ANY($1::uuid[])', [fincaIds]);
+    const nombreFinca = (id: string) => fincaRows.find((f) => f.id === id)?.nombre ?? 'una finca';
+
+    const avisos: { titulo: string; mensaje: string; modulo: string }[] = [];
+    for (const [fincaId, e] of embolse) {
+      const porVariedad = [...e.variedades].map(([v, n]) => `${v} ${formato(n)}`).join(' · ');
+      avisos.push({ titulo: `🎗️ Embolse — ${nombreFinca(fincaId)}`, mensaje: `${formato(e.total)} racimos embolsados${porVariedad ? ` (${porVariedad})` : ''}`, modulo: 'embolse-corta' });
+    }
+    for (const [fincaId, c] of corta) {
+      avisos.push({ titulo: `✂️ Corta — ${nombreFinca(fincaId)}`, mensaje: `${formato(c.total)} racimos cortados`, modulo: 'embolse-corta' });
+    }
+    for (const [fincaId, e] of entrega) {
+      const destino = e.destinatarios.size > 0 ? ` → ${[...e.destinatarios].join(', ')}` : '';
+      avisos.push({ titulo: `🧺 Entrega de carga — ${nombreFinca(fincaId)}`, mensaje: `${formato(e.primera)} de primera · ${formato(e.segunda)} de segunda${destino}`, modulo: 'entrega-carga' });
+    }
+
+    const { rows } = await pool.query(
+      `SELECT ps.id, ps.endpoint, ps.p256dh, ps.auth
+       FROM push_subscriptions ps
+       JOIN usuarios u ON u.id = ps.usuario_id
+       JOIN roles r ON r.id = u.rol_id
+       WHERE u.eliminado_at IS NULL AND u.activo = true
+         AND r.nombre = 'administrador'
+         AND u.id <> $1::uuid`,
+      [actorId]
+    );
+    for (const aviso of avisos) {
+      await enviarAVarios(rows, { titulo: aviso.titulo, mensaje: aviso.mensaje, url: './', modulo: aviso.modulo });
+    }
+  } catch (err) {
+    console.error('[push] Error preparando aviso de actividad:', err instanceof Error ? err.message : err);
+  }
+}
+
 export async function notificarIncidenciaUrgente(fincaId: string, descripcion: string) {
   if (!habilitado) return;
   try {
