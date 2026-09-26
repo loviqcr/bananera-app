@@ -23,6 +23,11 @@ function mensajeEntregaWhatsApp({ finca, area, fecha, entregas }) {
   return lineas.join('\n');
 }
 
+/** La variedad se guarda como "[Variedad: X]" dentro de observaciones; para mostrarla queda solo "X". */
+function textoObservacion(observaciones) {
+  return (observaciones || '').replace(/\[Variedad: ([^\]]+)\]/, '$1').replace(/\s+/g, ' ').trim();
+}
+
 function abrirWhatsApp(texto) {
   window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank', 'noopener');
 }
@@ -109,16 +114,14 @@ function crearStepper(colorBoton, contenedorModulo) {
   };
 }
 
-/** Entregas de hoy creadas por esta pantalla (traen grupo_entrega), agrupadas por toque de "Guardar entrega". */
-async function entregasCargaHoy(fincaId, areaId) {
-  const hoy = hoyISO();
-  const todas = (await repos.listarPorFinca('entregas_platano', fincaId)).filter(
-    (e) => e.area_id === areaId && e.fecha === hoy && e.grupo_entrega
-  );
+/** Junta las filas de un mismo toque de "Guardar entrega" (una por calidad) en una sola entrega, la más reciente primero. */
+function agruparPorEntrega(filas) {
   const grupos = new Map();
-  for (const fila of todas) {
+  for (const fila of filas) {
     const grupo = grupos.get(fila.grupo_entrega) ?? {
       grupo: fila.grupo_entrega,
+      fecha: fila.fecha,
+      areaId: fila.area_id,
       responsable: fila.responsable_nombre || 'Sin destinatario',
       primera: 0,
       segunda: 0,
@@ -132,6 +135,22 @@ async function entregasCargaHoy(fincaId, areaId) {
     grupos.set(fila.grupo_entrega, grupo);
   }
   return Array.from(grupos.values()).sort((a, b) => (a.actualizadoEn < b.actualizadoEn ? 1 : -1));
+}
+
+/** Entregas de hoy creadas por esta pantalla (traen grupo_entrega), agrupadas por toque de "Guardar entrega". */
+async function entregasCargaHoy(fincaId, areaId) {
+  const hoy = hoyISO();
+  const todas = (await repos.listarPorFinca('entregas_platano', fincaId)).filter(
+    (e) => e.area_id === areaId && e.fecha === hoy && e.grupo_entrega
+  );
+  return agruparPorEntrega(todas);
+}
+
+/** Entregas de esta finca de cualquier día que no sea hoy (de todos sus lotes), la fecha más reciente primero. */
+async function entregasCargaHistorial(fincaId) {
+  const hoy = hoyISO();
+  const todas = (await repos.listarPorFinca('entregas_platano', fincaId)).filter((e) => e.fecha !== hoy && e.grupo_entrega);
+  return agruparPorEntrega(todas).sort((a, b) => (a.fecha === b.fecha ? (a.actualizadoEn < b.actualizadoEn ? 1 : -1) : a.fecha < b.fecha ? 1 : -1));
 }
 
 /** Usado por el dashboard: total de cajas de HOY en toda la finca (todas las áreas), no solo la actual. */
@@ -392,7 +411,7 @@ export const entregaCargaModulo = {
         campoVariedad.value = '';
         campoObservaciones.value = '';
         limpiarSucio(contenedor);
-        await pintarHoy();
+        await refrescarListas();
       } catch (error) {
         mensaje.textContent = error.message || 'No se pudo guardar la entrega';
       } finally {
@@ -427,7 +446,7 @@ export const entregaCargaModulo = {
           elemento('div', { class: 'fila-registro' }, [
             elemento('div', {}, [
               elemento('div', { class: 'fila-registro__titulo', texto: g.responsable }),
-              g.observaciones ? elemento('div', { class: 'fila-registro__subtitulo', texto: g.observaciones.trim() }) : null,
+              textoObservacion(g.observaciones) ? elemento('div', { class: 'fila-registro__subtitulo', texto: textoObservacion(g.observaciones) }) : null,
             ]),
             elemento('div', { class: 'fila-registro__valor tono-verde', texto: `${g.primera} primera · ${g.segunda} segunda` }),
             elemento('button', {
@@ -448,7 +467,7 @@ export const entregaCargaModulo = {
                   onclick: async () => {
                     if (!confirm(`¿Eliminar la entrega a ${g.responsable}? No se puede deshacer.`)) return;
                     for (const id of g.ids) await repos.eliminar('entregas_platano', id);
-                    await pintarHoy();
+                    await refrescarListas();
                   },
                 })
               : null,
@@ -467,6 +486,84 @@ export const entregaCargaModulo = {
         );
       }
     }
-    await pintarHoy();
+
+    // ---- Historial: entregas de días anteriores de esta finca ----
+    const nombreArea = Object.fromEntries(areas.map((a) => [a.id, a.nombre]));
+    const POR_PAGINA = 20;
+    let visibles = POR_PAGINA;
+    const cabeceraHistorial = elemento('div', { class: 'fila', style: 'justify-content:space-between;align-items:baseline;margin-top:20px' }, [
+      elemento('h2', { class: 'titulo-pantalla', style: 'font-size:0.85rem;letter-spacing:0.04em', texto: 'HISTORIAL' }),
+      elemento('span', { class: 'subtitulo-pantalla', texto: finca?.nombre ?? '' }),
+    ]);
+    const listaHistorial = elemento('div', { class: 'lista-registros' });
+    contenedor.appendChild(cabeceraHistorial);
+    contenedor.appendChild(listaHistorial);
+
+    async function pintarHistorial() {
+      const todas = await entregasCargaHistorial(contexto.fincaId);
+      listaHistorial.innerHTML = '';
+      if (todas.length === 0) {
+        listaHistorial.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: 'Todavía no hay entregas de días anteriores.' }));
+        return;
+      }
+      let fechaActual = null;
+      for (const g of todas.slice(0, visibles)) {
+        if (g.fecha !== fechaActual) {
+          fechaActual = g.fecha;
+          listaHistorial.appendChild(elemento('h3', { style: 'margin:10px 0 2px;font-size:0.9rem', texto: formatearFecha(g.fecha) }));
+        }
+        listaHistorial.appendChild(
+          elemento('div', { class: 'fila-registro' }, [
+            elemento('div', {}, [
+              elemento('div', { class: 'fila-registro__titulo', texto: g.responsable }),
+              elemento('div', { class: 'fila-registro__subtitulo', texto: [nombreArea[g.areaId], textoObservacion(g.observaciones)].filter(Boolean).join(' · ') }),
+            ]),
+            elemento('div', { class: 'fila-registro__valor tono-verde', texto: `${g.primera} primera · ${g.segunda} segunda` }),
+            elemento('button', {
+              type: 'button',
+              class: 'boton-icono',
+              title: 'Enviar por WhatsApp',
+              style: 'background:none;flex:none',
+              texto: '📲',
+              onclick: () => abrirWhatsApp(mensajeEntregaWhatsApp({ finca: finca?.nombre, area: nombreArea[g.areaId], fecha: g.fecha, entregas: [g] })),
+            }),
+            esAdmin
+              ? elemento('button', {
+                  type: 'button',
+                  class: 'boton-icono',
+                  title: 'Eliminar entrega',
+                  style: 'background:none;color:var(--rojo-500);flex:none',
+                  texto: '🗑️',
+                  onclick: async () => {
+                    if (!confirm(`¿Eliminar la entrega a ${g.responsable} del ${formatearFecha(g.fecha)}? No se puede deshacer.`)) return;
+                    for (const id of g.ids) await repos.eliminar('entregas_platano', id);
+                    await pintarHistorial();
+                  },
+                })
+              : null,
+          ])
+        );
+      }
+      if (todas.length > visibles) {
+        listaHistorial.appendChild(
+          elemento('button', {
+            type: 'button',
+            class: 'boton boton--fantasma',
+            style: 'margin-top:8px',
+            texto: `Ver más (${todas.length - visibles} restantes)`,
+            onclick: async () => {
+              visibles += POR_PAGINA;
+              await pintarHistorial();
+            },
+          })
+        );
+      }
+    }
+
+    async function refrescarListas() {
+      await pintarHoy();
+      await pintarHistorial();
+    }
+    await refrescarListas();
   },
 };
