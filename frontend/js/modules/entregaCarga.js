@@ -1,7 +1,31 @@
 import { repos } from '../db/repos.js';
 import { localdb, generarUUID } from '../db/localdb.js';
 import { auth } from './auth.js';
-import { elemento, hoyISO, marcarSucio, limpiarSucio } from '../ui.js';
+import { elemento, hoyISO, formatearFecha, marcarSucio, limpiarSucio } from '../ui.js';
+
+/**
+ * Mensaje listo para mandarle al cliente por WhatsApp con el detalle de una
+ * entrega. Sin número de teléfono a propósito: WhatsApp deja elegir el chat
+ * (o grupo) al abrirse, y quien lo manda le da "enviar" él mismo.
+ */
+function mensajeEntregaWhatsApp({ finca, area, fecha, entregas }) {
+  const lineas = [`*Entrega de carga* — ${finca ?? 'Finca'}${area ? ` · ${area}` : ''}`, `Fecha: ${formatearFecha(fecha)}`];
+  for (const e of entregas) {
+    const variedad = /\[Variedad: ([^\]]+)\]/.exec(e.observaciones || '')?.[1];
+    const nota = (e.observaciones || '').replace(/\s*\[Variedad: [^\]]+\]/, '').trim();
+    lineas.push('', `Para: ${e.responsable}`, `Cajas de primera: ${e.primera}`, `Cajas de segunda: ${e.segunda}`);
+    if (variedad) lineas.push(`Variedad: ${variedad}`);
+    if (nota) lineas.push(`Nota: ${nota}`);
+  }
+  if (entregas.length > 1) {
+    lineas.push('', `Total: ${entregas.reduce((s, e) => s + e.primera, 0)} de primera · ${entregas.reduce((s, e) => s + e.segunda, 0)} de segunda`);
+  }
+  return lineas.join('\n');
+}
+
+function abrirWhatsApp(texto) {
+  window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank', 'noopener');
+}
 
 async function esAdministrador() {
   const sesion = await auth.sesionActual();
@@ -406,6 +430,14 @@ export const entregaCargaModulo = {
               g.observaciones ? elemento('div', { class: 'fila-registro__subtitulo', texto: g.observaciones.trim() }) : null,
             ]),
             elemento('div', { class: 'fila-registro__valor tono-verde', texto: `${g.primera} primera · ${g.segunda} segunda` }),
+            elemento('button', {
+              type: 'button',
+              class: 'boton-icono',
+              title: 'Enviar por WhatsApp',
+              style: 'background:none;flex:none',
+              texto: '📲',
+              onclick: () => abrirWhatsApp(mensajeEntregaWhatsApp({ finca: finca?.nombre, area: area?.nombre, fecha: hoyISO(), entregas: [g] })),
+            }),
             esAdmin
               ? elemento('button', {
                   type: 'button',
@@ -421,6 +453,17 @@ export const entregaCargaModulo = {
                 })
               : null,
           ])
+        );
+      }
+      if (grupos.length > 1) {
+        listaHoy.appendChild(
+          elemento('button', {
+            type: 'button',
+            class: 'boton boton--fantasma',
+            style: 'margin-top:8px',
+            texto: '📲 Enviar resumen de hoy por WhatsApp',
+            onclick: () => abrirWhatsApp(mensajeEntregaWhatsApp({ finca: finca?.nombre, area: area?.nombre, fecha: hoyISO(), entregas: grupos })),
+          })
         );
       }
     }
