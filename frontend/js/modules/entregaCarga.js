@@ -292,7 +292,9 @@ export const entregaCargaModulo = {
             pintarResponsables();
           },
         });
-        const grupo = elemento('div', { class: 'fila', style: 'gap:2px' }, [
+        // Sin la clase "fila" (que estira a los hijos con flex:1): cada destinatario
+        // con su ✏️ y 🗑️ ocupa lo que necesita y la lista baja de línea si no cabe.
+        const grupo = elemento('div', { style: 'display:flex;align-items:center;gap:2px;flex:none;max-width:100%' }, [
           boton,
           esAdmin
             ? elemento('button', {

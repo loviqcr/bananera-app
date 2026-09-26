@@ -2002,3 +2002,91 @@ input.stepper__valor::-webkit-inner-spin-button {
 :root[data-tema-efectivo="oscuro"] .tarjeta-stat--alerta .tarjeta-stat__valor,
 :root[data-tema-efectivo="oscuro"] .estadistica--alerta .estadistica__valor { color: var(--rojo-500); }
 :root[data-tema-efectivo="oscuro"] .estadistica--pendiente .estadistica__valor { color: var(--ambar-500); }
+
+/* ============================================================================
+   Ajuste a pantallas de celular (320–412 px)
+   Por defecto un hijo de grid/flex NO se encoge por debajo de su contenido
+   (min-width:auto): una cifra larga, un campo de fecha o una fila de botones
+   empujaban toda la pantalla hacia los lados. Estas reglas dejan que las
+   celdas se encojan y que lo que no cabe baje o se abrevie.
+   ========================================================================= */
+
+.rejilla-estadisticas { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.rejilla-estadisticas > *,
+.rejilla-finca-detalle > *,
+.rejilla-acciones-rapidas > *,
+.cuadricula-modulos > *,
+.fila > *,
+.campo { min-width: 0; }
+
+.estadistica__valor,
+.tarjeta-stat__valor { overflow-wrap: anywhere; }
+.estadistica__valor { font-size: clamp(1.25rem, 6.2vw, 1.85rem); }
+
+.campo input,
+.campo select,
+.campo textarea { min-width: 0; max-width: 100%; }
+.campo input[type="date"] { width: 100%; }
+
+/* Tarjetas de finca de Inicio: tantas columnas como quepan (con 5 o más
+   fincas ya no se salen de la pantalla). */
+.rejilla-fincas-mini { grid-template-columns: repeat(auto-fill, minmax(76px, 1fr)); }
+
+/* Botones de exportar (CSV / Excel / PDF): bajan de línea si no caben */
+.barra-acciones { flex-wrap: wrap; }
+.barra-acciones > .boton { flex: 1 1 auto; padding: 0 12px; white-space: nowrap; }
+
+/* Red de seguridad: si algún contenido raro se pasara, no se abre un scroll
+   lateral de toda la pantalla (las tablas ya se desplazan dentro de su
+   propio contenedor). `clip` no crea scroll, así que no afecta lo fijo. */
+.pantalla { overflow-x: clip; }
+
+.barra-superior__sync { flex: 0 1 auto; min-width: 0; }
+
+@media (max-width: 360px) {
+  .barra-superior { gap: 6px; padding-left: 10px; padding-right: 10px; }
+  .barra-superior__marca { font-size: 0.88rem; }
+  .indicador-conexion { max-width: 86px; }
+  #indicador-conexion-texto { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .campo input,
+  .campo select { padding: 12px; font-size: 0.95rem; }
+}
+
+/* Filas de listas: el texto se reparte el ancho y lo largo baja de línea, así
+   los botones de acción (📲 ✏️ 🗑️) nunca quedan empujados fuera de la tarjeta. */
+.fila-registro > div:first-child { min-width: 0; flex: 1 1 auto; }
+.fila-registro__titulo,
+.fila-registro__subtitulo { overflow-wrap: anywhere; }
+.fila-registro__valor { white-space: normal; text-align: right; flex: 0 1 auto; }
+.fila-registro > .boton-icono { flex: none; }
+
+/* Fechas Desde/Hasta: en pantallas angostas bajan una debajo de la otra en
+   vez de cortar el año; donde caben dos, se ven completas. */
+.fila:has(input[type="date"]) { flex-wrap: wrap; }
+.fila:has(input[type="date"]) > * { flex: 1 1 140px; }
+.campo input[type="date"] { padding-left: 10px; padding-right: 10px; }
+
+/* Tarjetas de finca de Inicio: nombres legibles (2 por fila en los más angostos) */
+.rejilla-fincas-mini { grid-template-columns: repeat(auto-fill, minmax(92px, 1fr)); }
+
+/* Filas de lista en celulares: el nombre baja de línea por palabras (no
+   "Cena/da") y la cifra de la derecha se achica un poco para dejarle lugar. */
+.fila-registro__titulo,
+.fila-registro__subtitulo { overflow-wrap: break-word; }
+@media (max-width: 400px) {
+  .fila-registro > div:first-child { flex: 1 1 4.5rem; }
+  .fila-registro__valor { font-size: 0.84rem; max-width: 52%; }
+}
+
+/* Si en un celular angosto no caben nombre + cifra + botones, los botones
+   bajan a su propia línea (a la derecha) en vez de partir el nombre. */
+@media (max-width: 400px) {
+  .fila-registro { flex-wrap: wrap; }
+  .fila-registro > div:first-child { flex: 1 1 7rem; }
+  .fila-registro__valor { max-width: none; }
+  .fila-registro > .boton-icono:first-of-type { margin-left: auto; }
+}
+
+/* Aviso de sincronización flotante: más compacto, para que tape menos de la
+   pantalla en el celular (con señal intermitente aparece seguido). */
+.aviso-offline { font-size: 0.78rem; line-height: 1.25; padding: 6px 12px; }
