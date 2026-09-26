@@ -8,7 +8,7 @@ import { elemento, hoyISO, formatearFecha, marcarSucio, limpiarSucio } from '../
  * entrega. Sin número de teléfono a propósito: WhatsApp deja elegir el chat
  * (o grupo) al abrirse, y quien lo manda le da "enviar" él mismo.
  */
-function mensajeEntregaWhatsApp({ finca, area, fecha, entregas }) {
+export function mensajeEntregaWhatsApp({ finca, area, fecha, entregas }) {
   const lineas = [`*Entrega de carga* — ${finca ?? 'Finca'}${area ? ` · ${area}` : ''}`, `Fecha: ${formatearFecha(fecha)}`];
   for (const e of entregas) {
     const variedad = /\[Variedad: ([^\]]+)\]/.exec(e.observaciones || '')?.[1];
@@ -28,7 +28,7 @@ function textoObservacion(observaciones) {
   return (observaciones || '').replace(/\[Variedad: ([^\]]+)\]/, '$1').replace(/\s+/g, ' ').trim();
 }
 
-function abrirWhatsApp(texto) {
+export function abrirWhatsApp(texto) {
   window.open(`https://wa.me/?text=${encodeURIComponent(texto)}`, '_blank', 'noopener');
 }
 

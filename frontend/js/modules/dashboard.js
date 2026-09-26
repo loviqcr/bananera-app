@@ -5,7 +5,7 @@ import { laboresConEstado } from './labores.js';
 import { planillaModulo } from './planilla.js';
 import { ventasModulo } from './ventas.js';
 import { estadisticasDia, resumenEmbolsePorSemana } from './embolseCorta.js';
-import { estadisticasHoy as estadisticasCargaHoy, ultimoDestinatario, resumenEntregaPorSemana } from './entregaCarga.js';
+import { estadisticasHoy as estadisticasCargaHoy, ultimoDestinatario, resumenEntregaPorSemana, mensajeEntregaWhatsApp, abrirWhatsApp } from './entregaCarga.js';
 import { auth } from './auth.js';
 import { elemento, tarjetaStat, icono, formatearFecha, hoyISO, mostrarPanel } from '../ui.js';
 
@@ -162,21 +162,30 @@ async function construirDetalleHoy(tipo, contexto) {
     let lineas = [];
     if (tipo === 'embolse') {
       total = `${n(propias.reduce((s, f) => s + Number(f.cantidad || 0), 0))} racimos`;
-      lineas = propias.map((f) => `${nombreArea[f.area_id] ?? 'Área'} · ${/\[Variedad: ([^\]]+)\]/.exec(f.observaciones || '')?.[1] ?? 'Sin variedad'} · ${n(f.cantidad)}`);
+      lineas = propias.map((f) => ({ texto: `${nombreArea[f.area_id] ?? 'Área'} · ${/\[Variedad: ([^\]]+)\]/.exec(f.observaciones || '')?.[1] ?? 'Sin variedad'} · ${n(f.cantidad)}` }));
     } else if (tipo === 'corta') {
       total = `${n(propias.reduce((s, f) => s + Number(f.racimos_cortados || 0), 0))} racimos`;
-      lineas = propias.map((f) => `${nombreArea[f.area_id] ?? 'Área'} · ${n(f.racimos_cortados)} racimos`);
+      lineas = propias.map((f) => ({ texto: `${nombreArea[f.area_id] ?? 'Área'} · ${n(f.racimos_cortados)} racimos` }));
     } else {
       const grupos = new Map();
       for (const f of propias) {
-        const g = grupos.get(f.grupo_entrega) ?? { area: nombreArea[f.area_id] ?? 'Área', destino: f.responsable_nombre || 'Sin destinatario', primera: 0, segunda: 0 };
+        const g = grupos.get(f.grupo_entrega) ?? { area: nombreArea[f.area_id] ?? 'Área', destino: f.responsable_nombre || 'Sin destinatario', observaciones: f.observaciones || '', primera: 0, segunda: 0 };
         if (f.calidad === 'primera') g.primera += Number(f.cantidad_cajas || 0);
         if (f.calidad === 'segunda') g.segunda += Number(f.cantidad_cajas || 0);
         grupos.set(f.grupo_entrega, g);
       }
       const lista = [...grupos.values()];
       total = `${n(lista.reduce((s, g) => s + g.primera, 0))} primera · ${n(lista.reduce((s, g) => s + g.segunda, 0))} segunda`;
-      lineas = lista.map((g) => `${g.area} · ${g.destino}: ${n(g.primera)} primera · ${n(g.segunda)} segunda`);
+      // Cada entrega lleva su 📲 para mandársela al cliente por WhatsApp.
+      lineas = lista.map((g) => ({
+        texto: `${g.area} · ${g.destino}: ${n(g.primera)} primera · ${n(g.segunda)} segunda`,
+        mensaje: mensajeEntregaWhatsApp({
+          finca: finca.nombre,
+          area: g.area,
+          fecha: hoy,
+          entregas: [{ responsable: g.destino, primera: g.primera, segunda: g.segunda, observaciones: g.observaciones }],
+        }),
+      }));
     }
     const vacia = propias.length === 0;
     return elemento('div', { class: 'fila-registro', style: `display:block${vacia ? ';opacity:0.6' : ''}` }, [
@@ -184,7 +193,21 @@ async function construirDetalleHoy(tipo, contexto) {
         elemento('strong', { texto: finca.nombre }),
         elemento('strong', { texto: vacia ? 'Sin registros hoy' : total }),
       ]),
-      ...lineas.map((l) => elemento('div', { class: 'fila-registro__subtitulo', texto: l })),
+      ...lineas.map((l) =>
+        l.mensaje
+          ? elemento('div', { style: 'display:flex;align-items:center;justify-content:space-between;gap:8px' }, [
+              elemento('div', { class: 'fila-registro__subtitulo', texto: l.texto }),
+              elemento('button', {
+                type: 'button',
+                class: 'boton-icono',
+                title: 'Enviar por WhatsApp',
+                style: 'background:none;flex:none',
+                texto: '📲',
+                onclick: () => abrirWhatsApp(l.mensaje),
+              }),
+            ])
+          : elemento('div', { class: 'fila-registro__subtitulo', texto: l.texto })
+      ),
     ]);
   });
 
