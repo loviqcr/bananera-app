@@ -291,6 +291,7 @@ async function seleccionarFinca(fincaId) {
   if (fincaId === 'todas') {
     mostrarVista('inicio');
     await renderizarInicio();
+    await abrirModuloPendiente();
     return;
   }
   await renderizarSelectorArea(fincaId);
@@ -320,6 +321,7 @@ async function renderizarSelectorArea(fincaId) {
       await actualizarContexto();
       mostrarVista('inicio');
       await renderizarInicio();
+      await abrirModuloPendiente();
     });
     el.listaAreas.appendChild(item);
   });
@@ -597,14 +599,52 @@ el.botonNotificaciones?.addEventListener('click', async () => {
 // worker aunque la app esté cerrada — ver service-worker.js).
 if ('serviceWorker' in navigator) {
   navigator.serviceWorker.addEventListener('message', (evento) => {
+    // El usuario tocó la notificación del sistema con la app ya abierta.
+    if (evento.data?.tipo === 'bananera:abrir-modulo') {
+      irAModuloDeNotificacion(evento.data.modulo, evento.data.tab);
+      return;
+    }
     if (evento.data?.tipo !== 'bananera:push') return;
     const payload = evento.data.payload || {};
     mostrarToast({
       titulo: payload.titulo || 'Nueva notificación',
       mensaje: payload.mensaje,
-      alHacerClick: () => abrirModulo(MODULOS[payload.modulo] ? payload.modulo : 'incidencias'),
+      alHacerClick: () => abrirModulo(MODULOS[payload.modulo] ? payload.modulo : 'incidencias', payload.tab || undefined),
     });
   });
+}
+
+// ---- Destino de una notificación (ver notificationclick en service-worker.js) ----
+// La app cerrada se abre con ?modulo=...&tab=...; ya abierta, recibe un mensaje.
+// En los dos casos se guarda como "pendiente" y se abre en cuanto la app está
+// lista (con sesión y con finca/área elegidas), no antes: un módulo sin finca
+// activa no tiene qué mostrar.
+let moduloPendiente = null;
+
+function guardarModuloPendiente(clave, tab) {
+  if (MODULOS[clave]) moduloPendiente = { clave, tab: tab || undefined };
+}
+
+(() => {
+  const params = new URLSearchParams(location.search);
+  guardarModuloPendiente(params.get('modulo'), params.get('tab'));
+  // Se limpia la dirección para que recargar la página no vuelva a saltar al módulo.
+  if (params.has('modulo') || params.has('tab')) history.replaceState(null, '', location.pathname);
+})();
+
+async function abrirModuloPendiente() {
+  if (!moduloPendiente) return;
+  const { clave, tab } = moduloPendiente;
+  moduloPendiente = null;
+  await abrirModulo(clave, tab);
+}
+
+function irAModuloDeNotificacion(clave, tab) {
+  guardarModuloPendiente(clave, tab);
+  // Si la app ya está en Inicio o dentro de un módulo, se abre de una vez;
+  // si está en login o eligiendo finca/área, queda pendiente hasta que termine.
+  const enPantallaDeTrabajo = !vistas.inicio.hidden || !vistas.modulo.hidden || !vistas.mas.hidden || !vistas.fincaDetalle.hidden;
+  if (cacheUsuario && enPantallaDeTrabajo) abrirModuloPendiente();
 }
 
 /**
@@ -866,6 +906,7 @@ async function continuarDespuesDeLogin() {
   if (fincaId === 'todas') {
     mostrarVista('inicio');
     await renderizarInicio();
+    await abrirModuloPendiente();
     return;
   }
   const areaId = fincas.obtenerAreaActiva();
@@ -876,6 +917,7 @@ async function continuarDespuesDeLogin() {
   }
   mostrarVista('inicio');
   await renderizarInicio();
+  await abrirModuloPendiente();
 }
 
 async function iniciar() {

@@ -4,7 +4,7 @@
  * este caché — esas las maneja directamente el Sync Client contra
  * IndexedDB, que es la fuente de verdad local.
  */
-const CACHE = 'bananera-shell-v79';
+const CACHE = 'bananera-shell-v80';
 
 const ARCHIVOS_SHELL = [
   './',
@@ -101,7 +101,8 @@ self.addEventListener('push', (evento) => {
     icon: './icons/icon-192.png',
     badge: './icons/icon-192.png',
     vibrate: [120, 60, 120],
-    data: { url: datos.url || './' },
+    // modulo/tab: a dónde lleva la notificación al tocarla (ver notificationclick).
+    data: { url: datos.url || './', modulo: datos.modulo || null, tab: datos.tab || null },
   };
 
   evento.waitUntil(
@@ -114,15 +115,28 @@ self.addEventListener('push', (evento) => {
   );
 });
 
+/**
+ * Al tocar la notificación se abre el módulo que avisó (ej. Pedidos a
+ * bodega, o la pestaña Corta):
+ *  - si la app ya está abierta, se le manda un mensaje para que cambie de
+ *    módulo y se le da el foco;
+ *  - si está cerrada, se abre con ?modulo=...&tab=... y la app lo lee al
+ *    arrancar (ver app.js).
+ * Una notificación sin módulo (avisos viejos) solo abre la app como antes.
+ */
 self.addEventListener('notificationclick', (evento) => {
   evento.notification.close();
-  const url = evento.notification.data?.url || './';
+  const { url = './', modulo = null, tab = null } = evento.notification.data || {};
+  const destino = modulo ? `./?modulo=${encodeURIComponent(modulo)}${tab ? `&tab=${encodeURIComponent(tab)}` : ''}` : url;
   evento.waitUntil(
-    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((lista) => {
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then(async (lista) => {
       for (const cliente of lista) {
-        if ('focus' in cliente) return cliente.focus();
+        if ('focus' in cliente) {
+          if (modulo) cliente.postMessage({ tipo: 'bananera:abrir-modulo', modulo, tab });
+          return cliente.focus();
+        }
       }
-      if (self.clients.openWindow) return self.clients.openWindow(url);
+      if (self.clients.openWindow) return self.clients.openWindow(destino);
     })
   );
 });
