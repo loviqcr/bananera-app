@@ -7,7 +7,7 @@ import { ventasModulo } from './ventas.js';
 import { estadisticasDia, resumenEmbolsePorSemana } from './embolseCorta.js';
 import { estadisticasHoy as estadisticasCargaHoy, ultimoDestinatario, resumenEntregaPorSemana, mensajeEntregaWhatsApp, abrirWhatsApp } from './entregaCarga.js';
 import { auth } from './auth.js';
-import { elemento, tarjetaStat, icono, formatearFecha, hoyISO, mostrarPanel } from '../ui.js';
+import { elemento, tarjetaStat, icono, iconoWhatsApp, formatearFecha, hoyISO, mostrarPanel } from '../ui.js';
 
 /** Título de una sección de Inicio: ícono en cuadro suave + texto. */
 function tituloSeccion(nombreIcono, texto) {
@@ -148,7 +148,7 @@ function barraProporcion(parte, total) {
 
 /**
  * Panel "Entrega de carga de hoy": una tarjeta por finca con sus entregas
- * (cada una con su 📲 para mandarla al cliente por WhatsApp), las cajas de
+ * (cada una con su botón de WhatsApp para mandarla al cliente por WhatsApp), las cajas de
  * primera y segunda con su proporción, y debajo el resumen semanal.
  */
 async function construirEntregaHoy(contexto) {
@@ -214,7 +214,7 @@ async function construirEntregaHoy(contexto) {
                       class: 'boton-icono',
                       title: 'Enviar por WhatsApp',
                       style: 'background:none;flex:none',
-                      texto: '📲',
+                      html: iconoWhatsApp(28),
                       onclick: () =>
                         abrirWhatsApp(
                           mensajeEntregaWhatsApp({

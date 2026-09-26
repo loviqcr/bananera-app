@@ -2090,3 +2090,13 @@ input.stepper__valor::-webkit-inner-spin-button {
 /* Aviso de sincronización flotante: más compacto, para que tape menos de la
    pantalla en el celular (con señal intermitente aparece seguido). */
 .aviso-offline { font-size: 0.78rem; line-height: 1.25; padding: 6px 12px; }
+
+/* Botón de WhatsApp: el logo va a su tamaño (la regla general de ".boton-icono svg" lo dejaba en 17px) */
+.boton-icono .icono-whatsapp { width: 28px; height: 28px; }
+.boton .icono-whatsapp { flex: none; }
+
+/* Los botones de acción de una fila (✏️ 🗑️ / WhatsApp) viajan juntos */
+.fila-registro__acciones { display: flex; align-items: center; gap: 2px; flex: none; }
+@media (max-width: 400px) {
+  .fila-registro > .fila-registro__acciones { margin-left: auto; }
+}

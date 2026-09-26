@@ -1,7 +1,7 @@
 import { repos } from '../db/repos.js';
 import { localdb, generarUUID } from '../db/localdb.js';
 import { auth } from './auth.js';
-import { elemento, icono, hoyISO, formatearFecha, marcarSucio, limpiarSucio } from '../ui.js';
+import { elemento, icono, iconoWhatsApp, hoyISO, formatearFecha, marcarSucio, limpiarSucio } from '../ui.js';
 
 /**
  * Mensaje listo para mandarle al cliente por WhatsApp con el detalle de una
@@ -465,28 +465,30 @@ export const entregaCargaModulo = {
               textoObservacion(g.observaciones) ? elemento('div', { class: 'fila-registro__subtitulo', texto: textoObservacion(g.observaciones) }) : null,
             ]),
             elemento('div', { class: 'fila-registro__valor tono-verde', texto: `${g.primera} primera · ${g.segunda} segunda` }),
-            elemento('button', {
-              type: 'button',
-              class: 'boton-icono',
-              title: 'Enviar por WhatsApp',
-              style: 'background:none;flex:none',
-              texto: '📲',
-              onclick: () => abrirWhatsApp(mensajeEntregaWhatsApp({ finca: finca?.nombre, area: area?.nombre, fecha: hoyISO(), entregas: [g] })),
-            }),
-            esAdmin
-              ? elemento('button', {
-                  type: 'button',
-                  class: 'boton-icono',
-                  title: 'Eliminar entrega',
-                  style: 'background:none;color:var(--rojo-500);flex:none',
-                  texto: '🗑️',
-                  onclick: async () => {
-                    if (!confirm(`¿Eliminar la entrega a ${g.responsable}? No se puede deshacer.`)) return;
-                    for (const id of g.ids) await repos.eliminar('entregas_platano', id);
-                    await refrescarListas();
-                  },
-                })
-              : null,
+            elemento('div', { class: 'fila-registro__acciones' }, [
+              elemento('button', {
+                type: 'button',
+                class: 'boton-icono',
+                title: 'Enviar por WhatsApp',
+                style: 'background:none;flex:none',
+                html: iconoWhatsApp(28),
+                onclick: () => abrirWhatsApp(mensajeEntregaWhatsApp({ finca: finca?.nombre, area: area?.nombre, fecha: hoyISO(), entregas: [g] })),
+              }),
+              esAdmin
+                ? elemento('button', {
+                    type: 'button',
+                    class: 'boton-icono',
+                    title: 'Eliminar entrega',
+                    style: 'background:none;color:var(--rojo-500);flex:none',
+                    texto: '🗑️',
+                    onclick: async () => {
+                      if (!confirm(`¿Eliminar la entrega a ${g.responsable}? No se puede deshacer.`)) return;
+                      for (const id of g.ids) await repos.eliminar('entregas_platano', id);
+                      await refrescarListas();
+                    },
+                  })
+                : null,
+            ]),
           ])
         );
       }
@@ -496,7 +498,7 @@ export const entregaCargaModulo = {
             type: 'button',
             class: 'boton boton--fantasma',
             style: 'margin-top:8px',
-            texto: '📲 Enviar resumen de hoy por WhatsApp',
+            html: `${iconoWhatsApp(22)}<span>Enviar resumen de hoy por WhatsApp</span>`,
             onclick: () => abrirWhatsApp(mensajeEntregaWhatsApp({ finca: finca?.nombre, area: area?.nombre, fecha: hoyISO(), entregas: grupos })),
           })
         );
@@ -535,28 +537,30 @@ export const entregaCargaModulo = {
               elemento('div', { class: 'fila-registro__subtitulo', texto: [nombreArea[g.areaId], textoObservacion(g.observaciones)].filter(Boolean).join(' · ') }),
             ]),
             elemento('div', { class: 'fila-registro__valor tono-verde', texto: `${g.primera} primera · ${g.segunda} segunda` }),
-            elemento('button', {
-              type: 'button',
-              class: 'boton-icono',
-              title: 'Enviar por WhatsApp',
-              style: 'background:none;flex:none',
-              texto: '📲',
-              onclick: () => abrirWhatsApp(mensajeEntregaWhatsApp({ finca: finca?.nombre, area: nombreArea[g.areaId], fecha: g.fecha, entregas: [g] })),
-            }),
-            esAdmin
-              ? elemento('button', {
-                  type: 'button',
-                  class: 'boton-icono',
-                  title: 'Eliminar entrega',
-                  style: 'background:none;color:var(--rojo-500);flex:none',
-                  texto: '🗑️',
-                  onclick: async () => {
-                    if (!confirm(`¿Eliminar la entrega a ${g.responsable} del ${formatearFecha(g.fecha)}? No se puede deshacer.`)) return;
-                    for (const id of g.ids) await repos.eliminar('entregas_platano', id);
-                    await pintarHistorial();
-                  },
-                })
-              : null,
+            elemento('div', { class: 'fila-registro__acciones' }, [
+              elemento('button', {
+                type: 'button',
+                class: 'boton-icono',
+                title: 'Enviar por WhatsApp',
+                style: 'background:none;flex:none',
+                html: iconoWhatsApp(28),
+                onclick: () => abrirWhatsApp(mensajeEntregaWhatsApp({ finca: finca?.nombre, area: nombreArea[g.areaId], fecha: g.fecha, entregas: [g] })),
+              }),
+              esAdmin
+                ? elemento('button', {
+                    type: 'button',
+                    class: 'boton-icono',
+                    title: 'Eliminar entrega',
+                    style: 'background:none;color:var(--rojo-500);flex:none',
+                    texto: '🗑️',
+                    onclick: async () => {
+                      if (!confirm(`¿Eliminar la entrega a ${g.responsable} del ${formatearFecha(g.fecha)}? No se puede deshacer.`)) return;
+                      for (const id of g.ids) await repos.eliminar('entregas_platano', id);
+                      await pintarHistorial();
+                    },
+                  })
+                : null,
+            ]),
           ])
         );
       }

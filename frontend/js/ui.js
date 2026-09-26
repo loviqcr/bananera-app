@@ -190,6 +190,21 @@ export function icono(nombre, tamano = 20) {
 }
 
 /**
+ * Logo de WhatsApp (círculo verde con globo y auricular), dibujado aquí en vez
+ * de usar un emoji: cada teléfono dibuja los emojis a su manera (en algunos el
+ * 📲 sale como un celular con una flecha), y esto se ve igual en todos.
+ */
+export function iconoWhatsApp(tamano = 24) {
+  return (
+    `<svg class="icono-whatsapp" viewBox="0 0 24 24" width="${tamano}" height="${tamano}" aria-hidden="true">` +
+    '<circle cx="12" cy="12" r="12" fill="#25D366"/>' +
+    '<path d="M12 4.6a7.4 7.4 0 0 0-6.4 11.1l-1 3.7 3.8-1a7.4 7.4 0 1 0 3.6-13.8Z" fill="none" stroke="#fff" stroke-width="1.7" stroke-linejoin="round"/>' +
+    '<path d="M9.4 8.5c.2-.4.5-.4.7-.4h.4c.1 0 .3 0 .4.3l.6 1.4c.1.2 0 .4-.1.5l-.4.5c-.1.1-.1.3 0 .4.5.9 1.3 1.6 2.2 2 .2.1.3 0 .4-.1l.5-.6c.1-.2.3-.2.5-.1l1.4.7c.2.1.3.2.2.5-.1.6-.7 1.3-1.5 1.4-1.9.2-5.3-2.2-5.7-4.5-.1-.5.1-1.1.4-1.5Z" fill="#fff"/>' +
+    '</svg>'
+  );
+}
+
+/**
  * Reemplaza todo elemento marcado con [data-icono] (en cualquier parte del
  * documento, incluido dentro de nodos recién insertados) por el <svg>
  * correspondiente. Se llama una vez al iniciar y de nuevo cada vez que un
@@ -249,28 +264,34 @@ export function listaRegistros(filas, formatearFila, opciones = {}) {
           subtitulo ? elemento('div', { class: 'fila-registro__subtitulo', texto: subtitulo }) : null,
         ]),
         valor != null ? elemento('div', { class: `fila-registro__valor ${tono ?? ''}`, texto: String(valor) }) : null,
-        onEditar
-          ? elemento('button', {
-              type: 'button',
-              class: 'boton-icono',
-              title: 'Editar',
-              style: 'background:none;color:var(--texto-suave);flex:none',
-              texto: '✏️',
-              onclick: () => onEditar(fila),
-            })
-          : null,
-        onEliminar
-          ? elemento('button', {
-              type: 'button',
-              class: 'boton-icono',
-              title: 'Eliminar',
-              style: 'background:none;color:var(--rojo-500);flex:none',
-              texto: '🗑️',
-              onclick: async () => {
-                if (!confirm('¿Eliminar este registro? No se puede deshacer.')) return;
-                await onEliminar(fila);
-              },
-            })
+        // ✏️ y 🗑️ van juntos en un mismo contenedor: si en un celular angosto
+        // no caben en la línea, bajan los dos a la vez y no uno solo.
+        onEditar || onEliminar
+          ? elemento('div', { class: 'fila-registro__acciones' }, [
+              onEditar
+                ? elemento('button', {
+                    type: 'button',
+                    class: 'boton-icono',
+                    title: 'Editar',
+                    style: 'background:none;color:var(--texto-suave);flex:none',
+                    texto: '✏️',
+                    onclick: () => onEditar(fila),
+                  })
+                : null,
+              onEliminar
+                ? elemento('button', {
+                    type: 'button',
+                    class: 'boton-icono',
+                    title: 'Eliminar',
+                    style: 'background:none;color:var(--rojo-500);flex:none',
+                    texto: '🗑️',
+                    onclick: async () => {
+                      if (!confirm('¿Eliminar este registro? No se puede deshacer.')) return;
+                      await onEliminar(fila);
+                    },
+                  })
+                : null,
+            ])
           : null,
       ])
     );
