@@ -9,17 +9,28 @@ import { elemento, hoyISO, formatearFecha, marcarSucio, limpiarSucio } from '../
  * (o grupo) al abrirse, y quien lo manda le da "enviar" él mismo.
  */
 export function mensajeEntregaWhatsApp({ finca, area, fecha, entregas }) {
-  const lineas = [`*Entrega de carga* — ${finca ?? 'Finca'}${area ? ` · ${area}` : ''}`, `Fecha: ${formatearFecha(fecha)}`];
+  const cajas = (n) => `${n} ${n === 1 ? 'caja' : 'cajas'}`;
+  const lineas = [
+    '*COSECHAS PRESBERE*',
+    '_Comprobante de entrega de carga_',
+    '',
+    `📅 *Fecha:* ${formatearFecha(fecha)}`,
+    `📍 *Origen:* ${finca ?? 'Finca'}${area ? ` · ${area}` : ''}`,
+  ];
   for (const e of entregas) {
     const variedad = /\[Variedad: ([^\]]+)\]/.exec(e.observaciones || '')?.[1];
     const nota = (e.observaciones || '').replace(/\s*\[Variedad: [^\]]+\]/, '').trim();
-    lineas.push('', `Para: ${e.responsable}`, `Cajas de primera: ${e.primera}`, `Cajas de segunda: ${e.segunda}`);
-    if (variedad) lineas.push(`Variedad: ${variedad}`);
-    if (nota) lineas.push(`Nota: ${nota}`);
+    lineas.push('', '━━━━━━━━━━━━━━', `👤 *${e.responsable}*`);
+    if (e.primera > 0) lineas.push(`• Primera: ${cajas(e.primera)}`);
+    if (e.segunda > 0) lineas.push(`• Segunda: ${cajas(e.segunda)}`);
+    if (variedad) lineas.push(`• Variedad: ${variedad}`);
+    if (nota) lineas.push(`• Nota: ${nota}`);
   }
-  if (entregas.length > 1) {
-    lineas.push('', `Total: ${entregas.reduce((s, e) => s + e.primera, 0)} de primera · ${entregas.reduce((s, e) => s + e.segunda, 0)} de segunda`);
-  }
+  const totalPrimera = entregas.reduce((s, e) => s + e.primera, 0);
+  const totalSegunda = entregas.reduce((s, e) => s + e.segunda, 0);
+  lineas.push('', '━━━━━━━━━━━━━━', `📦 *TOTAL: ${cajas(totalPrimera + totalSegunda)}*`);
+  if (entregas.length > 1) lineas.push(`(${cajas(totalPrimera)} de primera · ${cajas(totalSegunda)} de segunda)`);
+  lineas.push('', 'Gracias por su preferencia.');
   return lineas.join('\n');
 }
 
