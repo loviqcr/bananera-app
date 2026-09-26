@@ -1,7 +1,7 @@
 import { repos } from '../db/repos.js';
 import { localdb, generarUUID } from '../db/localdb.js';
 import { auth } from './auth.js';
-import { elemento, hoyISO, formatearFecha, marcarSucio, limpiarSucio } from '../ui.js';
+import { elemento, icono, hoyISO, formatearFecha, marcarSucio, limpiarSucio } from '../ui.js';
 
 /**
  * Mensaje listo para mandarle al cliente por WhatsApp con el detalle de una
@@ -256,7 +256,10 @@ export const entregaCargaModulo = {
       elemento('div', { class: 'banner-entrega-carga' }, [
         elemento('span', { class: 'chip chip--sobre-oscuro', texto: `${finca?.nombre ?? 'Finca'} · ${area?.nombre ?? 'Área'}` }),
         etiquetaFecha,
-        elemento('h1', { class: 'banner-entrega-carga__titulo', texto: 'Entrega de Carga' }),
+        elemento('div', { class: 'banner-fila' }, [
+          elemento('span', { class: 'banner-fila__icono', html: icono('truck', 34) }),
+          elemento('h1', { class: 'banner-entrega-carga__titulo', texto: 'Entrega de Carga' }),
+        ]),
       ])
     );
 

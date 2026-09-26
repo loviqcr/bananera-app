@@ -10,7 +10,7 @@ function filaPedido(pedido, { nombreFinca, puedeAtender, esAdmin, alCambiar }) {
       elemento('button', {
         type: 'button',
         class: 'boton boton--primario',
-        style: 'padding:6px 12px;font-size:0.85rem;flex:none',
+        style: 'padding:6px 14px;font-size:0.85rem;flex:none;width:auto;min-height:0;border-radius:12px',
         texto: '✓ Entregado',
         onclick: async () => {
           await repos.editar('pedidos_bodega', pedido.id, { estado: 'entregado' });

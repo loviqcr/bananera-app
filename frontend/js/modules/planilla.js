@@ -1,7 +1,7 @@
 import { repos } from '../db/repos.js';
 import { localdb } from '../db/localdb.js';
 import { auth } from './auth.js';
-import { elemento, crearFormulario, mostrarDialogo, formatearFecha, hoyISO, marcarSucio, limpiarSucio } from '../ui.js';
+import { elemento, icono, crearFormulario, mostrarDialogo, formatearFecha, hoyISO, marcarSucio, limpiarSucio } from '../ui.js';
 
 const ROLES_VEN_SALARIO = ['administrador', 'planilla'];
 
@@ -337,8 +337,13 @@ async function renderizarAsistencia(contenedor, contexto) {
     elemento('div', { class: 'banner-mano-obra' }, [
       elemento('span', { class: 'chip chip--sobre-oscuro', texto: finca?.nombre ?? 'Finca' }),
       etiquetaFecha,
-      elemento('h1', { class: 'banner-mano-obra__titulo', texto: 'Mano de Obra' }),
-      elemento('p', { class: 'banner-mano-obra__subtitulo', texto: 'Planilla y asistencia' }),
+      elemento('div', { class: 'banner-fila' }, [
+        elemento('span', { class: 'banner-fila__icono', html: icono('users', 34) }),
+        elemento('div', {}, [
+          elemento('h1', { class: 'banner-mano-obra__titulo', texto: 'Mano de Obra' }),
+          elemento('p', { class: 'banner-mano-obra__subtitulo', texto: 'Planilla y asistencia' }),
+        ]),
+      ]),
     ])
   );
   contenedor.appendChild(elemento('div', { class: 'campo' }, [elemento('label', { texto: 'Fecha' }), campoFecha]));

@@ -9,6 +9,11 @@ import { estadisticasHoy as estadisticasCargaHoy, ultimoDestinatario, resumenEnt
 import { auth } from './auth.js';
 import { elemento, tarjetaStat, icono, formatearFecha, hoyISO, mostrarPanel } from '../ui.js';
 
+/** Título de una sección de Inicio: ícono en cuadro suave + texto. */
+function tituloSeccion(nombreIcono, texto) {
+  return elemento('h2', { class: 'seccion-dashboard__titulo' }, [elemento('span', { class: 'icono-suave', html: icono(nombreIcono, 20) }), elemento('span', { texto })]);
+}
+
 function formatearMoneda(valor) {
   return `₡${Number(valor || 0).toLocaleString('es-CR', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}`;
 }
@@ -408,7 +413,7 @@ export async function renderizarDashboard(contenedor, contexto, manejadores = {}
   // Incidencias abre su módulo, como antes.
   contenedor.appendChild(
     elemento('div', { class: 'seccion-dashboard' }, [
-      elemento('h2', { class: 'seccion-dashboard__titulo', texto: 'Resumen general' }),
+      tituloSeccion('chart', 'Resumen general'),
       elemento('div', { class: 'rejilla-estadisticas' }, [
         tarjetaStat('package', stats.embolsadoHoy.toLocaleString('es-CR'), 'Embolse hoy', '', esAdmin ? () => abrirDetalle('embolse', contexto) : null),
         tarjetaStat('crop', stats.cortadoHoy.toLocaleString('es-CR'), 'Corta hoy', '', esAdmin ? () => abrirDetalle('corta', contexto) : null),
@@ -458,10 +463,10 @@ export async function renderizarDashboard(contenedor, contexto, manejadores = {}
     }
 
     contenedor.appendChild(
-      elemento('div', { class: 'seccion-dashboard' }, [elemento('h2', { class: 'seccion-dashboard__titulo', texto: 'Producción por finca' }), rejillaMini])
+      elemento('div', { class: 'seccion-dashboard' }, [tituloSeccion('farm', 'Producción por finca'), rejillaMini])
     );
     contenedor.appendChild(
-      elemento('div', { class: 'seccion-dashboard' }, [elemento('h2', { class: 'seccion-dashboard__titulo', texto: 'Detalle por finca' }), comparativa])
+      elemento('div', { class: 'seccion-dashboard' }, [tituloSeccion('sprout', 'Detalle por finca'), comparativa])
     );
   }
 

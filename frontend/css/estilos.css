@@ -1839,3 +1839,166 @@ input.stepper__valor::-webkit-inner-spin-button {
 .entrega-destinatario:first-child { padding-left: 0; border-left: none; }
 .entrega-destinatario__valor { margin-top: 8px; font-size: 1.5rem; font-weight: 800; font-variant-numeric: tabular-nums; }
 .entrega-destinatario__pie { margin-top: 4px; color: var(--texto-suave); font-size: 0.72rem; }
+
+/* ============================================================================
+   Sistema visual v2 — un mismo lenguaje en TODA la app: tarjetas redondeadas
+   con sombra suave, títulos en negrita, íconos en cuadros suaves, chips y
+   barras de proporción (el estilo del panel "Entrega de carga de hoy").
+   Solo estilos: no toca datos ni la lógica de ningún módulo. Va al final a
+   propósito, para que gane sobre las reglas anteriores sin tener que reescribir
+   cada una (los nombres de clase se conservan).
+   ========================================================================= */
+
+:root {
+  --radio: 18px;
+  --sombra-tarjeta: 0 1px 2px rgba(28, 33, 24, 0.05), 0 8px 22px -12px rgba(28, 33, 24, 0.22);
+}
+:root[data-tema-efectivo="oscuro"] {
+  --sombra-tarjeta: 0 1px 2px rgba(0, 0, 0, 0.4), 0 10px 24px -14px rgba(0, 0, 0, 0.7);
+}
+
+/* Títulos: negrita sans (la tipografía angosta de marca queda solo en la
+   barra superior y el login). */
+.titulo-pantalla,
+.encabezado-modulo__titulo {
+  font-family: var(--fuente-cuerpo);
+  font-weight: 800;
+  letter-spacing: -0.01em;
+}
+.titulo-pantalla { font-size: 1.6rem; line-height: 1.15; }
+.encabezado-modulo__titulo { font-size: 1.45rem; line-height: 1.15; }
+
+/* Tarjetas y filas */
+.tarjeta { border-radius: var(--radio); box-shadow: var(--sombra-tarjeta); }
+.dialogo-caja.tarjeta { box-shadow: 0 -4px 24px rgba(28, 33, 24, 0.22); border-radius: 22px 22px 0 0; }
+@media (min-width: 480px) {
+  .dialogo-caja.tarjeta { border-radius: 22px; box-shadow: var(--sombra); }
+}
+
+.fila-registro,
+.tarjeta-finca,
+.item-area,
+.tarjeta-finca-mini,
+.accion-rapida {
+  border-radius: 16px;
+  box-shadow: var(--sombra-tarjeta);
+}
+.fila-registro { padding: 13px 14px; }
+
+/* Campos y botones */
+.campo input,
+.campo select,
+.campo textarea { border-radius: 14px; }
+
+.boton--primario { box-shadow: 0 8px 18px -10px color-mix(in srgb, var(--primario) 80%, transparent); }
+.boton--secundario { border-radius: var(--radio); }
+
+/* Pestañas */
+.pestana { padding: 10px 16px; }
+.pestana--activa { box-shadow: 0 6px 14px -8px color-mix(in srgb, var(--primario) 85%, transparent); }
+
+/* Estadísticas */
+.estadistica { border-radius: var(--radio); }
+.estadistica__valor { font-size: 1.85rem; line-height: 1.1; }
+.tarjeta-stat { padding: 16px; }
+.tarjeta-stat__icono { width: 38px; height: 38px; border-radius: 12px; }
+.tarjeta-stat__valor { font-size: 2rem; line-height: 1.1; }
+
+/* Títulos de sección del dashboard: grandes, con su ícono en cuadro suave */
+.seccion-dashboard__titulo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 1.2rem;
+  font-weight: 800;
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--texto);
+  margin: 0 0 12px;
+}
+
+.icono-suave {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  background: color-mix(in srgb, var(--primario) 14%, transparent);
+  color: var(--primario);
+  flex: none;
+}
+
+/* Menú "Más": sin franja de color arriba; el color queda en el ícono */
+.tarjeta-modulo {
+  border-top: 1px solid var(--borde);
+  box-shadow: var(--sombra-tarjeta);
+  padding: 18px 10px;
+  gap: 10px;
+}
+.tarjeta-modulo--ambar,
+.tarjeta-modulo--verde,
+.tarjeta-modulo--azul,
+.tarjeta-modulo--tierra,
+.tarjeta-modulo--rojo { border-top-color: var(--borde); }
+.tarjeta-modulo__icono { width: 42px; height: 42px; border-radius: 14px; }
+
+/* Cabeceras de módulo (Entrega de Carga, Mano de Obra): tarjeta clara con
+   ícono grande y hojas de fondo, igual que el panel de entrega */
+.banner-entrega-carga,
+.banner-mano-obra {
+  position: relative;
+  overflow: hidden;
+  background: var(--superficie);
+  border: 1px solid var(--borde);
+  border-radius: 18px;
+  box-shadow: var(--sombra-tarjeta);
+}
+.banner-entrega-carga::before,
+.banner-entrega-carga::after,
+.banner-mano-obra::before,
+.banner-mano-obra::after {
+  content: '';
+  position: absolute;
+  background: color-mix(in srgb, var(--primario) 12%, transparent);
+  border-radius: 100% 0 100% 0;
+  pointer-events: none;
+}
+.banner-entrega-carga::before,
+.banner-mano-obra::before { right: -10px; top: -26px; width: 64px; height: 84px; transform: rotate(18deg); }
+.banner-entrega-carga::after,
+.banner-mano-obra::after { right: 34px; top: -34px; width: 44px; height: 64px; transform: rotate(-8deg); opacity: 0.7; }
+
+.chip--sobre-oscuro {
+  background: color-mix(in srgb, var(--primario) 14%, transparent);
+  color: var(--primario);
+}
+.banner-entrega-carga__fecha,
+.banner-mano-obra__fecha { color: var(--texto-suave); position: relative; z-index: 1; }
+.banner-entrega-carga__titulo,
+.banner-mano-obra__titulo {
+  font-family: var(--fuente-cuerpo);
+  font-weight: 800;
+  font-size: 1.5rem;
+  color: var(--texto);
+}
+.banner-mano-obra__subtitulo { color: var(--texto-suave); }
+.banner-fila { display: flex; align-items: center; gap: 12px; position: relative; z-index: 1; }
+.banner-fila__icono { color: var(--primario); display: flex; flex: none; }
+
+/* Modo oscuro: colores de "semáforo" y de familia de módulo. Las reglas
+   oscuras genéricas (":root[...] .tarjeta-stat__icono", etc.) pesan más que
+   las de cada variante, y dejaban en verde los íconos ámbar/azul/rojo/café
+   del menú y el rojo de las alertas. Se repiten con el mismo prefijo para
+   que la variante gane. */
+:root[data-tema-efectivo="oscuro"] .tarjeta-modulo--ambar .tarjeta-modulo__icono { background: rgba(240, 172, 27, 0.18); color: var(--ambar-500); }
+:root[data-tema-efectivo="oscuro"] .tarjeta-modulo--azul .tarjeta-modulo__icono { background: rgba(47, 127, 146, 0.24); color: #5fb3c7; }
+:root[data-tema-efectivo="oscuro"] .tarjeta-modulo--tierra .tarjeta-modulo__icono { background: rgba(138, 90, 52, 0.3); color: #d9b48d; }
+:root[data-tema-efectivo="oscuro"] .tarjeta-modulo--rojo .tarjeta-modulo__icono { background: rgba(201, 80, 46, 0.2); color: var(--rojo-500); }
+
+:root[data-tema-efectivo="oscuro"] .tarjeta-stat--alerta .tarjeta-stat__icono { background: rgba(201, 80, 46, 0.2); color: var(--rojo-500); }
+:root[data-tema-efectivo="oscuro"] .tarjeta-stat--ambar .tarjeta-stat__icono { background: rgba(240, 172, 27, 0.18); color: var(--ambar-500); }
+:root[data-tema-efectivo="oscuro"] .tarjeta-stat--azul .tarjeta-stat__icono { background: rgba(47, 127, 146, 0.24); color: #5fb3c7; }
+:root[data-tema-efectivo="oscuro"] .tarjeta-stat--alerta .tarjeta-stat__valor,
+:root[data-tema-efectivo="oscuro"] .estadistica--alerta .estadistica__valor { color: var(--rojo-500); }
+:root[data-tema-efectivo="oscuro"] .estadistica--pendiente .estadistica__valor { color: var(--ambar-500); }
