@@ -2100,3 +2100,24 @@ input.stepper__valor::-webkit-inner-spin-button {
 @media (max-width: 400px) {
   .fila-registro > .fila-registro__acciones { margin-left: auto; }
 }
+
+/* Fila tocable dentro del desglose semanal (finca o lote → abre su detalle) */
+.detalle-fila {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 6px;
+  margin: 0;
+  background: none;
+  border: none;
+  border-radius: 12px;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.detalle-fila:active { background: color-mix(in srgb, var(--primario) 12%, transparent); }
+.detalle-fila__texto { min-width: 0; }
+.detalle-fila__flecha { color: var(--texto-suave); display: flex; flex: none; }

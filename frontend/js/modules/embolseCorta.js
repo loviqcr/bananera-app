@@ -64,8 +64,11 @@ export async function resumenEmbolsePorSemana(fincaId, semanas = 8) {
     actual[variedad] = (actual[variedad] ?? 0) + cantidad;
 
     const clave = porFincaSeleccionada ? f.area_id : f.finca_id;
-    const parte = actual.detalleMapa.get(clave) ?? { nombre: nombres[clave] ?? (porFincaSeleccionada ? 'Sin área' : 'Finca'), ...vacio() };
+    // `registros` = las filas originales de esa finca (o lote) en la semana,
+    // para poder abrir el detalle día por día al tocarla.
+    const parte = actual.detalleMapa.get(clave) ?? { nombre: nombres[clave] ?? (porFincaSeleccionada ? 'Sin área' : 'Finca'), ...vacio(), registros: [] };
     parte[variedad] = (parte[variedad] ?? 0) + cantidad;
+    parte.registros.push(f);
     actual.detalleMapa.set(clave, parte);
 
     porSemana.set(semana, actual);

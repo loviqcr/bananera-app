@@ -80,9 +80,13 @@ async function construirSemanasEmbolse(fincaId) {
             'div',
             { style: 'margin-top:8px;padding-top:8px;border-top:1px solid var(--borde);display:flex;flex-direction:column;gap:8px' },
             f.detalle.map((d) =>
-              elemento('div', {}, [
-                elemento('div', { style: 'font-weight:700', texto: d.nombre }),
-                elemento('div', { class: 'fila-registro__subtitulo', texto: cantidades(d) }),
+              // Tocar la finca (o el lote) abre un popup con su detalle.
+              elemento('button', { type: 'button', class: 'detalle-fila', onclick: () => abrirDetalleEmbolseSemana(d, f.semana, porFinca) }, [
+                elemento('div', { class: 'detalle-fila__texto' }, [
+                  elemento('div', { style: 'font-weight:700', texto: d.nombre }),
+                  elemento('div', { class: 'fila-registro__subtitulo', texto: cantidades(d) }),
+                ]),
+                elemento('span', { class: 'detalle-fila__flecha', html: icono('chevron', 18) }),
               ])
             )
           ),
@@ -91,9 +95,97 @@ async function construirSemanasEmbolse(fincaId) {
     );
   }
   if (semanas.length > 0) {
-    contenido.prepend(elemento('p', { class: 'subtitulo-pantalla', texto: `Toca una semana para ver ${porFinca ? 'cada finca' : 'cada área'}.` }));
+    contenido.prepend(elemento('p', { class: 'subtitulo-pantalla', texto: `Toca una semana para verla y luego ${porFinca ? 'una finca' : 'un lote'} para ver su detalle.` }));
   }
   return contenido;
+}
+
+const VARIEDAD_DE = /\[Variedad: ([^\]]+)\]/;
+
+/**
+ * Popup con el detalle de UNA finca (o lote) en UNA semana: totales por
+ * variedad, cada lote y, día por día, cada registro con su cinta y nota.
+ * Se abre encima del desglose semanal, que queda debajo intacto.
+ */
+async function abrirDetalleEmbolseSemana(d, semana, porFinca) {
+  const [areas, colores] = await Promise.all([repos.listarTodos('areas'), repos.listarTodos('colores_cinta')]);
+  const nombreArea = Object.fromEntries(areas.map((a) => [a.id, a.nombre]));
+  const nombreColor = Object.fromEntries(colores.map((c) => [c.id, c.nombre]));
+  const n = (v) => Number(v || 0).toLocaleString('es-CR');
+  const variedadDe = (f) => VARIEDAD_DE.exec(f.observaciones || '')?.[1] ?? 'Sin variedad';
+  const notaDe = (f) => (f.observaciones || '').replace(VARIEDAD_DE, '').replace(/\s+/g, ' ').trim();
+
+  const registros = [...d.registros].sort((a, b) => (a.fecha === b.fecha ? 0 : a.fecha < b.fecha ? -1 : 1));
+  const total = registros.reduce((s, f) => s + Number(f.cantidad || 0), 0);
+  const porVariedad = new Map();
+  for (const f of registros) porVariedad.set(variedadDe(f), (porVariedad.get(variedadDe(f)) ?? 0) + Number(f.cantidad || 0));
+
+  const desde = new Date(semana + 'T00:00:00');
+  const hasta = new Date(desde);
+  hasta.setDate(hasta.getDate() + 6);
+  const rango = `${formatearFecha(semana)} al ${formatearFecha(hasta.toISOString().slice(0, 10))}`;
+
+  const contenido = elemento('div', {}, [
+    elemento('div', { class: 'subtitulo-pantalla', style: 'margin-bottom:10px', texto: `Semana del ${rango}` }),
+    elemento('div', { style: 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px' }, [
+      elemento('span', { class: 'entrega-chip', texto: `${n(total)} racimos` }),
+      ...[...porVariedad].map(([v, cant]) => elemento('span', { class: 'entrega-chip', texto: `${v}: ${n(cant)}` })),
+    ]),
+    elemento('div', { class: 'subtitulo-pantalla', style: 'margin-bottom:12px', texto: `${registros.length} ${registros.length === 1 ? 'registro' : 'registros'}` }),
+  ]);
+
+  // Por lote (solo cuando se abrió una finca: dentro de un lote sería repetir lo mismo)
+  if (porFinca) {
+    const lotes = new Map();
+    for (const f of registros) {
+      const l = lotes.get(f.area_id) ?? { nombre: nombreArea[f.area_id] ?? 'Sin lote', total: 0, variedades: new Map() };
+      l.total += Number(f.cantidad || 0);
+      l.variedades.set(variedadDe(f), (l.variedades.get(variedadDe(f)) ?? 0) + Number(f.cantidad || 0));
+      lotes.set(f.area_id, l);
+    }
+    contenido.appendChild(elemento('h3', { style: 'margin:0 0 6px;font-size:0.95rem', texto: 'Por lote' }));
+    contenido.appendChild(
+      elemento(
+        'div',
+        { class: 'lista-registros', style: 'margin-bottom:14px' },
+        [...lotes.values()]
+          .sort((a, b) => a.nombre.localeCompare(b.nombre))
+          .map((l) =>
+            elemento('div', { class: 'fila-registro', style: 'display:block' }, [
+              elemento('div', { style: 'display:flex;justify-content:space-between;gap:8px' }, [elemento('strong', { texto: l.nombre }), elemento('strong', { texto: `${n(l.total)} racimos` })]),
+              elemento('div', { class: 'fila-registro__subtitulo', texto: [...l.variedades].map(([v, cant]) => `${v}: ${n(cant)}`).join(' · ') }),
+            ])
+          )
+      )
+    );
+  }
+
+  // Por día, con cada registro
+  contenido.appendChild(elemento('h3', { style: 'margin:0 0 6px;font-size:0.95rem', texto: 'Día por día' }));
+  const dias = new Map();
+  for (const f of registros) dias.set(f.fecha, [...(dias.get(f.fecha) ?? []), f]);
+  const lista = elemento('div', { class: 'lista-registros' });
+  for (const [fecha, filas] of dias) {
+    const diaSemana = new Date(fecha + 'T00:00:00').toLocaleDateString('es-CR', { weekday: 'long' });
+    lista.appendChild(
+      elemento('div', { class: 'fila-registro', style: 'display:block' }, [
+        elemento('div', { style: 'display:flex;justify-content:space-between;gap:8px' }, [
+          elemento('strong', { style: 'text-transform:capitalize', texto: `${diaSemana} ${formatearFecha(fecha)}` }),
+          elemento('strong', { texto: `${n(filas.reduce((s, f) => s + Number(f.cantidad || 0), 0))} racimos` }),
+        ]),
+        ...filas.map((f) =>
+          elemento('div', {
+            class: 'fila-registro__subtitulo',
+            texto: [porFinca ? nombreArea[f.area_id] ?? 'Sin lote' : null, variedadDe(f), `${n(f.cantidad)} racimos`, f.color_cinta_id ? `cinta ${nombreColor[f.color_cinta_id] ?? ''}`.trim() : null, notaDe(f) || null]
+              .filter(Boolean)
+              .join(' · '),
+          })
+        ),
+      ])
+    );
+  }
+  contenido.appendChild(lista);
+  mostrarPanel({ titulo: `🎗️ Embolse — ${d.nombre}`, contenido });
 }
 
 /**
