@@ -237,37 +237,97 @@ async function abrirDetalleEntregaSemana(d, semana) {
   );
 
   contenido.appendChild(elemento('h3', { style: 'margin:0 0 6px;font-size:0.95rem', texto: 'Día por día' }));
+  contenido.appendChild(elemento('p', { class: 'subtitulo-pantalla', style: 'margin-bottom:8px', texto: 'Toca un día para mandarlo o imprimirlo por separado.' }));
   const dias = new Map();
   for (const e of entregas) dias.set(e.fecha, [...(dias.get(e.fecha) ?? []), e]);
   const lista = elemento('div', { class: 'lista-registros' });
   for (const [fecha, filas] of dias) {
     const diaSemana = new Date(fecha + 'T00:00:00').toLocaleDateString('es-CR', { weekday: 'long' });
     lista.appendChild(
-      elemento('div', { class: 'fila-registro', style: 'display:block' }, [
-        elemento('div', { style: 'display:flex;justify-content:space-between;gap:8px' }, [
-          elemento('strong', { style: 'text-transform:capitalize', texto: `${diaSemana} ${formatearFecha(fecha)}` }),
-          elemento('strong', { texto: `${n(filas.reduce((s, e) => s + e.primera + e.segunda, 0))} cajas` }),
+      // Tocar el día abre su propio popup (con WhatsApp/PDF) para mandar o imprimir solo esa entrega, sin el resto de la semana.
+      elemento('button', { type: 'button', class: 'fila-registro detalle-fila', style: 'display:block;text-align:left;width:100%', onclick: () => abrirDetalleEntregaDia(d.nombre, fecha, filas, nombreFinca, nombreArea) }, [
+        elemento('div', { class: 'detalle-fila__texto' }, [
+          elemento('div', { style: 'display:flex;justify-content:space-between;align-items:center;gap:8px' }, [
+            elemento('strong', { style: 'text-transform:capitalize', texto: `${diaSemana} ${formatearFecha(fecha)}` }),
+            elemento('div', { style: 'display:flex;align-items:center;gap:6px;flex:none' }, [
+              elemento('strong', { texto: `${n(filas.reduce((s, e) => s + e.primera + e.segunda, 0))} cajas` }),
+              elemento('span', { class: 'detalle-fila__flecha', html: icono('chevron', 16) }),
+            ]),
+          ]),
+          ...filas.map((e) =>
+            elemento('div', {
+              class: 'fila-registro__subtitulo',
+              texto: [
+                nombreFinca[e.fincaId] ?? 'Finca',
+                nombreArea[e.areaId] ?? 'Sin lote',
+                variedadDe(e.observaciones),
+                e.primera > 0 ? `${n(e.primera)} primera` : null,
+                e.segunda > 0 ? `${n(e.segunda)} segunda` : null,
+                notaDe(e.observaciones) || null,
+              ]
+                .filter(Boolean)
+                .join(' · '),
+            })
+          ),
         ]),
-        ...filas.map((e) =>
-          elemento('div', {
-            class: 'fila-registro__subtitulo',
-            texto: [
-              nombreFinca[e.fincaId] ?? 'Finca',
-              nombreArea[e.areaId] ?? 'Sin lote',
-              variedadDe(e.observaciones),
-              e.primera > 0 ? `${n(e.primera)} primera` : null,
-              e.segunda > 0 ? `${n(e.segunda)} segunda` : null,
-              notaDe(e.observaciones) || null,
-            ]
-              .filter(Boolean)
-              .join(' · '),
-          })
-        ),
       ])
     );
   }
   contenido.appendChild(lista);
   mostrarPanel({ titulo: `🚚 Entrega — ${d.nombre}`, contenido });
+}
+
+/**
+ * Popup con el detalle de UN SOLO día de entregas de un destinatario (se abre
+ * al tocar un día dentro de abrirDetalleEntregaSemana), con sus propios
+ * botones de WhatsApp/PDF para mandar o imprimir solo esa entrega.
+ */
+function abrirDetalleEntregaDia(nombreDestinatario, fecha, filasDia, nombreFinca, nombreArea) {
+  const n = (v) => Number(v || 0).toLocaleString('es-CR');
+  const variedadDe = (obs) => VARIEDAD_DE.exec(obs || '')?.[1] ?? 'Sin variedad';
+  const notaDe = (obs) => (obs || '').replace(VARIEDAD_DE, '').replace(/\s+/g, ' ').trim();
+  const totalPrimera = filasDia.reduce((s, e) => s + e.primera, 0);
+  const totalSegunda = filasDia.reduce((s, e) => s + e.segunda, 0);
+  const diaSemana = new Date(fecha + 'T00:00:00').toLocaleDateString('es-CR', { weekday: 'long' });
+  const tituloDia = `${diaSemana.charAt(0).toUpperCase()}${diaSemana.slice(1)} ${formatearFecha(fecha)}`;
+
+  const contenido = elemento('div', {}, [
+    elemento('div', { class: 'subtitulo-pantalla', style: 'margin-bottom:10px', texto: tituloDia }),
+    elemento('div', { style: 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:14px' }, [
+      elemento('span', { class: 'entrega-chip', texto: `${n(totalPrimera + totalSegunda)} cajas` }),
+      elemento('span', { class: 'entrega-chip', texto: `Primera: ${n(totalPrimera)}` }),
+      elemento('span', { class: 'entrega-chip', texto: `Segunda: ${n(totalSegunda)}` }),
+    ]),
+  ]);
+  contenido.appendChild(
+    elemento('div', { class: 'no-imprimir', style: 'display:flex;gap:8px;margin-bottom:14px' }, [
+      elemento('button', {
+        type: 'button',
+        class: 'boton boton--secundario',
+        style: 'flex:1;display:flex;align-items:center;justify-content:center;gap:8px',
+        html: `${iconoWhatsApp(20)}<span>WhatsApp</span>`,
+        onclick: () =>
+          abrirWhatsApp(mensajeEntregasWhatsApp({ titulo: `Entrega de carga — ${nombreDestinatario}`, entregas: filasDia, nombreFinca, nombreArea, mostrarFinca: true, mostrarResponsable: false })),
+      }),
+      elemento('button', { type: 'button', class: 'boton boton--secundario', style: 'flex:1', texto: '🖨️ PDF', onclick: (e) => imprimirPanel(e.currentTarget) }),
+    ])
+  );
+  const lista = elemento(
+    'div',
+    { class: 'lista-registros' },
+    filasDia.map((e) =>
+      elemento('div', { class: 'fila-registro', style: 'display:block' }, [
+        elemento('div', {
+          class: 'fila-registro__subtitulo',
+          texto: [nombreFinca[e.fincaId] ?? 'Finca', nombreArea[e.areaId] ?? 'Sin lote', variedadDe(e.observaciones), e.primera > 0 ? `${n(e.primera)} primera` : null, e.segunda > 0 ? `${n(e.segunda)} segunda` : null, notaDe(e.observaciones) || null]
+            .filter(Boolean)
+            .join(' · '),
+        }),
+      ])
+    )
+  );
+  contenido.appendChild(lista);
+  mostrarPanel({ titulo: `🚚 Entrega — ${nombreDestinatario}`, contenido });
 }
 
 /**
