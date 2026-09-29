@@ -5,7 +5,7 @@ import { laboresConEstado } from './labores.js';
 import { planillaModulo } from './planilla.js';
 import { ventasModulo } from './ventas.js';
 import { estadisticasDia, resumenEmbolsePorSemana } from './embolseCorta.js';
-import { estadisticasHoy as estadisticasCargaHoy, ultimoDestinatario, resumenEntregaPorSemana, mensajeEntregaWhatsApp, abrirWhatsApp, agruparPorEntrega } from './entregaCarga.js';
+import { estadisticasHoy as estadisticasCargaHoy, ultimoDestinatario, resumenEntregaPorSemana, mensajeEntregaWhatsApp, abrirWhatsApp, agruparPorEntrega, descargarEntregasCSV } from './entregaCarga.js';
 import { auth } from './auth.js';
 import { elemento, tarjetaStat, icono, iconoWhatsApp, formatearFecha, hoyISO, mostrarPanel } from '../ui.js';
 
@@ -223,6 +223,21 @@ async function abrirDetalleEntregaSemana(d, semana) {
     elemento('div', { class: 'subtitulo-pantalla', style: 'margin-bottom:12px', texto: `${entregas.length} ${entregas.length === 1 ? 'entrega' : 'entregas'}` }),
   ]);
 
+  const nombreArchivo = `entregas-${d.nombre}-${semana}.csv`
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '') // quita tildes (é → e) para que el nombre de archivo sea simple
+    .replace(/[^a-z0-9.-]+/g, '-');
+  contenido.appendChild(
+    elemento('button', {
+      type: 'button',
+      class: 'boton boton--secundario',
+      style: 'margin-bottom:14px',
+      texto: '⬇️ Descargar esta semana (CSV)',
+      onclick: () => descargarEntregasCSV(null, d.registros, nombreArchivo),
+    })
+  );
+
   contenido.appendChild(elemento('h3', { style: 'margin:0 0 6px;font-size:0.95rem', texto: 'Día por día' }));
   const dias = new Map();
   for (const e of entregas) dias.set(e.fecha, [...(dias.get(e.fecha) ?? []), e]);
@@ -402,6 +417,15 @@ async function construirEntregaHoy(contexto) {
 
   contenido.appendChild(
     elemento('div', { class: 'entrega-seccion' }, [elemento('span', { class: 'entrega-icono-suave', html: icono('calendar', 20) }), elemento('span', { texto: 'Resumen semanal' })])
+  );
+  contenido.appendChild(
+    elemento('button', {
+      type: 'button',
+      class: 'boton boton--secundario',
+      style: 'margin-bottom:12px;width:100%',
+      texto: '⬇️ Descargar todo (CSV)',
+      onclick: () => descargarEntregasCSV(fincaId),
+    })
   );
   contenido.appendChild(await construirSemanasEntrega(fincaId));
   return contenido;
