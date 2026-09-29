@@ -5,9 +5,9 @@ import { laboresConEstado } from './labores.js';
 import { planillaModulo } from './planilla.js';
 import { ventasModulo } from './ventas.js';
 import { estadisticasDia, resumenEmbolsePorSemana } from './embolseCorta.js';
-import { estadisticasHoy as estadisticasCargaHoy, ultimoDestinatario, resumenEntregaPorSemana, mensajeEntregaWhatsApp, abrirWhatsApp, agruparPorEntrega, descargarEntregasCSV } from './entregaCarga.js';
+import { estadisticasHoy as estadisticasCargaHoy, ultimoDestinatario, resumenEntregaPorSemana, mensajeEntregaWhatsApp, abrirWhatsApp, agruparPorEntrega, historialEntregas, mensajeEntregasWhatsApp } from './entregaCarga.js';
 import { auth } from './auth.js';
-import { elemento, tarjetaStat, icono, iconoWhatsApp, formatearFecha, hoyISO, mostrarPanel } from '../ui.js';
+import { elemento, tarjetaStat, icono, iconoWhatsApp, formatearFecha, hoyISO, mostrarPanel, imprimirPanel } from '../ui.js';
 
 /** Título de una sección de Inicio: ícono en cuadro suave + texto. */
 function tituloSeccion(nombreIcono, texto) {
@@ -223,19 +223,17 @@ async function abrirDetalleEntregaSemana(d, semana) {
     elemento('div', { class: 'subtitulo-pantalla', style: 'margin-bottom:12px', texto: `${entregas.length} ${entregas.length === 1 ? 'entrega' : 'entregas'}` }),
   ]);
 
-  const nombreArchivo = `entregas-${d.nombre}-${semana}.csv`
-    .toLowerCase()
-    .normalize('NFD')
-    .replace(/[̀-ͯ]/g, '') // quita tildes (é → e) para que el nombre de archivo sea simple
-    .replace(/[^a-z0-9.-]+/g, '-');
   contenido.appendChild(
-    elemento('button', {
-      type: 'button',
-      class: 'boton boton--secundario',
-      style: 'margin-bottom:14px',
-      texto: '⬇️ Descargar esta semana (CSV)',
-      onclick: () => descargarEntregasCSV(null, d.registros, nombreArchivo),
-    })
+    elemento('div', { class: 'no-imprimir', style: 'display:flex;gap:8px;margin-bottom:14px' }, [
+      elemento('button', {
+        type: 'button',
+        class: 'boton boton--secundario',
+        style: 'flex:1;display:flex;align-items:center;justify-content:center;gap:8px',
+        html: `${iconoWhatsApp(20)}<span>WhatsApp</span>`,
+        onclick: () => abrirWhatsApp(mensajeEntregasWhatsApp({ titulo: `Entregas de carga — ${d.nombre}`, entregas, nombreFinca, nombreArea, mostrarFinca: true, mostrarResponsable: false })),
+      }),
+      elemento('button', { type: 'button', class: 'boton boton--secundario', style: 'flex:1', texto: '🖨️ PDF', onclick: (e) => imprimirPanel(e.currentTarget) }),
+    ])
   );
 
   contenido.appendChild(elemento('h3', { style: 'margin:0 0 6px;font-size:0.95rem', texto: 'Día por día' }));
@@ -419,13 +417,19 @@ async function construirEntregaHoy(contexto) {
     elemento('div', { class: 'entrega-seccion' }, [elemento('span', { class: 'entrega-icono-suave', html: icono('calendar', 20) }), elemento('span', { texto: 'Resumen semanal' })])
   );
   contenido.appendChild(
-    elemento('button', {
-      type: 'button',
-      class: 'boton boton--secundario',
-      style: 'margin-bottom:12px;width:100%',
-      texto: '⬇️ Descargar todo (CSV)',
-      onclick: () => descargarEntregasCSV(fincaId),
-    })
+    elemento('div', { class: 'no-imprimir', style: 'display:flex;gap:8px;margin-bottom:12px' }, [
+      elemento('button', {
+        type: 'button',
+        class: 'boton boton--secundario',
+        style: 'flex:1;display:flex;align-items:center;justify-content:center;gap:8px',
+        html: `${iconoWhatsApp(20)}<span>WhatsApp</span>`,
+        onclick: async () => {
+          const { grupos, nombreFinca: nf, nombreArea: na } = await historialEntregas(fincaId);
+          abrirWhatsApp(mensajeEntregasWhatsApp({ titulo: 'Entregas de carga', entregas: grupos, nombreFinca: nf, nombreArea: na, mostrarFinca: porFinca, mostrarResponsable: true }));
+        },
+      }),
+      elemento('button', { type: 'button', class: 'boton boton--secundario', style: 'flex:1', texto: '🖨️ PDF', onclick: (e) => imprimirPanel(e.currentTarget) }),
+    ])
   );
   contenido.appendChild(await construirSemanasEntrega(fincaId));
   return contenido;

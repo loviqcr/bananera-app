@@ -233,28 +233,14 @@ export async function resumenEntregaPorSemana(fincaId, semanas = 8) {
     .slice(0, semanas);
 }
 
-function descargarCSV(nombre, encabezado, filas) {
-  const escapar = (v) => `"${String(v ?? '').replace(/"/g, '""')}"`;
-  const csv = [encabezado, ...filas].map((fila) => fila.map(escapar).join(',')).join('\n');
-  const blob = new Blob(['﻿' + csv], { type: 'text/csv;charset=utf-8;' }); // BOM: para que Excel muestre bien las tildes
-  const url = URL.createObjectURL(blob);
-  const enlace = document.createElement('a');
-  enlace.href = url;
-  enlace.download = nombre;
-  document.body.appendChild(enlace);
-  enlace.click();
-  enlace.remove();
-  URL.revokeObjectURL(url);
-}
-
 /**
- * Descarga en un CSV (una fila por entrega real, no por calidad) las
- * entregas de carga ya hechas: fecha, finca, lote, destinatario, variedad,
- * primera/segunda y nota — para revisarlas contra la factura fuera de la
- * app. `registrosRaw` son filas de `entregas_platano`; si se omite se trae
- * todo el historial de `fincaId` ('todas' incluye todas las fincas).
+ * Trae el historial de entregas de carga ya agrupado (una entrada por
+ * entrega real, no por calidad) junto con los nombres de finca y lote —
+ * para armar el mensaje de WhatsApp o la vista que se manda a imprimir.
+ * `registrosRaw` son filas de `entregas_platano`; si se omite se trae todo
+ * el historial de `fincaId` ('todas' incluye todas las fincas).
  */
-export async function descargarEntregasCSV(fincaId, registrosRaw = null, nombreArchivo = null) {
+export async function historialEntregas(fincaId, registrosRaw = null) {
   const [filas, fincas, areas] = await Promise.all([
     registrosRaw ?? repos.listarPorFinca('entregas_platano', fincaId).then((t) => t.filter((e) => e.grupo_entrega)),
     repos.listarTodos('fincas'),
@@ -262,24 +248,38 @@ export async function descargarEntregasCSV(fincaId, registrosRaw = null, nombreA
   ]);
   const nombreFinca = Object.fromEntries(fincas.map((f) => [f.id, f.nombre]));
   const nombreArea = Object.fromEntries(areas.map((a) => [a.id, a.nombre]));
-  const variedadDe = (obs) => /\[Variedad: ([^\]]+)\]/.exec(obs || '')?.[1] ?? '';
-  const notaDe = (obs) => (obs || '').replace(/\[Variedad: [^\]]+\]/, '').replace(/\s+/g, ' ').trim();
-
   const grupos = agruparPorEntrega(filas).sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
-  const encabezado = ['Fecha', 'Finca', 'Lote', 'Destinatario', 'Variedad', 'Primera', 'Segunda', 'Total', 'Nota'];
-  const cuerpo = grupos.map((g) => [
-    g.fecha,
-    nombreFinca[g.fincaId] ?? '',
-    nombreArea[g.areaId] ?? '',
-    g.responsable,
-    variedadDe(g.observaciones),
-    g.primera,
-    g.segunda,
-    g.primera + g.segunda,
-    notaDe(g.observaciones),
-  ]);
-  descargarCSV(nombreArchivo ?? `entregas-de-carga-${hoyISO()}.csv`, encabezado, cuerpo);
-  return grupos.length;
+  return { grupos, nombreFinca, nombreArea };
+}
+
+/**
+ * Mensaje de WhatsApp con varias entregas ya hechas (una por entrega real),
+ * cada una con su fecha, finca/lote, variedad y cajas — para mandárselo al
+ * cliente o revisarlo uno mismo sin abrir la app. `entregas` son objetos de
+ * `agruparPorEntrega` (fincaId/areaId/responsable/primera/segunda/observaciones).
+ */
+export function mensajeEntregasWhatsApp({ titulo, entregas, nombreFinca = {}, nombreArea = {}, mostrarFinca = true, mostrarResponsable = false }) {
+  const variedadDe = (obs) => /\[Variedad: ([^\]]+)\]/.exec(obs || '')?.[1];
+  const notaDe = (obs) => (obs || '').replace(/\[Variedad: [^\]]+\]/, '').replace(/\s+/g, ' ').trim();
+  const cajas = (n) => `${n} ${n === 1 ? 'caja' : 'cajas'}`;
+  const lineas = ['*COSECHAS PRESBERE*', `_${titulo}_`];
+  for (const e of entregas) {
+    const variedad = variedadDe(e.observaciones);
+    const nota = notaDe(e.observaciones);
+    const ubicacion = [mostrarFinca ? nombreFinca[e.fincaId] : null, nombreArea[e.areaId]].filter(Boolean).join(' · ');
+    lineas.push('', '━━━━━━━━━━━━━━', `📆 *${formatearFecha(e.fecha)}*`);
+    if (ubicacion) lineas.push(`📍 ${ubicacion}`);
+    if (mostrarResponsable) lineas.push(`👤 ${e.responsable}`);
+    const partes = [];
+    if (e.primera > 0) partes.push(`${e.primera} primera`);
+    if (e.segunda > 0) partes.push(`${e.segunda} segunda`);
+    lineas.push(`🍌 ${variedad ? variedad + ' — ' : ''}${partes.join(' · ')}`);
+    if (nota) lineas.push(`📝 ${nota}`);
+  }
+  const totalPrimera = entregas.reduce((s, e) => s + e.primera, 0);
+  const totalSegunda = entregas.reduce((s, e) => s + e.segunda, 0);
+  lineas.push('', '━━━━━━━━━━━━━━', `📦 *TOTAL: ${cajas(totalPrimera + totalSegunda)}* (${cajas(totalPrimera)} de primera · ${cajas(totalSegunda)} de segunda)`);
+  return lineas.join('\n');
 }
 
 export const entregaCargaModulo = {

@@ -430,7 +430,7 @@ export function mostrarPanel({ titulo, contenido, encabezado }) {
   caja.appendChild(contenido);
   const botonCerrar = elemento('button', {
     type: 'button',
-    class: 'boton boton--primario',
+    class: 'boton boton--primario no-imprimir',
     style: 'margin-top:14px;display:flex;align-items:center;justify-content:center;gap:8px',
     html: `${icono('xcircle', 20)}<span>Cerrar</span>`,
   });
@@ -438,4 +438,28 @@ export function mostrarPanel({ titulo, contenido, encabezado }) {
   caja.appendChild(botonCerrar);
   fondo.appendChild(caja);
   document.body.appendChild(fondo);
+}
+
+/**
+ * Imprime (o "Guardar como PDF" desde el diálogo de impresión) solo el
+ * panel/diálogo que contiene a `elementoInterior`, ocultando cualquier otro
+ * panel apilado encima o debajo (ej. un popup de detalle sobre el desglose
+ * semanal) para que no salgan mezclados en la hoja.
+ */
+export function imprimirPanel(elementoInterior) {
+  const propio = elementoInterior.closest('.panel-info-fondo, .dialogo-fondo');
+  if (!propio) {
+    window.print();
+    return;
+  }
+  const otros = Array.from(document.querySelectorAll('.panel-info-fondo, .dialogo-fondo')).filter((f) => f !== propio);
+  for (const el of otros) el.classList.add('no-imprimir');
+  propio.classList.add('imprimir-este');
+  const limpiar = () => {
+    propio.classList.remove('imprimir-este');
+    for (const el of otros) el.classList.remove('no-imprimir');
+    window.removeEventListener('afterprint', limpiar);
+  };
+  window.addEventListener('afterprint', limpiar);
+  window.print();
 }
