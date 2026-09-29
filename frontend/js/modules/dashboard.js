@@ -5,7 +5,7 @@ import { laboresConEstado } from './labores.js';
 import { planillaModulo } from './planilla.js';
 import { ventasModulo } from './ventas.js';
 import { estadisticasDia, resumenEmbolsePorSemana } from './embolseCorta.js';
-import { estadisticasHoy as estadisticasCargaHoy, ultimoDestinatario, resumenEntregaPorSemana, mensajeEntregaWhatsApp, abrirWhatsApp } from './entregaCarga.js';
+import { estadisticasHoy as estadisticasCargaHoy, ultimoDestinatario, resumenEntregaPorSemana, mensajeEntregaWhatsApp, abrirWhatsApp, agruparPorEntrega } from './entregaCarga.js';
 import { auth } from './auth.js';
 import { elemento, tarjetaStat, icono, iconoWhatsApp, formatearFecha, hoyISO, mostrarPanel } from '../ui.js';
 
@@ -189,6 +189,75 @@ async function abrirDetalleEmbolseSemana(d, semana, porFinca) {
 }
 
 /**
+ * Popup con el detalle de UN destinatario en UNA semana: total de cajas,
+ * variedades y, día por día, cada entrega con su finca, lote y variedad —
+ * para poder revisarla contra la factura. Se abre encima del desglose
+ * semanal, que queda debajo intacto.
+ */
+async function abrirDetalleEntregaSemana(d, semana) {
+  const [fincas, areas] = await Promise.all([repos.listarTodos('fincas'), repos.listarTodos('areas')]);
+  const nombreFinca = Object.fromEntries(fincas.map((f) => [f.id, f.nombre]));
+  const nombreArea = Object.fromEntries(areas.map((a) => [a.id, a.nombre]));
+  const n = (v) => Number(v || 0).toLocaleString('es-CR');
+  const variedadDe = (obs) => VARIEDAD_DE.exec(obs || '')?.[1] ?? 'Sin variedad';
+  const notaDe = (obs) => (obs || '').replace(VARIEDAD_DE, '').replace(/\s+/g, ' ').trim();
+
+  const entregas = agruparPorEntrega(d.registros).sort((a, b) => (a.fecha === b.fecha ? 0 : a.fecha < b.fecha ? -1 : 1));
+  const totalCajas = entregas.reduce((s, e) => s + e.primera + e.segunda, 0);
+  const porVariedad = new Map();
+  for (const e of entregas) porVariedad.set(variedadDe(e.observaciones), (porVariedad.get(variedadDe(e.observaciones)) ?? 0) + e.primera + e.segunda);
+
+  const desde = new Date(semana + 'T00:00:00');
+  const hasta = new Date(desde);
+  hasta.setDate(hasta.getDate() + 6);
+  const rango = `${formatearFecha(semana)} al ${formatearFecha(hasta.toISOString().slice(0, 10))}`;
+
+  const contenido = elemento('div', {}, [
+    elemento('div', { class: 'subtitulo-pantalla', style: 'margin-bottom:10px', texto: `Semana del ${rango}` }),
+    elemento('div', { style: 'display:flex;flex-wrap:wrap;gap:6px;margin-bottom:6px' }, [
+      elemento('span', { class: 'entrega-chip', texto: `${n(totalCajas)} cajas` }),
+      elemento('span', { class: 'entrega-chip', texto: `Primera: ${n(d.primera)}` }),
+      elemento('span', { class: 'entrega-chip', texto: `Segunda: ${n(d.segunda)}` }),
+      ...[...porVariedad].map(([v, cant]) => elemento('span', { class: 'entrega-chip', texto: `${v}: ${n(cant)}` })),
+    ]),
+    elemento('div', { class: 'subtitulo-pantalla', style: 'margin-bottom:12px', texto: `${entregas.length} ${entregas.length === 1 ? 'entrega' : 'entregas'}` }),
+  ]);
+
+  contenido.appendChild(elemento('h3', { style: 'margin:0 0 6px;font-size:0.95rem', texto: 'Día por día' }));
+  const dias = new Map();
+  for (const e of entregas) dias.set(e.fecha, [...(dias.get(e.fecha) ?? []), e]);
+  const lista = elemento('div', { class: 'lista-registros' });
+  for (const [fecha, filas] of dias) {
+    const diaSemana = new Date(fecha + 'T00:00:00').toLocaleDateString('es-CR', { weekday: 'long' });
+    lista.appendChild(
+      elemento('div', { class: 'fila-registro', style: 'display:block' }, [
+        elemento('div', { style: 'display:flex;justify-content:space-between;gap:8px' }, [
+          elemento('strong', { style: 'text-transform:capitalize', texto: `${diaSemana} ${formatearFecha(fecha)}` }),
+          elemento('strong', { texto: `${n(filas.reduce((s, e) => s + e.primera + e.segunda, 0))} cajas` }),
+        ]),
+        ...filas.map((e) =>
+          elemento('div', {
+            class: 'fila-registro__subtitulo',
+            texto: [
+              nombreFinca[e.fincaId] ?? 'Finca',
+              nombreArea[e.areaId] ?? 'Sin lote',
+              variedadDe(e.observaciones),
+              e.primera > 0 ? `${n(e.primera)} primera` : null,
+              e.segunda > 0 ? `${n(e.segunda)} segunda` : null,
+              notaDe(e.observaciones) || null,
+            ]
+              .filter(Boolean)
+              .join(' · '),
+          })
+        ),
+      ])
+    );
+  }
+  contenido.appendChild(lista);
+  mostrarPanel({ titulo: `🚚 Entrega — ${d.nombre}`, contenido });
+}
+
+/**
  * Desglose de Entrega de Carga por semana (cajas de primera/segunda, y a
  * quién se le entregó cada una), respetando el contexto actual.
  */
@@ -217,7 +286,8 @@ async function construirSemanasEntrega(fincaId) {
               'div',
               { class: 'entrega-destinatarios' },
               f.porDestinatario.map((d) =>
-                elemento('div', { class: 'entrega-destinatario' }, [
+                // Tocar el destinatario abre el detalle día por día de esa semana (finca, lote y variedad de cada entrega).
+                elemento('button', { type: 'button', class: 'entrega-destinatario', onclick: () => abrirDetalleEntregaSemana(d, f.semana) }, [
                   elemento('span', { class: 'entrega-chip' }, [elemento('span', { html: icono('user', 14) }), d.nombre]),
                   elemento('div', { class: 'entrega-destinatario__valor', texto: `${d.primera}/${d.segunda}` }),
                   barraProporcion(d.primera + d.segunda, totalSemana),
@@ -228,6 +298,9 @@ async function construirSemanasEntrega(fincaId) {
           : null,
       ])
     );
+  }
+  if (semanas.length > 0) {
+    contenido.prepend(elemento('p', { class: 'subtitulo-pantalla', texto: 'Toca un destinatario para ver el detalle día por día de esa semana.' }));
   }
   return contenido;
 }

@@ -126,12 +126,13 @@ function crearStepper(colorBoton, contenedorModulo) {
 }
 
 /** Junta las filas de un mismo toque de "Guardar entrega" (una por calidad) en una sola entrega, la más reciente primero. */
-function agruparPorEntrega(filas) {
+export function agruparPorEntrega(filas) {
   const grupos = new Map();
   for (const fila of filas) {
     const grupo = grupos.get(fila.grupo_entrega) ?? {
       grupo: fila.grupo_entrega,
       fecha: fila.fecha,
+      fincaId: fila.finca_id,
       areaId: fila.area_id,
       responsable: fila.responsable_nombre || 'Sin destinatario',
       primera: 0,
@@ -212,8 +213,11 @@ export async function resumenEntregaPorSemana(fincaId, semanas = 8) {
     if (e.calidad === 'primera' || e.calidad === 'segunda') actual[e.calidad] += Number(e.cantidad_cajas) || 0;
     if (e.responsable_nombre) {
       const nombre = e.responsable_nombre;
-      const destinatario = actual.porDestinatarioMapa.get(nombre) ?? { nombre, primera: 0, segunda: 0 };
+      // `registros` = las filas originales de este destinatario en la semana,
+      // para poder abrir el detalle día por día (finca, lote y variedad) al tocarlo.
+      const destinatario = actual.porDestinatarioMapa.get(nombre) ?? { nombre, primera: 0, segunda: 0, registros: [] };
       if (e.calidad === 'primera' || e.calidad === 'segunda') destinatario[e.calidad] += Number(e.cantidad_cajas) || 0;
+      destinatario.registros.push(e);
       actual.porDestinatarioMapa.set(nombre, destinatario);
     }
     porSemana.set(semana, actual);

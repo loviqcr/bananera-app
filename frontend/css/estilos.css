@@ -2121,3 +2121,14 @@ input.stepper__valor::-webkit-inner-spin-button {
 .detalle-fila:active { background: color-mix(in srgb, var(--primario) 12%, transparent); }
 .detalle-fila__texto { min-width: 0; }
 .detalle-fila__flecha { color: var(--texto-suave); display: flex; flex: none; }
+
+/* El destinatario del desglose semanal de Entrega de Carga también se toca (abre su detalle día por día) */
+button.entrega-destinatario {
+  background: none;
+  font: inherit;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+  border-radius: 8px;
+}
+button.entrega-destinatario:active { background: color-mix(in srgb, var(--primario) 12%, transparent); }
