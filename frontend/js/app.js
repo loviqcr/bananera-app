@@ -852,9 +852,23 @@ document.addEventListener('bananera:operacion-rechazada', (evento) => {
 
 el.formLogin?.addEventListener('submit', async (evento) => {
   evento.preventDefault();
+  const botonIngresar = el.formLogin.querySelector('button[type="submit"]');
+  if (botonIngresar.disabled) return; // ya hay un intento en curso (ej. Enter + clic casi al mismo tiempo)
   el.errorLogin.textContent = '';
+  el.errorLogin.style.color = '';
   const usuario = el.campoUsuario.value.trim();
   const password = el.campoPassword.value;
+
+  botonIngresar.disabled = true;
+  botonIngresar.textContent = 'Entrando…';
+  // El servidor puede estar "dormido" (plan gratuito de Render, se duerme
+  // solo sin uso) y tardar hasta un minuto en despertar en la primera
+  // petición — sin este aviso, esa espera se sentía como que la app no
+  // hizo nada y llevaba a tocar "Ingresar" varias veces.
+  const avisoDespertar = setTimeout(() => {
+    botonIngresar.textContent = 'Entrando… (el servidor puede estar despertando, puede tardar un minuto)';
+  }, 5000);
+
   try {
     const resultado = await auth.iniciarSesion(usuario, password);
     cacheUsuario = resultado.usuario;
@@ -867,6 +881,10 @@ el.formLogin?.addEventListener('submit', async (evento) => {
   } catch (error) {
     el.errorLogin.textContent = error.message;
     el.errorLogin.style.color = 'var(--rojo-500)';
+  } finally {
+    clearTimeout(avisoDespertar);
+    botonIngresar.disabled = false;
+    botonIngresar.textContent = 'Ingresar';
   }
 });
 
