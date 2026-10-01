@@ -15,6 +15,18 @@ function sumarDiasISO(fechaISO, dias) {
   return fecha.toISOString().slice(0, 10);
 }
 
+/** Rango de la quincena vigente (o la de `fechaISO` si se pasa): 1-15 o 16-fin de mes. */
+function quincenaActual(fechaISO = hoyISO()) {
+  const [anio, mes, dia] = fechaISO.split('-').map(Number);
+  const esPrimeraQuincena = dia <= 15;
+  const ultimoDiaMes = new Date(anio, mes, 0).getDate(); // día 0 del mes siguiente = último día de este mes
+  const pad = (n) => String(n).padStart(2, '0');
+  return {
+    desde: `${anio}-${pad(mes)}-${pad(esPrimeraQuincena ? 1 : 16)}`,
+    hasta: `${anio}-${pad(mes)}-${pad(esPrimeraQuincena ? 15 : ultimoDiaMes)}`,
+  };
+}
+
 // Los 3 estados de "Mano de Obra" (reemplazan los 5 anteriores). Se
 // reutilizan a propósito los mismos valores de estado que ya existían
 // ('presente'/'permiso'/'ausente') en vez de inventar unos nuevos — así
@@ -491,6 +503,49 @@ async function renderizarReportes(contenedor, contexto) {
 }
 
 /**
+ * Pago bruto (sin CCSS/renta ni otros rebajos) de cada trabajador activo de
+ * `fincaId` entre `desde` y `hasta` (inclusive) = días marcados "presente"
+ * × tarifa diaria configurada en Trabajadores (a prorrata de sus horas).
+ * También cuenta sus ausencias (con/sin permiso) en ese mismo rango, para
+ * quien necesite ver "cuánto faltó" además de "cuánto pagar" — lo reutilizan
+ * tanto "Cálculo de pago" como el resumen de Planilla en Inicio.
+ */
+async function calcularPagoPorRango(fincaId, desde, hasta) {
+  const [empleados, salarios] = await Promise.all([empleadosActivos(fincaId), mapaSalarios()]);
+  let totalGeneral = 0;
+  let faltaTarifa = 0;
+  const filas = [];
+  for (const empleado of empleados) {
+    // Por fecha única, no por cantidad de filas: si por algún motivo
+    // quedaron dos registros de asistencia para el mismo día (ej. un
+    // conflicto de sincronización entre dispositivos que no se limpió), ese
+    // día no debe contar doble — el último que se procese gana, da igual
+    // cuál sea porque en la práctica siempre coinciden.
+    const registrosPorFecha = new Map();
+    for (const a of await localdb.getPorIndice('asistencia', 'empleado_id', empleado.id)) {
+      if (a.eliminado_at || a.fecha < desde || a.fecha > hasta) continue;
+      registrosPorFecha.set(a.fecha, a);
+    }
+    let dias = 0, horasTotales = 0, ausentes = 0, permisos = 0;
+    for (const a of registrosPorFecha.values()) {
+      if (a.estado === 'presente') {
+        dias++;
+        // Un día sin horas registradas (asistencia marcada antes de que
+        // existiera este campo) se sigue pagando como jornada completa.
+        horasTotales += Number(a.horas ?? HORAS_JORNADA_COMPLETA);
+      } else if (a.estado === 'ausente') ausentes++;
+      else if (a.estado === 'permiso') permisos++;
+    }
+    const tarifa = salarios[empleado.id]?.salario_diario ?? null;
+    const total = tarifa != null ? (horasTotales / HORAS_JORNADA_COMPLETA) * tarifa : null;
+    if (tarifa == null && dias > 0) faltaTarifa++;
+    if (total != null) totalGeneral += total;
+    filas.push({ empleado, dias, horasTotales, ausentes, permisos, tarifa, total });
+  }
+  return { filas, totalGeneral, faltaTarifa };
+}
+
+/**
  * Pago bruto (sin CCSS/renta ni otros rebajos) = días marcados "presente"
  * en el rango × tarifa diaria configurada en Trabajadores. Solo cuenta
  * "presente" a propósito — incapacidad/permiso/vacaciones no se pagan
@@ -537,38 +592,10 @@ async function renderizarCalculoPago(contenedor, contexto) {
       return;
     }
 
-    const [empleados, nombreFinca, salarios] = await Promise.all([
-      empleadosActivos(contexto.fincaId),
+    const [nombreFinca, { filas, totalGeneral, faltaTarifa }] = await Promise.all([
       contexto.fincaId === 'todas' ? mapaNombresFincas() : Promise.resolve(null),
-      mapaSalarios(),
+      calcularPagoPorRango(contexto.fincaId, desde, hasta),
     ]);
-
-    let totalGeneral = 0;
-    let faltaTarifa = 0;
-    const filas = [];
-    for (const empleado of empleados) {
-      // Por fecha única, no por cantidad de filas: si por algún motivo
-      // quedaron dos registros de asistencia para el mismo día (ej. un
-      // conflicto de sincronización entre dispositivos que no se limpió),
-      // ese día no debe contar doble en el pago — el último que se procese
-      // gana, da igual cuál sea porque en la práctica siempre coinciden.
-      const registrosPorFecha = new Map();
-      for (const a of await localdb.getPorIndice('asistencia', 'empleado_id', empleado.id)) {
-        if (a.eliminado_at || a.estado !== 'presente' || a.fecha < desde || a.fecha > hasta) continue;
-        registrosPorFecha.set(a.fecha, a);
-      }
-      const dias = registrosPorFecha.size;
-      // Un día sin horas registradas (asistencia marcada antes de que
-      // existiera este campo) se sigue pagando como jornada completa, no
-      // como 0 — así el historial previo no pierde valor de golpe.
-      let horasTotales = 0;
-      for (const a of registrosPorFecha.values()) horasTotales += Number(a.horas ?? HORAS_JORNADA_COMPLETA);
-      const tarifa = salarios[empleado.id]?.salario_diario ?? null;
-      const total = tarifa != null ? (horasTotales / HORAS_JORNADA_COMPLETA) * tarifa : null;
-      if (tarifa == null && dias > 0) faltaTarifa++;
-      if (total != null) totalGeneral += total;
-      filas.push({ empleado, dias, horasTotales, tarifa, total });
-    }
 
     zonaResultado.appendChild(elemento('p', { class: 'subtitulo-pantalla' }, `${formatearFecha(desde)} — ${formatearFecha(hasta)}`));
 
@@ -688,5 +715,34 @@ export const planillaModulo = {
       else if (deHoy && deHoy.estado !== 'presente') ausentes += 1;
     }
     return { presentes, ausentes };
+  },
+
+  /**
+   * Quién vino a trabajar hoy y quién no, trabajador por trabajador (a
+   * diferencia de presentesAusentesHoy, que solo suma) — para el panel
+   * "Personal" del dashboard. `estado` queda en null cuando nadie ha pasado
+   * lista todavía por ese trabajador hoy (no es lo mismo que "ausente").
+   */
+  async asistenciaHoyDetallada(fincaId) {
+    const empleados = await empleadosActivos(fincaId);
+    const hoy = hoyISO();
+    const filas = [];
+    for (const empleado of empleados) {
+      const registros = await localdb.getPorIndice('asistencia', 'empleado_id', empleado.id);
+      const deHoy = registros.find((a) => a.fecha === hoy && !a.eliminado_at);
+      filas.push({ empleado, estado: deHoy?.estado ?? null, horas: deHoy?.horas ?? null });
+    }
+    return filas;
+  },
+
+  /**
+   * Resumen de la quincena vigente (1-15 o 16-fin de mes) para el panel
+   * "Personal" del dashboard: cuánto faltó y cuánto pagar por trabajador,
+   * sin tener que entrar a "Cálculo de pago" a elegir las fechas a mano.
+   */
+  async resumenQuincena(fincaId) {
+    const { desde, hasta } = quincenaActual();
+    const resultado = await calcularPagoPorRango(fincaId, desde, hasta);
+    return { desde, hasta, ...resultado };
   },
 };

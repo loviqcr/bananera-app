@@ -608,6 +608,82 @@ async function construirIncidenciasPendientes(contexto, alIrAIncidencias) {
   return contenido;
 }
 
+const ETIQUETA_ASISTENCIA = {
+  presente: '✅ Presente',
+  permiso: '📄 Con permiso',
+  ausente: '🚫 Sin permiso',
+};
+
+/**
+ * Panel "Personal" del dashboard: quién vino a trabajar hoy y quién no
+ * (finca por finca si se está viendo "todas"), y debajo un resumen de la
+ * quincena vigente (días ausentes y total a pagar por trabajador) — para
+ * no tener que entrar a Planilla a revisarlo. "Sin marcar todavía" es
+ * distinto de "Ausente": significa que nadie ha pasado lista por esa
+ * persona hoy, no que de verdad faltó.
+ */
+async function construirPlanillaHoy(contexto) {
+  const { fincaId } = contexto;
+  const porFinca = !fincaId || fincaId === 'todas';
+  const n = (v) => Number(v || 0).toLocaleString('es-CR');
+
+  let fincas = (await repos.listarTodos('fincas')).sort((a, b) => a.orden - b.orden);
+  if (!porFinca) fincas = fincas.filter((f) => f.id === fincaId);
+  else if (contexto.fincaIdsPermitidas) fincas = fincas.filter((f) => contexto.fincaIdsPermitidas.includes(f.id));
+
+  const filasHoy = await planillaModulo.asistenciaHoyDetallada(fincaId);
+
+  const bloquesHoy = fincas.map((finca) => {
+    const propias = filasHoy.filter((f) => f.empleado.finca_id === finca.id);
+    const presentes = propias.filter((f) => f.estado === 'presente').length;
+    const resumenFinca = propias.length === 0 ? 'Sin trabajadores activos' : `${presentes}/${propias.length} presentes`;
+    return elemento('div', { class: 'fila-registro', style: 'display:block' }, [
+      elemento('div', { style: 'display:flex;justify-content:space-between;gap:8px' }, [elemento('strong', { texto: finca.nombre }), elemento('strong', { texto: resumenFinca })]),
+      ...propias.map((f) => elemento('div', { class: 'fila-registro__subtitulo', texto: `${f.empleado.nombre} · ${ETIQUETA_ASISTENCIA[f.estado] ?? '❔ Sin marcar todavía'}` })),
+    ]);
+  });
+
+  const contenido = elemento('div', {}, [
+    elemento('h3', { style: 'margin:0 0 6px;font-size:0.95rem', texto: `Hoy · ${formatearFecha(hoyISO())}` }),
+    elemento('div', { class: 'lista-registros', style: 'margin-bottom:16px' }, bloquesHoy.length > 0 ? bloquesHoy : [elemento('p', { class: 'subtitulo-pantalla', texto: 'Sin fincas para mostrar.' })]),
+  ]);
+
+  // ---- Quincena actual: cuánto faltó y cuánto pagar (ver quincenaActual() en planilla.js) ----
+  const quincena = await planillaModulo.resumenQuincena(fincaId);
+  contenido.appendChild(elemento('h3', { style: 'margin:0 0 6px;font-size:0.95rem', texto: `Quincena actual · ${formatearFecha(quincena.desde)} al ${formatearFecha(quincena.hasta)}` }));
+  if (quincena.faltaTarifa > 0) {
+    contenido.appendChild(
+      elemento('div', { class: 'aviso-offline', style: 'display:block;margin-bottom:10px' }, `⚠️ ${quincena.faltaTarifa} trabajador(es) sin tarifa configurada — no entran en el total de abajo.`)
+    );
+  }
+
+  const filasOrdenadas = [...quincena.filas].sort((a, b) => b.ausentes + b.permisos - (a.ausentes + a.permisos));
+  const listaQuincena = elemento(
+    'div',
+    { class: 'lista-registros' },
+    filasOrdenadas.length === 0
+      ? [elemento('p', { class: 'subtitulo-pantalla', texto: 'Sin trabajadores activos.' })]
+      : filasOrdenadas.map(({ empleado, dias, ausentes, permisos, tarifa, total }) => {
+          const faltas = ausentes + permisos;
+          const subtitulo = [`${dias} día(s) trabajado(s)`, faltas > 0 ? `${faltas} falta(s)${permisos > 0 ? ` (${permisos} con permiso)` : ''}` : null, tarifa == null ? 'sin tarifa configurada' : null]
+            .filter(Boolean)
+            .join(' · ');
+          return elemento('div', { class: 'fila-registro' }, [
+            elemento('div', {}, [elemento('div', { class: 'fila-registro__titulo', texto: empleado.nombre }), elemento('div', { class: 'fila-registro__subtitulo', texto: subtitulo })]),
+            elemento('div', { class: `fila-registro__valor ${total == null ? 'tono-ambar' : 'tono-verde'}`, texto: total != null ? formatearMoneda(total) : '—' }),
+          ]);
+        })
+  );
+  contenido.appendChild(listaQuincena);
+  contenido.appendChild(
+    elemento('div', { class: 'tarjeta estadistica', style: 'margin-top:12px' }, [
+      elemento('div', { class: 'estadistica__valor', texto: formatearMoneda(quincena.totalGeneral) }),
+      elemento('div', { class: 'estadistica__etiqueta', texto: 'Total a pagar esta quincena (trabajadores con tarifa configurada)' }),
+    ])
+  );
+  return contenido;
+}
+
 async function abrirDetalle(tipo, contexto, alIrAIncidencias) {
   const etiquetaFinca = await etiquetaFincaParaPanel(contexto.fincaId);
   if (tipo === 'incidencias') {
@@ -616,6 +692,10 @@ async function abrirDetalle(tipo, contexto, alIrAIncidencias) {
   }
   if (tipo === 'entrega') {
     mostrarPanel({ titulo: `Entrega de carga de hoy (${etiquetaFinca})`, encabezado: encabezadoEntrega(etiquetaFinca), contenido: await construirEntregaHoy(contexto) });
+    return;
+  }
+  if (tipo === 'planilla') {
+    mostrarPanel({ titulo: `👷 Personal (${etiquetaFinca})`, contenido: await construirPlanillaHoy(contexto) });
     return;
   }
   mostrarPanel({ titulo: `${TITULOS_HOY[tipo]} (${etiquetaFinca})`, contenido: await construirDetalleHoy(tipo, contexto) });
@@ -660,14 +740,16 @@ export async function renderizarDashboard(contenedor, contexto, manejadores = {}
   // dashboard de las demás tarjetas (Producción/Personal/Ventas/Inventario/
   // Otros indicadores) — "Detalle por finca" más abajo sigue teniendo el
   // resto para quien lo necesite viendo "Todas las fincas". ----
-  // Las 4 tarjetas son tocables para el administrador: abren lo de HOY
-  // finca por finca (y el desglose semanal en embolse/entrega), para no
-  // tener que entrar a cada finca a revisarlo. Para los demás roles solo
-  // Incidencias abre su módulo, como antes.
+  // Las tarjetas son tocables para el administrador: abren lo de HOY finca
+  // por finca (y el desglose semanal en embolse/entrega), para no tener que
+  // entrar a cada finca a revisarlo. Para los demás roles solo Incidencias
+  // abre su módulo, como antes. Personal va primera a propósito (se pidió
+  // que sea la de acceso más rápido, para ver asistencia/quincena de un vistazo).
   contenedor.appendChild(
     elemento('div', { class: 'seccion-dashboard' }, [
       tituloSeccion('chart', 'Resumen general'),
       elemento('div', { class: 'rejilla-estadisticas' }, [
+        tarjetaStat('users', `${stats.personal.presentes}/${stats.personal.total}`, 'Personal hoy', '', esAdmin ? () => abrirDetalle('planilla', contexto) : null),
         tarjetaStat('package', stats.embolsadoHoy.toLocaleString('es-CR'), 'Embolse hoy', '', esAdmin ? () => abrirDetalle('embolse', contexto) : null),
         tarjetaStat('crop', stats.cortadoHoy.toLocaleString('es-CR'), 'Corta hoy', '', esAdmin ? () => abrirDetalle('corta', contexto) : null),
         tarjetaStat('basket', stats.cargaHoy.total.toLocaleString('es-CR'), 'Entrega de carga', '', esAdmin ? () => abrirDetalle('entrega', contexto) : null),
