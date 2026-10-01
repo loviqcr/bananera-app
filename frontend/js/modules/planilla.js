@@ -193,8 +193,13 @@ async function renderizarEmpleados(contenedor, contexto) {
   }
 
   contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: 'Trabajadores' }));
-  const activos = empleados.filter((e) => e.estado === 'activo');
-  const inactivos = empleados.filter((e) => e.estado !== 'activo');
+  // Viendo "todas las fincas" se ordena por finca primero (y por nombre
+  // dentro de cada una) para que salgan agrupados — si no, el orden
+  // depende de cómo haya quedado guardado cada uno y se ve revuelto.
+  const comparar = (a, b) =>
+    (nombreFinca ? (nombreFinca[a.finca_id] ?? '').localeCompare(nombreFinca[b.finca_id] ?? '') : 0) || a.nombre.localeCompare(b.nombre);
+  const activos = empleados.filter((e) => e.estado === 'activo').sort(comparar);
+  const inactivos = empleados.filter((e) => e.estado !== 'activo').sort(comparar);
   const lista = elemento('div', { class: 'lista-registros' });
   if (activos.length === 0) lista.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: 'Sin trabajadores registrados todavía.' }));
 
@@ -682,7 +687,14 @@ export const planillaModulo = {
       boton.addEventListener('click', () => activar(tab.clave));
       pestanas.appendChild(boton);
     }
-    await activar(tabs.some((t) => t.clave === pestanaGuardada) ? pestanaGuardada : tabs[0].clave);
+    // Viendo "Todas las fincas", "Pasar lista" es un callejón sin salida
+    // (solo deja pasar lista de una finca a la vez) — si esa es la pestaña
+    // que tocaría abrir por defecto, se abre "Trabajadores" en su lugar
+    // (sí funciona viendo todas las fincas: lista a cada uno con el nombre
+    // de su finca). Si el administrador entra a propósito a "Pasar lista"
+    // desde acá, el aviso de elegir una finca se sigue mostrando igual.
+    const inicial = tabs.some((t) => t.clave === pestanaGuardada) ? pestanaGuardada : tabs[0].clave;
+    await activar(contexto.fincaId === 'todas' && inicial === 'asistencia' ? 'empleados' : inicial);
   },
 
   async totalActivos(fincaId) {
