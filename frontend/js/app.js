@@ -20,6 +20,7 @@ import { alertasModulo } from './modules/alertas.js';
 import { usuariosModulo } from './modules/usuarios.js';
 import { entregaCargaModulo } from './modules/entregaCarga.js';
 import { pedidosBodegaModulo } from './modules/pedidosBodega.js';
+import { solicitudesCargaModulo } from './modules/solicitudesCarga.js';
 
 const ICONOS_FINCA = ['🌄', '🌴', '🌾', '⛰️'];
 
@@ -41,6 +42,7 @@ const MODULOS = {
   usuarios: usuariosModulo,
   'entrega-carga': entregaCargaModulo,
   'pedidos-bodega': pedidosBodegaModulo,
+  'solicitudes-carga': solicitudesCargaModulo,
 };
 
 const vistas = {

@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { pool } from '../db/pool';
 import { requiereAutenticacion } from '../middleware/auth';
 import { aplicarOperacion, obtenerCambiosPendientes, type OperacionSync } from '../services/syncService';
-import { notificarIncidenciaUrgente, notificarPedidoBodega, notificarActividad, type OperacionCreada } from '../services/pushService';
+import { notificarIncidenciaUrgente, notificarPedidoBodega, notificarSolicitudCarga, notificarActividad, type OperacionCreada } from '../services/pushService';
 
 export const syncRouter = Router();
 syncRouter.use(requiereAutenticacion);
@@ -67,6 +67,17 @@ syncRouter.post('/push', async (req, res, next) => {
           if (fincaId) {
             notificarPedidoBodega(fincaId, texto, usuario.id).catch((err) => {
               console.error('[sync] Error enviando notificación push de pedido:', err);
+            });
+          }
+        }
+        if (resultado.estado === 'ok' && op.tabla === 'solicitudes_carga' && op.operacion === 'crear') {
+          const fincaId = op.datos?.finca_id as string | undefined;
+          const tipo = (op.datos?.tipo as string | undefined) ?? 'carga';
+          const cantidadCajas = Number(op.datos?.cantidad_cajas) || 0;
+          const destinatario = (op.datos?.destinatario as string | undefined) ?? null;
+          if (fincaId) {
+            notificarSolicitudCarga(fincaId, tipo, cantidadCajas, destinatario, usuario.id).catch((err) => {
+              console.error('[sync] Error enviando notificación push de solicitud de carga:', err);
             });
           }
         }

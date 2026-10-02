@@ -139,6 +139,37 @@ export async function notificarPedidoBodega(fincaId: string, texto: string, soli
   }
 }
 
+/**
+ * Aviso de una solicitud nueva de "Pedir Carga/Empaque": le llega solo a
+ * los administradores (son quienes la verifican y reenvían al comprador o
+ * gestionan el empaque), nunca a quien la escribió.
+ */
+export async function notificarSolicitudCarga(fincaId: string, tipo: string, cantidadCajas: number, destinatario: string | null, solicitanteId: string | null) {
+  if (!habilitado) return;
+  try {
+    const { rows: fincaRows } = await pool.query('SELECT nombre FROM fincas WHERE id = $1', [fincaId]);
+    const nombreFinca = fincaRows[0]?.nombre ?? 'una finca';
+    const { rows } = await pool.query(
+      `SELECT ps.id, ps.endpoint, ps.p256dh, ps.auth
+       FROM push_subscriptions ps
+       JOIN usuarios u ON u.id = ps.usuario_id
+       JOIN roles r ON r.id = u.rol_id
+       WHERE u.eliminado_at IS NULL AND u.activo = true
+         AND r.nombre = 'administrador'
+         AND ($1::uuid IS NULL OR u.id <> $1::uuid)`,
+      [solicitanteId]
+    );
+    const esCarga = tipo === 'carga';
+    const titulo = esCarga ? `🚚 Pedido de carga — ${nombreFinca}` : `📦 Pedido de empaque — ${nombreFinca}`;
+    const mensaje = esCarga
+      ? `${cantidadCajas.toLocaleString('es-CR')} cajas${destinatario ? ` para ${destinatario}` : ''}`
+      : `${cantidadCajas.toLocaleString('es-CR')} cajas de empaque`;
+    await enviarAVarios(rows, { titulo, mensaje, url: './', modulo: 'solicitudes-carga' });
+  } catch (err) {
+    console.error('[push] Error preparando notificación de solicitud de carga:', err instanceof Error ? err.message : err);
+  }
+}
+
 export interface OperacionCreada {
   tabla: string;
   datos: Record<string, unknown>;

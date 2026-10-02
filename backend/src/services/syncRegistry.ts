@@ -330,6 +330,20 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
     rolesEliminar: ['administrador'],
   },
 
+  // "Pedir Carga/Empaque": plantilla rápida para reportar cajas a un
+  // comprador (tipo 'carga') o pedir material de empaque (tipo 'empaque').
+  // El administrador la verifica y marca 'atendido' una vez que la reenvía
+  // por WhatsApp (o, en empaque, una vez que ya se gestionó).
+  solicitudes_carga: {
+    tabla: 'solicitudes_carga',
+    columnas: ['finca_id', 'fecha', 'tipo', 'cantidad_cajas', 'destinatario', 'observaciones', 'solicitante_id', 'solicitante_nombre', 'estado'],
+    fincaScoped: true,
+    permiteEliminar: true,
+    conflictStrategy: 'lww',
+    rolesEscritura: ['administrador', 'encargado_finca', 'trabajador'],
+    rolesEliminar: ['administrador'],
+  },
+
   // ---- Fase 8: Embolse y corta ----
   colores_cinta: {
     tabla: 'colores_cinta',
