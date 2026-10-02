@@ -11,7 +11,7 @@ import { elemento, icono, iconoWhatsApp, hoyISO, formatearFecha, marcarSucio, li
 export function mensajeEntregaWhatsApp({ finca, area, fecha, entregas }) {
   const cajas = (n) => `${n} ${n === 1 ? 'caja' : 'cajas'}`;
   const lineas = [
-    '*COSECHAS PRESBERE*',
+    '*CONTRERAS*',
     '_Comprobante de entrega de carga_',
     '',
     `📅 *Fecha:* ${formatearFecha(fecha)}`,
@@ -262,7 +262,7 @@ export function mensajeEntregasWhatsApp({ titulo, entregas, nombreFinca = {}, no
   const variedadDe = (obs) => /\[Variedad: ([^\]]+)\]/.exec(obs || '')?.[1];
   const notaDe = (obs) => (obs || '').replace(/\[Variedad: [^\]]+\]/, '').replace(/\s+/g, ' ').trim();
   const cajas = (n) => `${n} ${n === 1 ? 'caja' : 'cajas'}`;
-  const lineas = ['*COSECHAS PRESBERE*', `_${titulo}_`];
+  const lineas = ['*CONTRERAS*', `_${titulo}_`];
   for (const e of entregas) {
     const variedad = variedadDe(e.observaciones);
     const nota = notaDe(e.observaciones);

@@ -27,7 +27,7 @@ async function agregarComprador() {
 /** Mensaje de WhatsApp para reenviarle al comprador el reporte de cajas (solo tipo 'carga'). */
 function mensajeSolicitudWhatsApp(s, nombreFinca) {
   const lineas = [
-    '*COSECHAS PRESBERE*',
+    '*CONTRERAS*',
     '_Reporte de pedido de cajas_',
     '',
     `📅 *Fecha:* ${formatearFecha(s.fecha)}`,
