@@ -28,7 +28,7 @@ async function agregarComprador() {
 function mensajeSolicitudWhatsApp(s, nombreFinca) {
   const lineas = [
     '*COSECHAS PRESBERE*',
-    '_Reporte de carga_',
+    '_Reporte de pedido de cajas_',
     '',
     `📅 *Fecha:* ${formatearFecha(s.fecha)}`,
     `📍 *Finca:* ${nombreFinca}`,
