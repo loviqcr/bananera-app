@@ -6,6 +6,7 @@ import { planillaModulo } from './planilla.js';
 import { ventasModulo } from './ventas.js';
 import { estadisticasDia, resumenEmbolsePorSemana } from './embolseCorta.js';
 import { estadisticasHoy as estadisticasCargaHoy, ultimoDestinatario, resumenEntregaPorSemana, mensajeEntregaWhatsApp, abrirWhatsApp, agruparPorEntrega, historialEntregas, mensajeEntregasWhatsApp } from './entregaCarga.js';
+import { solicitudesCargaPendientes } from './solicitudesCarga.js';
 import { auth } from './auth.js';
 import { elemento, tarjetaStat, icono, iconoWhatsApp, formatearFecha, hoyISO, mostrarPanel, imprimirPanel } from '../ui.js';
 
@@ -703,7 +704,7 @@ async function abrirDetalle(tipo, contexto, alIrAIncidencias) {
 
 /** Usado por el dashboard y por la pantalla de detalle de finca. */
 export async function estadisticasDeFinca(fincaId) {
-  const [insumosBajos, abiertas, labores, personal, totalPersonal, ventasMes, dia, cargaHoy, ultimaEntrega] = await Promise.all([
+  const [insumosBajos, abiertas, labores, personal, totalPersonal, ventasMes, dia, cargaHoy, ultimaEntrega, solicitudesPendientes] = await Promise.all([
     inventarioModulo.insumosBajos(fincaId),
     incidenciasAbiertas(fincaId),
     laboresConEstado(fincaId),
@@ -713,6 +714,7 @@ export async function estadisticasDeFinca(fincaId) {
     estadisticasDia(fincaId),
     estadisticasCargaHoy(fincaId),
     ultimoDestinatario(fincaId),
+    solicitudesCargaPendientes(fincaId),
   ]);
   // Solo se usa en la pantalla de detalle de finca (Fincas > tocar una).
   const atrasadas = labores.filter((l) => l.estado?.clase === 'insignia--rojo').length;
@@ -727,6 +729,7 @@ export async function estadisticasDeFinca(fincaId) {
     proximosACorta: dia.proximosACorta,
     cargaHoy,
     ultimaEntrega,
+    solicitudesPendientes,
   };
 }
 
@@ -734,7 +737,7 @@ export async function renderizarDashboard(contenedor, contexto, manejadores = {}
   contenedor.innerHTML = '';
   const [stats, sesion] = await Promise.all([estadisticasDeFinca(contexto.fincaId), auth.sesionActual()]);
   const esAdmin = sesion?.usuario?.rol === 'administrador';
-  const { alTocarIncidencias } = manejadores;
+  const { alTocarIncidencias, alTocarSolicitudesCarga } = manejadores;
 
   // ---- Resumen general: a propósito solo estos 4, se pidió limpiar el
   // dashboard de las demás tarjetas (Producción/Personal/Ventas/Inventario/
@@ -754,6 +757,9 @@ export async function renderizarDashboard(contenedor, contexto, manejadores = {}
         tarjetaStat('crop', stats.cortadoHoy.toLocaleString('es-CR'), 'Corta hoy', '', esAdmin ? () => abrirDetalle('corta', contexto) : null),
         tarjetaStat('basket', stats.cargaHoy.total.toLocaleString('es-CR'), 'Entrega de carga', '', esAdmin ? () => abrirDetalle('entrega', contexto) : null),
         tarjetaStat('alert', stats.abiertas.length, 'Incidencias pendientes', stats.abiertas.length > 0 ? 'tarjeta-stat--alerta' : '', esAdmin ? () => abrirDetalle('incidencias', contexto, alTocarIncidencias) : alTocarIncidencias),
+        esAdmin
+          ? tarjetaStat('truck', stats.solicitudesPendientes.length, 'Pedir Carga/Empaque', stats.solicitudesPendientes.length > 0 ? 'tarjeta-stat--alerta' : '', alTocarSolicitudesCarga)
+          : null,
       ]),
     ])
   );

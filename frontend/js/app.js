@@ -671,6 +671,7 @@ async function renderizarInicio(contenedor = el.contenedorDashboard) {
   try {
     await renderizarDashboard(contenedor, contextoActual(), {
       alTocarIncidencias: () => abrirModulo('incidencias'),
+      alTocarSolicitudesCarga: () => abrirModulo('solicitudes-carga'),
     });
   } catch (error) {
     console.warn('[app] No se pudo calcular el dashboard:', error);

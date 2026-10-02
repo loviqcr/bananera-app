@@ -110,6 +110,12 @@ function filaSolicitud(s, { nombreFinca, esAdmin, alCambiar }) {
   ]);
 }
 
+/** Solicitudes aún no atendidas de `fincaId` ('todas' incluye todas las fincas) — usado por el dashboard de Inicio. */
+export async function solicitudesCargaPendientes(fincaId) {
+  const todas = await repos.listarPorFinca('solicitudes_carga', fincaId);
+  return todas.filter((s) => s.estado !== 'atendido');
+}
+
 export const solicitudesCargaModulo = {
   etiqueta: 'Pedir Carga/Empaque',
   async render(contenedor, contexto) {
