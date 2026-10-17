@@ -1,6 +1,6 @@
 import { repos } from '../db/repos.js';
 import { inventarioModulo } from './inventario.js';
-import { incidenciasAbiertas } from './incidencias.js';
+import { incidenciasAbiertas, ESTADOS_INCIDENCIA } from './incidencias.js';
 import { laboresConEstado } from './labores.js';
 import { planillaModulo } from './planilla.js';
 import { ventasModulo } from './ventas.js';
@@ -8,7 +8,7 @@ import { estadisticasDia, resumenEmbolsePorSemana } from './embolseCorta.js';
 import { estadisticasHoy as estadisticasCargaHoy, ultimoDestinatario, resumenEntregaPorSemana, mensajeEntregaWhatsApp, abrirWhatsApp, agruparPorEntrega, historialEntregas, mensajeEntregasWhatsApp } from './entregaCarga.js';
 import { solicitudesCargaPendientes } from './solicitudesCarga.js';
 import { auth } from './auth.js';
-import { elemento, tarjetaStat, icono, iconoWhatsApp, formatearFecha, hoyISO, mostrarPanel, imprimirPanel } from '../ui.js';
+import { elemento, tarjetaStat, icono, iconoWhatsApp, formatearFecha, hoyISO, mostrarPanel, mostrarDialogo, imprimirPanel } from '../ui.js';
 
 /** Título de una sección de Inicio: ícono en cuadro suave + texto. */
 function tituloSeccion(nombreIcono, texto) {
@@ -583,18 +583,30 @@ async function construirIncidenciasPendientes(contexto, alIrAIncidencias) {
   if (ordenadas.length === 0) {
     contenido.appendChild(elemento('p', { class: 'subtitulo-pantalla', texto: '✅ No hay incidencias pendientes.' }));
   } else {
+    contenido.appendChild(elemento('p', { class: 'subtitulo-pantalla', style: 'margin-bottom:8px', texto: 'Toca una incidencia para cambiar su estado o dejar la solución/respuesta.' }));
     contenido.appendChild(
       elemento(
         'div',
         { class: 'lista-registros' },
         ordenadas.map((i) =>
-          elemento('div', { class: 'fila-registro', style: 'display:block' }, [
-            elemento('div', { style: 'display:flex;justify-content:space-between;gap:8px' }, [
-              elemento('strong', { texto: `${nombreFinca[i.finca_id] ?? 'Finca'} · ${i.tipo ?? ''}` }),
-              elemento('span', { class: `fila-registro__valor ${i.prioridad === 'urgente' ? 'tono-alerta' : ''}`, texto: i.prioridad ?? '' }),
+          elemento('button', { type: 'button', class: 'fila-registro detalle-fila', style: 'display:block;text-align:left;width:100%', onclick: () => abrirRespuestaIncidencia(i, contexto, alIrAIncidencias) }, [
+            elemento('div', { class: 'detalle-fila__texto' }, [
+              elemento('div', { style: 'display:flex;justify-content:space-between;align-items:center;gap:8px' }, [
+                elemento('strong', { texto: `${nombreFinca[i.finca_id] ?? 'Finca'} · ${i.tipo ?? ''}` }),
+                elemento('div', { style: 'display:flex;align-items:center;gap:6px;flex:none' }, [
+                  elemento('span', { class: `fila-registro__valor ${i.prioridad === 'urgente' ? 'tono-alerta' : ''}`, texto: i.prioridad ?? '' }),
+                  elemento('span', { class: 'detalle-fila__flecha', html: icono('chevron', 16) }),
+                ]),
+              ]),
+              elemento('div', { class: 'fila-registro__subtitulo', texto: `${nombreArea[i.area_id] ?? 'Sin área'} · ${formatearFecha(i.fecha)}` }),
+              i.descripcion ? elemento('div', { style: 'margin-top:4px;white-space:pre-wrap;overflow-wrap:anywhere', texto: i.descripcion }) : null,
+              i.respuesta
+                ? elemento('div', { style: 'margin-top:6px;padding:8px;border-radius:10px;background:color-mix(in srgb, var(--primario) 10%, transparent)' }, [
+                    elemento('strong', { style: 'font-size:0.8rem', texto: '💬 Respuesta: ' }),
+                    elemento('span', { style: 'white-space:pre-wrap;overflow-wrap:anywhere', texto: i.respuesta }),
+                  ])
+                : null,
             ]),
-            elemento('div', { class: 'fila-registro__subtitulo', texto: `${nombreArea[i.area_id] ?? 'Sin área'} · ${formatearFecha(i.fecha)}` }),
-            i.descripcion ? elemento('div', { style: 'margin-top:4px;white-space:pre-wrap;overflow-wrap:anywhere', texto: i.descripcion }) : null,
           ])
         )
       )
@@ -607,6 +619,26 @@ async function construirIncidenciasPendientes(contexto, alIrAIncidencias) {
   });
   contenido.appendChild(boton);
   return contenido;
+}
+
+/**
+ * Diálogo para cambiar el estado de una incidencia y dejar escrita la
+ * solución/respuesta sin salir de Inicio — se cierra y reabre el panel para
+ * que se vea el cambio de una vez.
+ */
+async function abrirRespuestaIncidencia(incidencia, contexto, alIrAIncidencias) {
+  const resultado = await mostrarDialogo({
+    titulo: 'Actualizar incidencia',
+    textoConfirmar: 'Guardar',
+    campos: [
+      { nombre: 'estado', etiqueta: 'Estado', tipo: 'select', opciones: ESTADOS_INCIDENCIA, valor: incidencia.estado },
+      { nombre: 'respuesta', etiqueta: 'Solución / Respuesta (opcional)', tipo: 'textarea', valor: incidencia.respuesta ?? '' },
+    ],
+  });
+  if (!resultado) return;
+  await repos.editar('incidencias', incidencia.id, { estado: resultado.estado, respuesta: resultado.respuesta.trim() || null });
+  document.querySelector('.panel-info-fondo')?.remove();
+  await abrirDetalle('incidencias', contexto, alIrAIncidencias);
 }
 
 const ETIQUETA_ASISTENCIA = {

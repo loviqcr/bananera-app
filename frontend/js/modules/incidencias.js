@@ -9,7 +9,7 @@ const PRIORIDADES = [
   { value: 'media', label: '🟡 Media' },
   { value: 'baja', label: '🟢 Baja' },
 ];
-const ESTADOS = [
+export const ESTADOS_INCIDENCIA = [
   { value: 'reportada', label: 'Reportada' },
   { value: 'asignada', label: 'Asignada' },
   { value: 'en_proceso', label: 'En proceso' },
@@ -155,8 +155,14 @@ export const incidenciasModulo = {
           elemento('div', { class: 'fila-registro__subtitulo', texto: inc.descripcion }),
           elemento('div', { style: 'margin-top:6px;display:flex;gap:6px;flex-wrap:wrap' }, [
             elemento('span', { class: `insignia ${INSIGNIA_PRIORIDAD[inc.prioridad] ?? 'insignia--gris'}`, texto: PRIORIDADES.find((p) => p.value === inc.prioridad)?.label ?? inc.prioridad }),
-            elemento('span', { class: `insignia ${INSIGNIA_ESTADO[inc.estado] ?? 'insignia--gris'}`, texto: ESTADOS.find((e) => e.value === inc.estado)?.label ?? inc.estado }),
+            elemento('span', { class: `insignia ${INSIGNIA_ESTADO[inc.estado] ?? 'insignia--gris'}`, texto: ESTADOS_INCIDENCIA.find((e) => e.value === inc.estado)?.label ?? inc.estado }),
           ]),
+          inc.respuesta
+            ? elemento('div', { style: 'margin-top:6px;padding:8px;border-radius:10px;background:color-mix(in srgb, var(--primario) 10%, transparent)' }, [
+                elemento('strong', { style: 'font-size:0.8rem', texto: '💬 Respuesta: ' }),
+                elemento('span', { style: 'white-space:pre-wrap;overflow-wrap:anywhere', texto: inc.respuesta }),
+              ])
+            : null,
           inc.foto_url
             ? elemento('img', {
                 class: 'previa-foto previa-foto--tocable',
@@ -190,10 +196,13 @@ export const incidenciasModulo = {
         const resultado = await mostrarDialogo({
           titulo: 'Actualizar incidencia',
           textoConfirmar: 'Guardar',
-          campos: [{ nombre: 'estado', etiqueta: 'Estado', tipo: 'select', opciones: ESTADOS, valor: inc.estado }],
+          campos: [
+            { nombre: 'estado', etiqueta: 'Estado', tipo: 'select', opciones: ESTADOS_INCIDENCIA, valor: inc.estado },
+            { nombre: 'respuesta', etiqueta: 'Solución / Respuesta (opcional)', tipo: 'textarea', valor: inc.respuesta ?? '' },
+          ],
         });
         if (!resultado) return;
-        await repos.editar('incidencias', inc.id, { estado: resultado.estado });
+        await repos.editar('incidencias', inc.id, { estado: resultado.estado, respuesta: resultado.respuesta.trim() || null });
         await this.render(contenedor, contexto);
       });
       lista.appendChild(fila);

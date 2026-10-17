@@ -227,7 +227,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
   // ---- Fase 5: Incidencias ----
   incidencias: {
     tabla: 'incidencias',
-    columnas: ['finca_id', 'area_id', 'fecha', 'hora', 'tipo', 'descripcion', 'foto_url', 'responsable_id', 'prioridad', 'estado'],
+    columnas: ['finca_id', 'area_id', 'fecha', 'hora', 'tipo', 'descripcion', 'foto_url', 'responsable_id', 'prioridad', 'estado', 'respuesta'],
     fincaScoped: true,
     permiteEliminar: true,
     conflictStrategy: 'lww',
