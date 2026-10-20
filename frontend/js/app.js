@@ -531,15 +531,33 @@ async function actualizarBotonNotificaciones() {
   el.botonNotificaciones.classList.toggle('item-cuenta--activo', activo);
   const texto = el.botonNotificaciones.querySelector('.texto-notificaciones');
   if (texto) texto.textContent = activo ? '🔔 Notificaciones activadas (tocar para desactivar)' : 'Activar notificaciones de incidencias urgentes';
+
+  // El dispositivo puede creer que está suscrito (el navegador ya tiene la
+  // suscripción) sin que el servidor la tenga guardada — pasa si el POST a
+  // /notificaciones/suscribir falló en silencio la primera vez (ej. el
+  // servidor estaba dormido/lento en ese momento). Sin esto, el botón se
+  // seguía viendo "activado" para siempre y nunca llegaba ningún aviso.
+  // Reenviar es seguro y barato: el servidor solo actualiza la misma fila
+  // (ON CONFLICT endpoint) en vez de duplicarla.
+  if (activo) enviarSuscripcionAlServidor(suscripcion).catch(() => {});
 }
 
-async function enviarSuscripcionAlServidor(suscripcion) {
+async function enviarSuscripcionAlServidor(suscripcion, reintentos = 1) {
   const token = await auth.obtenerToken();
-  await fetch(`${API_BASE_URL}/notificaciones/suscribir`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-    body: JSON.stringify(suscripcion.toJSON()),
-  });
+  try {
+    await fetch(`${API_BASE_URL}/notificaciones/suscribir`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+      body: JSON.stringify(suscripcion.toJSON()),
+    });
+  } catch (error) {
+    // Reintento único tras una pausa corta — cubre el caso típico de un
+    // servidor recién despertando (Render en el plan gratuito) sin dejar al
+    // usuario esperando el minuto completo que puede tardar en despertar.
+    if (reintentos <= 0) throw error;
+    await new Promise((r) => setTimeout(r, 8000));
+    await enviarSuscripcionAlServidor(suscripcion, reintentos - 1);
+  }
 }
 
 async function activarNotificaciones() {
@@ -960,6 +978,17 @@ async function iniciar() {
   }
   cacheUsuario = sesion.usuario;
   iniciarSyncClient();
+  // Por si la suscripción a notificaciones de este dispositivo quedó "a
+  // medias" (el navegador la tiene pero el servidor no, ver
+  // actualizarBotonNotificaciones) — se reintenta en cada arranque, no solo
+  // al visitar "Más", para corregirse sola lo antes posible.
+  if (soportaPush()) {
+    suscripcionActual()
+      .then((s) => {
+        if (s && Notification.permission === 'granted') enviarSuscripcionAlServidor(s).catch(() => {});
+      })
+      .catch(() => {});
+  }
   await continuarDespuesDeLogin();
 }
 
