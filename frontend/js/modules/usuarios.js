@@ -17,46 +17,55 @@ function etiquetaRol(valor) {
 
 async function cabecerasAuth() {
   const token = await auth.obtenerToken();
+  // Sin esto, una sesión vencida (o sin token por otro motivo) mandaba
+  // "Authorization: Bearer null" al servidor — el 401 que eso provoca se
+  // veía igual que cualquier otro error ("¿tenés conexión?"), así que no
+  // había forma de distinguir "se te venció la sesión" de "el servidor no
+  // respondió" sin mirar la consola del navegador.
+  if (!token) throw new Error('Tu sesión venció — cierra sesión y vuelve a entrar.');
   return { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json' };
 }
 
+/**
+ * Pide algo al servidor distinguiendo el motivo real del error: sesión
+ * vencida (cabecerasAuth), sin red / servidor inalcanzable (fetch lanza
+ * TypeError), o el servidor respondió pero con error (se muestra el código
+ * y, si lo trae, el mensaje propio del servidor) — antes los tres casos se
+ * mostraban con el mismo "¿tenés conexión?", lo que hacía imposible saber
+ * qué pasaba de verdad sin abrir la consola del navegador.
+ */
+async function pedirAlServidor(url, opciones = {}) {
+  const headers = { ...(await cabecerasAuth()), ...(opciones.headers || {}) };
+  let respuesta;
+  try {
+    respuesta = await fetch(url, { ...opciones, headers });
+  } catch {
+    throw new Error('No se pudo conectar con el servidor — revisa tu conexión a internet (o puede estar lento/reiniciando, intenta de nuevo en un momento).');
+  }
+  if (!respuesta.ok) {
+    const cuerpo = await respuesta.json().catch(() => ({}));
+    throw new Error(cuerpo.error || `El servidor respondió con error ${respuesta.status}.`);
+  }
+  return respuesta;
+}
+
 async function listarUsuarios() {
-  const respuesta = await fetch(`${API_BASE_URL}/usuarios`, { headers: await cabecerasAuth() });
-  if (!respuesta.ok) throw new Error('No se pudo cargar la lista de usuarios (¿tenés conexión?)');
+  const respuesta = await pedirAlServidor(`${API_BASE_URL}/usuarios`);
   return respuesta.json();
 }
 
 async function crearUsuario(datos) {
-  const respuesta = await fetch(`${API_BASE_URL}/usuarios`, {
-    method: 'POST',
-    headers: await cabecerasAuth(),
-    body: JSON.stringify(datos),
-  });
-  const cuerpo = await respuesta.json().catch(() => ({}));
-  if (!respuesta.ok) throw new Error(cuerpo.error || 'No se pudo crear el usuario');
-  return cuerpo;
+  const respuesta = await pedirAlServidor(`${API_BASE_URL}/usuarios`, { method: 'POST', body: JSON.stringify(datos) });
+  return respuesta.json();
 }
 
 async function actualizarUsuario(id, datos) {
-  const respuesta = await fetch(`${API_BASE_URL}/usuarios/${id}`, {
-    method: 'PATCH',
-    headers: await cabecerasAuth(),
-    body: JSON.stringify(datos),
-  });
-  const cuerpo = await respuesta.json().catch(() => ({}));
-  if (!respuesta.ok) throw new Error(cuerpo.error || 'No se pudo actualizar el usuario');
-  return cuerpo;
+  const respuesta = await pedirAlServidor(`${API_BASE_URL}/usuarios/${id}`, { method: 'PATCH', body: JSON.stringify(datos) });
+  return respuesta.json();
 }
 
 async function eliminarUsuario(id) {
-  const respuesta = await fetch(`${API_BASE_URL}/usuarios/${id}`, {
-    method: 'DELETE',
-    headers: await cabecerasAuth(),
-  });
-  if (!respuesta.ok) {
-    const cuerpo = await respuesta.json().catch(() => ({}));
-    throw new Error(cuerpo.error || 'No se pudo eliminar el usuario');
-  }
+  await pedirAlServidor(`${API_BASE_URL}/usuarios/${id}`, { method: 'DELETE' });
 }
 
 function grupoCasillasFincas(listaFincas, seleccionadas) {
