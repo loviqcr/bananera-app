@@ -499,7 +499,7 @@ consultaTemaSistema.addEventListener('change', () => {
   if (preferenciaTema() === 'auto') aplicarTema();
 });
 
-// -------------------- Notificaciones push (incidencias urgentes) --------------------
+// -------------------- Notificaciones push (incidencias, pedidos, actividad) --------------------
 
 /** applicationServerKey debe ir como Uint8Array, no como el string base64url que da el servidor. */
 function urlBase64ToUint8Array(base64String) {
@@ -530,7 +530,7 @@ async function actualizarBotonNotificaciones() {
   const activo = !!suscripcion && Notification.permission === 'granted';
   el.botonNotificaciones.classList.toggle('item-cuenta--activo', activo);
   const texto = el.botonNotificaciones.querySelector('.texto-notificaciones');
-  if (texto) texto.textContent = activo ? '🔔 Notificaciones activadas (tocar para desactivar)' : 'Activar notificaciones de incidencias urgentes';
+  if (texto) texto.textContent = activo ? '🔔 Notificaciones activadas (tocar para desactivar)' : 'Activar notificaciones (incidencias, pedidos y más)';
 
   // El dispositivo puede creer que está suscrito (el navegador ya tiene la
   // suscripción) sin que el servidor la tenga guardada — pasa si el POST a

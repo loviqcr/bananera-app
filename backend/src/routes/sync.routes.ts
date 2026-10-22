@@ -3,7 +3,7 @@ import { z } from 'zod';
 import { pool } from '../db/pool';
 import { requiereAutenticacion } from '../middleware/auth';
 import { aplicarOperacion, obtenerCambiosPendientes, type OperacionSync } from '../services/syncService';
-import { notificarIncidenciaUrgente, notificarPedidoBodega, notificarSolicitudCarga, notificarActividad, type OperacionCreada } from '../services/pushService';
+import { notificarIncidenciaNueva, notificarPedidoBodega, notificarSolicitudCarga, notificarActividad, type OperacionCreada } from '../services/pushService';
 
 export const syncRouter = Router();
 syncRouter.use(requiereAutenticacion);
@@ -49,11 +49,12 @@ syncRouter.post('/push', async (req, res, next) => {
 
         // Aviso push (no bloquea la respuesta ni afecta el resultado de la
         // operación si falla — es un "extra", no parte de guardar el dato).
-        if (resultado.estado === 'ok' && op.tabla === 'incidencias' && op.operacion === 'crear' && op.datos?.prioridad === 'urgente') {
-          const fincaId = op.datos.finca_id as string | undefined;
-          const descripcion = op.datos.descripcion as string | undefined;
+        if (resultado.estado === 'ok' && op.tabla === 'incidencias' && op.operacion === 'crear') {
+          const fincaId = op.datos?.finca_id as string | undefined;
+          const descripcion = op.datos?.descripcion as string | undefined;
+          const prioridad = (op.datos?.prioridad as string | undefined) ?? 'media';
           if (fincaId) {
-            notificarIncidenciaUrgente(fincaId, descripcion ?? '').catch((err) => {
+            notificarIncidenciaNueva(fincaId, prioridad, descripcion ?? '').catch((err) => {
               console.error('[sync] Error enviando notificación push:', err);
             });
           }

@@ -255,14 +255,24 @@ export async function notificarActividad(operaciones: OperacionCreada[], actorId
   }
 }
 
-export async function notificarIncidenciaUrgente(fincaId: string, descripcion: string) {
+const ICONO_PRIORIDAD: Record<string, string> = { urgente: '🚨', alta: '🟠', media: '🟡', baja: '🟢' };
+const ETIQUETA_PRIORIDAD: Record<string, string> = { urgente: 'urgente', alta: 'de prioridad alta', media: 'de prioridad media', baja: 'de prioridad baja' };
+
+/**
+ * Aviso de CUALQUIER incidencia nueva (antes solo avisaba si era
+ * 'urgente') — el administrador pidió enterarse de todas, no solo las
+ * urgentes, para no tener que entrar a la app a revisarlas.
+ */
+export async function notificarIncidenciaNueva(fincaId: string, prioridad: string, descripcion: string) {
   if (!habilitado) return;
   try {
     const { rows } = await pool.query('SELECT nombre FROM fincas WHERE id = $1', [fincaId]);
     const nombreFinca = rows[0]?.nombre ?? 'una finca';
+    const icono = ICONO_PRIORIDAD[prioridad] ?? '⚠️';
+    const etiqueta = ETIQUETA_PRIORIDAD[prioridad] ?? '';
     await notificarFinca(fincaId, {
-      titulo: `🚨 Incidencia urgente — ${nombreFinca}`,
-      mensaje: descripcion?.trim() || 'Se reportó una incidencia urgente.',
+      titulo: `${icono} Incidencia${etiqueta ? ' ' + etiqueta : ''} — ${nombreFinca}`,
+      mensaje: descripcion?.trim() || 'Se reportó una incidencia.',
       url: './',
       modulo: 'incidencias',
     });
