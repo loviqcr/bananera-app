@@ -141,7 +141,7 @@ export const REGISTRO_SYNC: Record<string, TablaSincronizable> = {
   },
   labores_deshija: {
     tabla: 'labores_deshija',
-    columnas: ['finca_id', 'area_id', 'fecha', 'proxima_fecha', 'responsable_id', 'observaciones'],
+    columnas: ['finca_id', 'area_id', 'fecha', 'proxima_fecha', 'responsable_id', 'observaciones', 'cantidad'],
     fincaScoped: true,
     permiteEliminar: true,
     conflictStrategy: 'lww',

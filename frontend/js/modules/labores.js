@@ -262,12 +262,21 @@ const renderizarDeshija = renderizarLaborConFrecuencia(
   'labores_deshija',
   'deshija',
   '🌱 Registrar deshija',
-  [{ nombre: 'variedad', etiqueta: 'Variedad', tipo: 'select', opciones: [{ value: 'Plátano', label: 'Plátano' }, { value: 'Banano', label: 'Banano' }, { value: 'FHIA', label: 'FHIA' }] }],
-  (valores) => ({ observaciones: (valores.observaciones || '') + (valores.variedad ? ` [Variedad: ${valores.variedad}]` : '') }),
-  undefined,
+  [
+    { nombre: 'cantidad', etiqueta: 'Cantidad', tipo: 'number', paso: '0.01' },
+    { nombre: 'variedad', etiqueta: 'Variedad', tipo: 'select', opciones: [{ value: 'Plátano', label: 'Plátano' }, { value: 'Banano', label: 'Banano' }, { value: 'FHIA', label: 'FHIA' }] },
+  ],
+  (valores) => ({ cantidad: valores.cantidad ? Number(valores.cantidad) : null, observaciones: (valores.observaciones || '') + (valores.variedad ? ` [Variedad: ${valores.variedad}]` : '') }),
+  (f, nombreArea) => {
+    const { variedad, limpio } = separarVariedad(f.observaciones);
+    return {
+      titulo: formatearFecha(f.fecha),
+      subtitulo: [nombreArea[f.area_id] ?? 'Sin área', variedad || null, f.cantidad ? `Cantidad: ${f.cantidad}` : null, limpio || null].filter(Boolean).join(' · '),
+    };
+  },
   (f) => {
     const { variedad, limpio } = separarVariedad(f.observaciones);
-    return { variedad, observaciones: limpio };
+    return { cantidad: f.cantidad, variedad, observaciones: limpio };
   }
 );
 
