@@ -67,12 +67,15 @@ function calcularEstadisticas(filas, campoCantidad) {
 
 async function renderizarPlatano(contenedor, contexto) {
   contenedor.innerHTML = '';
-  const [areas, variedades, todas, esAdmin] = await Promise.all([
+  const [areas, variedades, todas, esAdmin, todasLasAreas] = await Promise.all([
     opcionesAreas(contexto.fincaId),
     opcionesVariedades('platano'),
     repos.listarPorFinca('entregas_platano', contexto.fincaId),
     esAdministrador(),
+    repos.listarTodos('areas'), // nombre del área para la lista — `areas` se limita a la finca activa, para el select del formulario
   ]);
+  const nombreArea = Object.fromEntries(todasLasAreas.map((a) => [a.id, a.nombre]));
+  const nombreVariedad = Object.fromEntries(variedades.map((v) => [v.value, v.label]));
   const filas = todas.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
   const stats = calcularEstadisticas(filas, 'cantidad_dedos');
 
@@ -137,9 +140,11 @@ async function renderizarPlatano(contenedor, contexto) {
     listaRegistros(
       filas.slice(0, 15),
       (f) => ({
-        titulo: `${formatearFecha(f.fecha)} · ${(f.cantidad_dedos || 0).toLocaleString('es-CR')} dedos`,
-        subtitulo: `${ETIQUETA_CALIDAD[f.calidad] ?? f.calidad ?? ''}${f.cantidad_cajas ? ` · ${f.cantidad_cajas} cajas` : ''}`,
-        valor: f.cantidad_racimos ? `${f.cantidad_racimos} rac.` : null,
+        titulo: `${formatearFecha(f.fecha)} · ${nombreArea[f.area_id] ?? 'Sin área'}`,
+        subtitulo: [nombreVariedad[f.variedad_id] ?? null, ETIQUETA_CALIDAD[f.calidad] ?? f.calidad ?? null, f.cantidad_cajas ? `${f.cantidad_cajas} cajas` : null, f.cantidad_racimos ? `${f.cantidad_racimos} rac.` : null]
+          .filter(Boolean)
+          .join(' · '),
+        valor: `${(f.cantidad_dedos || 0).toLocaleString('es-CR')} dedos`,
       }),
       {
         onEditar: esAdmin
@@ -187,12 +192,15 @@ async function renderizarPlatano(contenedor, contexto) {
 
 async function renderizarBanano(contenedor, contexto) {
   contenedor.innerHTML = '';
-  const [areas, variedades, todas, esAdmin] = await Promise.all([
+  const [areas, variedades, todas, esAdmin, todasLasAreas] = await Promise.all([
     opcionesAreas(contexto.fincaId),
     opcionesVariedades('banano'),
     repos.listarPorFinca('entregas_banano', contexto.fincaId),
     esAdministrador(),
+    repos.listarTodos('areas'), // nombre del área para la lista — `areas` se limita a la finca activa, para el select del formulario
   ]);
+  const nombreArea = Object.fromEntries(todasLasAreas.map((a) => [a.id, a.nombre]));
+  const nombreVariedad = Object.fromEntries(variedades.map((v) => [v.value, v.label]));
   const filas = todas.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
   const stats = calcularEstadisticas(filas, 'cantidad_manos');
 
@@ -253,8 +261,9 @@ async function renderizarBanano(contenedor, contexto) {
     listaRegistros(
       filas.slice(0, 15),
       (f) => ({
-        titulo: `${formatearFecha(f.fecha)} · ${(f.cantidad_manos || 0).toLocaleString('es-CR')} manos`,
-        subtitulo: `${ETIQUETA_CALIDAD[f.calidad] ?? f.calidad ?? ''}${f.cantidad_cajas ? ` · ${f.cantidad_cajas} cajas` : ''}`,
+        titulo: `${formatearFecha(f.fecha)} · ${nombreArea[f.area_id] ?? 'Sin área'}`,
+        subtitulo: [nombreVariedad[f.variedad_id] ?? null, ETIQUETA_CALIDAD[f.calidad] ?? f.calidad ?? null, f.cantidad_cajas ? `${f.cantidad_cajas} cajas` : null].filter(Boolean).join(' · '),
+        valor: `${(f.cantidad_manos || 0).toLocaleString('es-CR')} manos`,
       }),
       {
         onEditar: esAdmin

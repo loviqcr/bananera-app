@@ -13,6 +13,11 @@ async function mapaNombres(tabla, campoNombre = 'nombre') {
   return Object.fromEntries(filas.map((f) => [f.id, f[campoNombre]]));
 }
 
+/** Embolse/Corta guardan la variedad como "[Variedad: X]" dentro de observaciones, no en su propia columna. */
+function variedadDe(observaciones) {
+  return /\[Variedad: ([^\]]+)\]/.exec(observaciones || '')?.[1] ?? '';
+}
+
 // Cada reporte declara su tabla, sus columnas (encabezado + cómo leer cada
 // fila) y si es finca-scoped, para que el filtro de finca/área/fecha del
 // módulo sea el mismo para todos.
@@ -91,6 +96,7 @@ async function definicionesReportes() {
         { titulo: 'Fecha', leer: (f) => formatearFecha(f.fecha) },
         { titulo: 'Finca', leer: (f) => fincas[f.finca_id] ?? '' },
         { titulo: 'Área', leer: (f) => areas[f.area_id] ?? '' },
+        { titulo: 'Variedad', leer: (f) => variedadDe(f.observaciones) },
         { titulo: 'Cantidad', leer: (f) => f.cantidad ?? 0 },
       ],
       totalizar: (filas) => [{ titulo: 'Total', valor: filas.reduce((s, f) => s + Number(f.cantidad || 0), 0) }],
@@ -101,6 +107,7 @@ async function definicionesReportes() {
         { titulo: 'Fecha', leer: (f) => formatearFecha(f.fecha) },
         { titulo: 'Finca', leer: (f) => fincas[f.finca_id] ?? '' },
         { titulo: 'Área', leer: (f) => areas[f.area_id] ?? '' },
+        { titulo: 'Variedad', leer: (f) => variedadDe(f.observaciones) },
         { titulo: 'Racimos', leer: (f) => f.racimos_cortados ?? 0 },
       ],
       totalizar: (filas) => [{ titulo: 'Total racimos', valor: filas.reduce((s, f) => s + Number(f.racimos_cortados || 0), 0) }],

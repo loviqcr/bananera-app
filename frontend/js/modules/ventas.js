@@ -87,13 +87,16 @@ async function renderizarVenta(tabla, campoCantidad, campoPrecio, etiquetaCantid
   }
 
   const nombreCliente = Object.fromEntries(clientes.map((c) => [c.value, c.label]));
+  const nombreVariedad = Object.fromEntries(variedades.map((v) => [v.value, v.label]));
   contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: 'Ventas registradas' }));
   contenedor.appendChild(
     listaRegistros(
       ordenadas.slice(0, 15),
       (f) => ({
         titulo: `${formatearFecha(f.fecha)} · ${formatearMoneda(Number(f[campoCantidad] || 0) * Number(f[campoPrecio] || 0))}`,
-        subtitulo: `${(f[campoCantidad] || 0).toLocaleString('es-CR')} × ${formatearMoneda(f[campoPrecio])}${f.cliente_id ? ` · ${nombreCliente[f.cliente_id] ?? ''}` : ''}`,
+        subtitulo: [nombreVariedad[f.variedad_id] ?? null, `${(f[campoCantidad] || 0).toLocaleString('es-CR')} × ${formatearMoneda(f[campoPrecio])}`, f.cliente_id ? nombreCliente[f.cliente_id] ?? null : null]
+          .filter(Boolean)
+          .join(' · '),
       }),
       {
         onEliminar: esAdmin
