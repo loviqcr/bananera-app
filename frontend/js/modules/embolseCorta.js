@@ -197,11 +197,14 @@ async function renderizarEmbolse(contenedor, contexto) {
   contenedor.appendChild(
     listaRegistros(
       ordenadas.slice(0, 15),
-      (f) => ({
-        titulo: `${formatearFecha(f.fecha)} · ${nombreArea[f.area_id] ?? 'Área'}`,
-        subtitulo: f.color_cinta_id ? `Cinta ${nombreColor[f.color_cinta_id] ?? ''}` : '',
-        valor: f.cantidad,
-      }),
+      (f) => {
+        const { variedad } = separarVariedad(f.observaciones);
+        return {
+          titulo: `${formatearFecha(f.fecha)} · ${nombreArea[f.area_id] ?? 'Área'}`,
+          subtitulo: [variedad || null, f.color_cinta_id ? `Cinta ${nombreColor[f.color_cinta_id] ?? ''}` : null].filter(Boolean).join(' · '),
+          valor: f.cantidad,
+        };
+      },
       {
         onEditar: esAdmin
           ? async (f) => {
@@ -292,10 +295,14 @@ async function renderizarCorta(contenedor, contexto) {
   contenedor.appendChild(
     listaRegistros(
       ordenadas.slice(0, 15),
-      (f) => ({
-        titulo: `${formatearFecha(f.fecha)} · ${nombreArea[f.area_id] ?? 'Área'}`,
-        valor: `${f.racimos_cortados} rac.`,
-      }),
+      (f) => {
+        const { variedad, limpio } = separarVariedad(f.observaciones);
+        return {
+          titulo: `${formatearFecha(f.fecha)} · ${nombreArea[f.area_id] ?? 'Área'}`,
+          subtitulo: [variedad || null, limpio || null].filter(Boolean).join(' · '),
+          valor: `${f.racimos_cortados} rac.`,
+        };
+      },
       {
         onEditar: esAdmin
           ? async (f) => {
