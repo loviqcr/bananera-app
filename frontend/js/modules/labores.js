@@ -71,7 +71,13 @@ function formularioSimple(nombre, fincaId, extraCampos, alGuardarExtra) {
 
 async function renderizarSiembra(contenedor, contexto) {
   contenedor.innerHTML = '';
-  const [areas, filas, esAdmin] = await Promise.all([opcionesAreas(contexto.fincaId), repos.listarPorFinca('labores_siembra', contexto.fincaId), esAdministrador()]);
+  const [areas, filas, esAdmin, todasLasAreas] = await Promise.all([
+    opcionesAreas(contexto.fincaId),
+    repos.listarPorFinca('labores_siembra', contexto.fincaId),
+    esAdministrador(),
+    repos.listarTodos('areas'), // nombre del área para la lista — aparte de `areas` (que se limita a la finca activa, para los selects de los formularios)
+  ]);
+  const nombreArea = Object.fromEntries(todasLasAreas.map((a) => [a.id, a.nombre]));
   const ordenadas = filas.sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
 
   if (contexto.fincaId !== 'todas') {
@@ -107,10 +113,13 @@ async function renderizarSiembra(contenedor, contexto) {
   contenedor.appendChild(
     listaRegistros(
       ordenadas.slice(0, 15),
-      (f) => ({
-        titulo: `${formatearFecha(f.fecha)} · ${f.nombre || 'Siembra'}`,
-        subtitulo: f.cantidad ? `Cantidad: ${f.cantidad}` : '',
-      }),
+      (f) => {
+        const { variedad, limpio } = separarVariedad(f.observaciones);
+        return {
+          titulo: `${formatearFecha(f.fecha)} · ${f.nombre || 'Siembra'}`,
+          subtitulo: [nombreArea[f.area_id] ?? 'Sin área', variedad || null, f.cantidad ? `Cantidad: ${f.cantidad}` : null, limpio || null].filter(Boolean).join(' · '),
+        };
+      },
       {
         onEditar: esAdmin
           ? async (f) => {
