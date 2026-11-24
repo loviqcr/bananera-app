@@ -47,6 +47,7 @@ const MODULOS = {
 
 const vistas = {
   login: document.getElementById('vista-login'),
+  notificaciones: document.getElementById('vista-notificaciones'),
   selectorFinca: document.getElementById('vista-selector-finca'),
   selectorArea: document.getElementById('vista-selector-area'),
   fincaDetalle: document.getElementById('vista-finca-detalle'),
@@ -80,6 +81,9 @@ const el = {
   botonSalirMas: document.getElementById('boton-salir-mas'),
   selectorTema: document.getElementById('selector-tema'),
   botonNotificaciones: document.getElementById('boton-notificaciones'),
+  botonNotificacionesGate: document.getElementById('boton-notificaciones-gate'),
+  notificacionesGateTexto: document.getElementById('notificaciones-gate-texto'),
+  notificacionesGateError: document.getElementById('notificaciones-gate-error'),
   botonVolverInicio: document.getElementById('boton-volver-inicio'),
   tituloModulo: document.getElementById('titulo-modulo'),
   contenedorModulo: document.getElementById('contenedor-modulo'),
@@ -110,7 +114,10 @@ function mostrarVista(nombre) {
   }
   if (nombre !== 'modulo') moduloActivoClave = null;
 
-  const sesionActiva = nombre !== 'login';
+  // 'notificaciones' se trata igual que 'login' a propósito: es un paso
+  // obligatorio antes de usar la app, y mostrar la barra de navegación ahí
+  // dejaría saltársela tocando "Inicio"/"Fincas" directamente.
+  const sesionActiva = nombre !== 'login' && nombre !== 'notificaciones';
   document.body.classList.toggle('tiene-nav-inferior', sesionActiva);
   if (el.navInferior) el.navInferior.hidden = !sesionActiva;
 
@@ -898,7 +905,7 @@ el.formLogin?.addEventListener('submit', async (evento) => {
       el.errorLogin.style.color = 'var(--ambar-600)';
     }
     iniciarSyncClient();
-    await continuarDespuesDeLogin();
+    await continuarConGateDeNotificaciones();
   } catch (error) {
     el.errorLogin.textContent = error.message;
     el.errorLogin.style.color = 'var(--rojo-500)';
@@ -906,6 +913,64 @@ el.formLogin?.addEventListener('submit', async (evento) => {
     clearTimeout(avisoDespertar);
     botonIngresar.disabled = false;
     botonIngresar.textContent = 'Ingresar';
+  }
+});
+
+/**
+ * Paso obligatorio entre el login y el resto de la app: si el dispositivo
+ * soporta notificaciones push pero todavía no las tiene concedidas, se
+ * bloquea acá (pantalla #vista-notificaciones) en vez de dejar seguir — ver
+ * la nota en index.html sobre por qué. Si el dispositivo no las soporta en
+ * absoluto (soportaPush() false — ej. navegadores viejos, Safari de
+ * escritorio), no tiene sentido bloquear algo que ni siquiera es posible
+ * ahí, así que se deja pasar igual.
+ */
+async function continuarConGateDeNotificaciones() {
+  if (soportaPush() && Notification.permission !== 'granted') {
+    pintarGateNotificaciones();
+    mostrarVista('notificaciones');
+    return;
+  }
+  await continuarDespuesDeLogin();
+}
+
+function pintarGateNotificaciones() {
+  if (!el.botonNotificacionesGate) return;
+  el.notificacionesGateError.textContent = '';
+  if (Notification.permission === 'denied') {
+    el.notificacionesGateTexto.textContent =
+      'Bloqueaste las notificaciones antes. Para continuar, actívalas a mano desde los ajustes del navegador/celular para este sitio (busca "Notificaciones" o "Permisos") y luego toca el botón de abajo.';
+    el.botonNotificacionesGate.textContent = '🔄 Ya las activé, continuar';
+  } else {
+    el.notificacionesGateTexto.textContent =
+      'Cosechas Presbere necesita avisarte de incidencias urgentes, pedidos a bodega y otros reportes — sin esto no te vas a enterar a tiempo. Es obligatorio para poder usar la app.';
+    el.botonNotificacionesGate.textContent = '🔔 Activar notificaciones';
+  }
+}
+
+el.botonNotificacionesGate?.addEventListener('click', async () => {
+  const boton = el.botonNotificacionesGate;
+  boton.disabled = true;
+  el.notificacionesGateError.textContent = '';
+  try {
+    // Una vez "denied", el navegador ya no vuelve a mostrar el permiso
+    // desde JS (requestPermission() resolvería 'denied' de inmediato, sin
+    // diálogo) — ahí solo queda revisar si lo activaron a mano en Ajustes.
+    if (Notification.permission !== 'denied') {
+      await activarNotificaciones();
+    }
+    if (Notification.permission === 'granted') {
+      await continuarDespuesDeLogin();
+    } else {
+      pintarGateNotificaciones();
+      if (Notification.permission !== 'denied') {
+        el.notificacionesGateError.textContent = 'No se activaron. Inténtalo de nuevo.';
+      }
+    }
+  } catch {
+    el.notificacionesGateError.textContent = 'No se pudo activar. Revisa tu conexión e inténtalo de nuevo.';
+  } finally {
+    boton.disabled = false;
   }
 });
 
@@ -989,7 +1054,7 @@ async function iniciar() {
       })
       .catch(() => {});
   }
-  await continuarDespuesDeLogin();
+  await continuarConGateDeNotificaciones();
 }
 
 iniciar();
