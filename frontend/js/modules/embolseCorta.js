@@ -196,7 +196,7 @@ async function renderizarEmbolse(contenedor, contexto) {
   contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: 'Embolse por área' }));
   contenedor.appendChild(
     listaRegistros(
-      ordenadas.slice(0, 15),
+      ordenadas.slice(0, 50),
       (f) => {
         const { variedad } = separarVariedad(f.observaciones);
         return {
@@ -294,7 +294,7 @@ async function renderizarCorta(contenedor, contexto) {
   contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: 'Cortas registradas' }));
   contenedor.appendChild(
     listaRegistros(
-      ordenadas.slice(0, 15),
+      ordenadas.slice(0, 50),
       (f) => {
         const { variedad, limpio } = separarVariedad(f.observaciones);
         return {
