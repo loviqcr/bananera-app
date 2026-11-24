@@ -1,6 +1,6 @@
 import { repos } from '../db/repos.js';
 import { auth } from './auth.js';
-import { elemento, crearFormulario, listaRegistros, mostrarDialogo, tarjetaEstadistica, formatearFecha, hoyISO } from '../ui.js';
+import { elemento, crearFormulario, listaRegistros, listaPaginada, mostrarDialogo, tarjetaEstadistica, formatearFecha, hoyISO } from '../ui.js';
 
 // Días típicos entre el embolse de un racimo y su corta (maduración) — se
 // usa solo para estimar la fecha de la pestaña "Seguimiento"; no depende de
@@ -195,8 +195,8 @@ async function renderizarEmbolse(contenedor, contexto) {
 
   contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: 'Embolse por área' }));
   contenedor.appendChild(
-    listaRegistros(
-      ordenadas.slice(0, 50),
+    listaPaginada(ordenadas, 15, (filasPagina) => listaRegistros(
+      filasPagina,
       (f) => {
         const { variedad } = separarVariedad(f.observaciones);
         return {
@@ -239,7 +239,7 @@ async function renderizarEmbolse(contenedor, contexto) {
             }
           : undefined,
       }
-    )
+    ))
   );
 }
 
@@ -293,8 +293,8 @@ async function renderizarCorta(contenedor, contexto) {
 
   contenedor.appendChild(elemento('h2', { class: 'titulo-pantalla', style: 'font-size:1.1rem', texto: 'Cortas registradas' }));
   contenedor.appendChild(
-    listaRegistros(
-      ordenadas.slice(0, 50),
+    listaPaginada(ordenadas, 15, (filasPagina) => listaRegistros(
+      filasPagina,
       (f) => {
         const { variedad, limpio } = separarVariedad(f.observaciones);
         return {
@@ -335,7 +335,7 @@ async function renderizarCorta(contenedor, contexto) {
             }
           : undefined,
       }
-    )
+    ))
   );
 }
 

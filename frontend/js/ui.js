@@ -299,6 +299,58 @@ export function listaRegistros(filas, formatearFila, opciones = {}) {
   return contenedor;
 }
 
+/**
+ * Pagina un arreglo ya ordenado con flechas "← Anterior" / "Siguiente →" y
+ * un indicador "Página X de Y", en vez de mostrar todo de una vez o cortar
+ * en seco a los N más recientes (que hacía que los registros viejos
+ * "desaparecieran" sin aviso). Solo esta sección se vuelve a pintar al
+ * cambiar de página — no hace falta recargar toda la pantalla.
+ * `renderPagina(filasDeEsaPagina)` arma el contenido de esa página
+ * (normalmente llamando a listaRegistros()) y se vuelve a invocar cada vez
+ * que cambia la página.
+ */
+export function listaPaginada(filas, porPagina, renderPagina) {
+  const contenedor = elemento('div');
+  const zonaLista = elemento('div');
+  contenedor.appendChild(zonaLista);
+
+  const totalPaginas = Math.max(1, Math.ceil(filas.length / porPagina));
+  let pagina = 0;
+
+  const botonAnterior = elemento('button', {
+    type: 'button',
+    class: 'boton boton--secundario paginador__boton',
+    onclick: () => cambiarA(pagina - 1),
+  }, [elemento('span', { style: 'display:inline-flex;transform:rotate(180deg)', html: icono('chevron', 16) }), elemento('span', {}, 'Anterior')]);
+  const etiqueta = elemento('span', { class: 'paginador__etiqueta' });
+  const botonSiguiente = elemento('button', {
+    type: 'button',
+    class: 'boton boton--secundario paginador__boton',
+    onclick: () => cambiarA(pagina + 1),
+  }, [elemento('span', {}, 'Siguiente'), elemento('span', { style: 'display:inline-flex', html: icono('chevron', 16) })]);
+  const controles = elemento('div', { class: 'paginador' }, [botonAnterior, etiqueta, botonSiguiente]);
+
+  function cambiarA(nueva) {
+    if (nueva < 0 || nueva >= totalPaginas) return;
+    pagina = nueva;
+    pintar();
+    contenedor.scrollIntoView({ block: 'nearest' });
+  }
+
+  function pintar() {
+    zonaLista.innerHTML = '';
+    const desde = pagina * porPagina;
+    zonaLista.appendChild(renderPagina(filas.slice(desde, desde + porPagina)));
+    etiqueta.textContent = `Página ${pagina + 1} de ${totalPaginas}`;
+    botonAnterior.disabled = pagina === 0;
+    botonSiguiente.disabled = pagina >= totalPaginas - 1;
+  }
+
+  pintar();
+  if (totalPaginas > 1) contenedor.appendChild(controles);
+  return contenedor;
+}
+
 export function formatearFecha(fechaISO) {
   if (!fechaISO) return '';
   const [anio, mes, dia] = fechaISO.slice(0, 10).split('-');

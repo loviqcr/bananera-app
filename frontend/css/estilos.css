@@ -2149,3 +2149,29 @@ button.entrega-destinatario {
   border-radius: 8px;
 }
 button.entrega-destinatario:active { background: color-mix(in srgb, var(--primario) 12%, transparent); }
+
+/* Paginación de listas largas (ver listaPaginada() en ui.js) */
+.paginador {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-top: 12px;
+}
+.paginador__etiqueta {
+  flex: 1;
+  min-width: 0;
+  text-align: center;
+  color: var(--texto-suave);
+  font-size: 0.85rem;
+}
+.paginador__boton {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 12px;
+  font-size: 0.85rem;
+  min-height: 0;
+  width: auto;
+  flex: none;
+}
